@@ -1,7 +1,7 @@
 steps:
-  # 1. Build the container image
+  # 1. Build the container image (no cache to ensure fresh build)
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/alerta-10d', '.']
+    args: ['build', '--no-cache', '-t', 'gcr.io/$PROJECT_ID/alerta-10d', '.']
 
   # 2. Push the image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'

@@ -3,8 +3,12 @@
 REST API for frontend communication and serving static files
 """
 
+# VERSION STAMP - to verify which code is running
+BUILD_VERSION = "2026-01-09-2030"
+
 # EARLY DEBUG - before any complex imports
 import sys
+print(f"[DEBUG] ===== BUILD VERSION: {BUILD_VERSION} =====", flush=True)
 print("[DEBUG] app.py starting - before imports", flush=True)
 
 from flask import Flask, jsonify, request, send_from_directory
@@ -106,6 +110,16 @@ def not_found(e):
 # =============================================================================
 # API Routes
 # =============================================================================
+
+@app.route("/api/version")
+def get_version():
+    """Get current build version - useful for debugging deployments"""
+    return jsonify({
+        "version": BUILD_VERSION,
+        "monitored_pairs_count": len(generator.monitored_pairs),
+        "status": "running"
+    })
+
 
 @app.route("/api/pairs")
 def get_pairs():
