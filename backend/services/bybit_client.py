@@ -27,18 +27,22 @@ class BybitClient:
         """Make a GET request to Bybit API"""
         try:
             url = f"{self.base_url}{endpoint}"
+            print(f"📡 API Request: {url} params={params}", flush=True)
             response = self.session.get(url, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
             
             if data.get("retCode") == 0:
-                return data.get("result", {})
+                result = data.get("result", {})
+                list_count = len(result.get("list", [])) if isinstance(result, dict) else 0
+                print(f"✅ API Response OK: {list_count} items", flush=True)
+                return result
             else:
-                print(f"API Error: {data.get('retMsg', 'Unknown error')}")
+                print(f"❌ API Error: {data.get('retMsg', 'Unknown error')}", flush=True)
                 return None
                 
         except requests.exceptions.RequestException as e:
-            print(f"Request failed: {e}")
+            print(f"❌ Request failed: {e}", flush=True)
             return None
     
     def get_instruments(self, category: str = "linear") -> List[Dict]:
@@ -82,6 +86,7 @@ class BybitClient:
         # Sort by symbol
         filtered.sort(key=lambda x: x["symbol"])
         
+        print(f"🛠️ get_instruments: Found {len(filtered)} valid instruments (min leverage {MIN_LEVERAGE}x)", flush=True)
         return filtered
     
     def get_top_pairs(self, limit: int = 100) -> List[str]:
@@ -89,15 +94,19 @@ class BybitClient:
         Get top N pairs by 24h volume, excluding specified pairs
         Returns list of symbols
         """
+        print(f"🔄 get_top_pairs called with limit={limit}", flush=True)
+        
         # Get 24h tickers for volume ranking
         result = self._make_request("/v5/market/tickers", {
             "category": "linear"
         })
         
         if not result:
+            print("❌ get_top_pairs: tickers request failed", flush=True)
             return []
         
         tickers = result.get("list", [])
+        print(f"📊 Got {len(tickers)} tickers from API", flush=True)
         
         # Get instruments with sufficient leverage
         valid_instruments = {inst["symbol"] for inst in self.get_instruments()}
@@ -124,7 +133,11 @@ class BybitClient:
         usdt_tickers.sort(key=lambda x: x["volume24h"], reverse=True)
         
         # Return top N symbols
-        return [t["symbol"] for t in usdt_tickers[:limit]]
+        top_symbols = [t["symbol"] for t in usdt_tickers[:limit]]
+        print(f"✅ get_top_pairs: Returning {len(top_symbols)} pairs", flush=True)
+        if top_symbols:
+            print(f"📋 First 5: {', '.join(top_symbols[:5])}", flush=True)
+        return top_symbols
     
     def get_klines(self, symbol: str, interval: str, limit: int = 100) -> List[Dict]:
         """
