@@ -26,34 +26,78 @@ class BybitClient:
         self.base_url = BYBIT_BASE_URL
         self.api_key = BYBIT_API_KEY
         self.api_secret = BYBIT_API_SECRET
+        self.recv_window = "5000"
         self.session = requests.Session()
+        
+        # Real browser User-Agent to avoid 403
         self.session.headers.update({
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         })
         
-        # Add API key headers if available
         if self.api_key:
-            print(f"[BYBIT] API Key configured: {self.api_key[:8]}...", flush=True)
+            print(f"[BYBIT] Auth enabled: {self.api_key[:8]}...", flush=True)
         else:
-            print("[BYBIT] No API key - using public endpoints only", flush=True)
-    
+            print("[BYBIT] Auth disabled - using public mode", flush=True)
+            
+    def _generate_signature(self, timestamp: str, query_string: str) -> str:
+        """Generate Bybit v5 API signature"""
+        param_str = timestamp + self.api_key + self.recv_window + query_string
+        hash = hmac.new(
+            bytes(self.api_secret, "utf-8"),
+            param_str.encode("utf-8"),
+            hashlib.sha256
+        )
+        return hash.hexdigest()
+
     def _make_request(self, endpoint: str, params: Dict = None) -> Optional[Dict]:
-        """Make a GET request to Bybit API"""
+        """Make a GET request to Bybit API with optional authentication"""
         try:
             url = f"{self.base_url}{endpoint}"
-            print(f"[API] GET {endpoint} params={params}", flush=True)
-            response = self.session.get(url, params=params, timeout=10)
-            print(f"[API] Response status: {response.status_code}", flush=True)
+            
+            # Prepare headers
+            headers = {}
+            if self.api_key and self.api_secret:
+                timestamp = str(int(time.time() * 1000))
+                
+                # Format query string for signature
+                if params:
+                    # Sort params to ensure consistent signature
+                    import urllib.parse
+                    sorted_params = sorted(params.items())
+                    query_string = urllib.parse.urlencode(sorted_params)
+                else:
+                    query_string = ""
+                
+                signature = self._generate_signature(timestamp, query_string)
+                
+                headers.update({
+                    "X-BAPI-API-KEY": self.api_key,
+                    "X-BAPI-TIMESTAMP": timestamp,
+                    "X-BAPI-RECV-WINDOW": self.recv_window,
+                    "X-BAPI-SIGN": signature
+                })
+                print(f"[API] Auth GET {endpoint}", flush=True)
+            else:
+                print(f"[API] Public GET {endpoint} params={params}", flush=True)
+
+            response = self.session.get(url, params=params, headers=headers, timeout=10)
+            print(f"[API] {endpoint} -> HTTP {response.status_code}", flush=True)
+            
+            # If 403, log extra info
+            if response.status_code == 403:
+                print(f"[API] 403 FORBIDDEN - Bybit is blocking this IP. Try with API Keys.", flush=True)
+                
             response.raise_for_status()
             data = response.json()
             
             if data.get("retCode") == 0:
                 result = data.get("result", {})
                 list_count = len(result.get("list", [])) if isinstance(result, dict) else 0
-                print(f"[API] OK - {list_count} items returned", flush=True)
+                print(f"[API] OK - {list_count} items", flush=True)
                 return result
             else:
-                print(f"[API] ERROR: {data.get('retMsg', 'Unknown error')}", flush=True)
+                print(f"[API] ERROR {data.get('retCode')}: {data.get('retMsg')}", flush=True)
                 return None
                 
         except requests.exceptions.RequestException as e:
