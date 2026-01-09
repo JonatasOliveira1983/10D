@@ -4,7 +4,7 @@ REST API for frontend communication and serving static files
 """
 
 # VERSION STAMP - to verify which code is running
-BUILD_VERSION = "2026-01-09-2030"
+BUILD_VERSION = "2026-01-09-2055"
 
 # EARLY DEBUG - before any complex imports
 import sys
@@ -117,6 +117,8 @@ def get_version():
     return jsonify({
         "version": BUILD_VERSION,
         "monitored_pairs_count": len(generator.monitored_pairs),
+        "api_key_loaded": bool(os.environ.get("BYBIT_API_KEY")),
+        "api_secret_loaded": bool(os.environ.get("BYBIT_API_SECRET")),
         "status": "running"
     })
 
