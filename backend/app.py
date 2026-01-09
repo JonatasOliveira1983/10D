@@ -44,34 +44,34 @@ def background_scanner():
 # =============================================================================
 import sys
 
-# Force unbuffered output
-sys.stdout.reconfigure(line_buffering=True)
-sys.stderr.reconfigure(line_buffering=True)
+# Debug: verificar se o módulo está sendo carregado
+print(">>> APP.PY MODULE LOADING <<<", file=sys.stderr)
+sys.stderr.flush()
 
-sys.stderr.write("=" * 60 + "\n")
-sys.stderr.write("🚀 10D - Sistema de Sinais - Initializing...\n")
-sys.stderr.write("=" * 60 + "\n")
+print("=" * 60, file=sys.stderr)
+print("🚀 10D - Sistema de Sinais - Initializing...", file=sys.stderr)
+print("=" * 60, file=sys.stderr)
 sys.stderr.flush()
 
 try:
-    sys.stderr.write(f"📊 Initializing with {PAIR_LIMIT} pairs...\n")
+    print(f"📊 Initializing with {PAIR_LIMIT} pairs...", file=sys.stderr)
     sys.stderr.flush()
     pairs = generator.initialize(pair_limit=PAIR_LIMIT)
-    sys.stderr.write(f"✅ Successfully loaded {len(pairs)} pairs\n")
+    print(f"✅ Successfully loaded {len(pairs)} pairs", file=sys.stderr)
     sys.stderr.flush()
 except Exception as e:
-    sys.stderr.write(f"❌ ERROR during initialization: {e}\n")
+    print(f"❌ ERROR during initialization: {e}", file=sys.stderr)
     import traceback
-    traceback.print_exc()
+    traceback.print_exc(file=sys.stderr)
     sys.stderr.flush()
 
 # Start background scanner on module load
-sys.stderr.write("🔄 Starting background scanner...\n")
+print("🔄 Starting background scanner...", file=sys.stderr)
 sys.stderr.flush()
 scanning = True
 scan_thread = threading.Thread(target=background_scanner, daemon=True)
 scan_thread.start()
-sys.stderr.write(f"✅ Auto-scanner started (updates every {UPDATE_INTERVAL_SECONDS} seconds)\n")
+print(f"✅ Auto-scanner started (updates every {UPDATE_INTERVAL_SECONDS} seconds)", file=sys.stderr)
 sys.stderr.flush()
 
 
