@@ -49,29 +49,29 @@ print(">>> APP.PY MODULE LOADING <<<", file=sys.stderr)
 sys.stderr.flush()
 
 print("=" * 60, file=sys.stderr)
-print("🚀 10D - Sistema de Sinais - Initializing...", file=sys.stderr)
+print("[INIT] 10D Trading System - Starting initialization...", file=sys.stderr)
 print("=" * 60, file=sys.stderr)
 sys.stderr.flush()
 
 try:
-    print(f"📊 Initializing with {PAIR_LIMIT} pairs...", file=sys.stderr)
+    print(f"[INIT] Initializing with {PAIR_LIMIT} pairs...", file=sys.stderr)
     sys.stderr.flush()
     pairs = generator.initialize(pair_limit=PAIR_LIMIT)
-    print(f"✅ Successfully loaded {len(pairs)} pairs", file=sys.stderr)
+    print(f"[INIT] SUCCESS - Loaded {len(pairs)} pairs", file=sys.stderr)
     sys.stderr.flush()
 except Exception as e:
-    print(f"❌ ERROR during initialization: {e}", file=sys.stderr)
+    print(f"[INIT] ERROR during initialization: {e}", file=sys.stderr)
     import traceback
     traceback.print_exc(file=sys.stderr)
     sys.stderr.flush()
 
 # Start background scanner on module load
-print("🔄 Starting background scanner...", file=sys.stderr)
+print("[SCANNER] Starting background scanner...", file=sys.stderr)
 sys.stderr.flush()
 scanning = True
 scan_thread = threading.Thread(target=background_scanner, daemon=True)
 scan_thread.start()
-print(f"✅ Auto-scanner started (updates every {UPDATE_INTERVAL_SECONDS} seconds)", file=sys.stderr)
+print(f"[SCANNER] Auto-scanner started (interval: {UPDATE_INTERVAL_SECONDS}s)", file=sys.stderr)
 sys.stderr.flush()
 
 

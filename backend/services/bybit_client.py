@@ -5,6 +5,8 @@ Handles all communication with Bybit API v5
 
 import requests
 import time
+import hashlib
+import hmac
 from typing import List, Dict, Optional
 import sys
 import os
@@ -12,37 +14,50 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import BYBIT_BASE_URL, MIN_LEVERAGE, EXCLUDED_PAIRS
 
+# API Keys from environment (optional for public endpoints)
+BYBIT_API_KEY = os.environ.get("BYBIT_API_KEY", "")
+BYBIT_API_SECRET = os.environ.get("BYBIT_API_SECRET", "")
+
 
 class BybitClient:
     """Client for Bybit API v5"""
     
     def __init__(self):
         self.base_url = BYBIT_BASE_URL
+        self.api_key = BYBIT_API_KEY
+        self.api_secret = BYBIT_API_SECRET
         self.session = requests.Session()
         self.session.headers.update({
             "Content-Type": "application/json"
         })
+        
+        # Add API key headers if available
+        if self.api_key:
+            print(f"[BYBIT] API Key configured: {self.api_key[:8]}...", flush=True)
+        else:
+            print("[BYBIT] No API key - using public endpoints only", flush=True)
     
     def _make_request(self, endpoint: str, params: Dict = None) -> Optional[Dict]:
         """Make a GET request to Bybit API"""
         try:
             url = f"{self.base_url}{endpoint}"
-            print(f"📡 API Request: {url} params={params}", flush=True)
+            print(f"[API] GET {endpoint} params={params}", flush=True)
             response = self.session.get(url, params=params, timeout=10)
+            print(f"[API] Response status: {response.status_code}", flush=True)
             response.raise_for_status()
             data = response.json()
             
             if data.get("retCode") == 0:
                 result = data.get("result", {})
                 list_count = len(result.get("list", [])) if isinstance(result, dict) else 0
-                print(f"✅ API Response OK: {list_count} items", flush=True)
+                print(f"[API] OK - {list_count} items returned", flush=True)
                 return result
             else:
-                print(f"❌ API Error: {data.get('retMsg', 'Unknown error')}", flush=True)
+                print(f"[API] ERROR: {data.get('retMsg', 'Unknown error')}", flush=True)
                 return None
                 
         except requests.exceptions.RequestException as e:
-            print(f"❌ Request failed: {e}", flush=True)
+            print(f"[API] REQUEST FAILED: {e}", flush=True)
             return None
     
     def get_instruments(self, category: str = "linear") -> List[Dict]:
@@ -86,7 +101,7 @@ class BybitClient:
         # Sort by symbol
         filtered.sort(key=lambda x: x["symbol"])
         
-        print(f"🛠️ get_instruments: Found {len(filtered)} valid instruments (min leverage {MIN_LEVERAGE}x)", flush=True)
+        print(f"[INSTRUMENTS] Found {len(filtered)} valid instruments (min leverage {MIN_LEVERAGE}x)", flush=True)
         return filtered
     
     def get_top_pairs(self, limit: int = 100) -> List[str]:
@@ -94,7 +109,7 @@ class BybitClient:
         Get top N pairs by 24h volume, excluding specified pairs
         Returns list of symbols
         """
-        print(f"🔄 get_top_pairs called with limit={limit}", flush=True)
+        print(f"[GET_TOP_PAIRS] Called with limit={limit}", flush=True)
         
         # Get 24h tickers for volume ranking
         result = self._make_request("/v5/market/tickers", {
@@ -102,11 +117,11 @@ class BybitClient:
         })
         
         if not result:
-            print("❌ get_top_pairs: tickers request failed", flush=True)
+            print("[GET_TOP_PAIRS] ERROR: tickers request failed", flush=True)
             return []
         
         tickers = result.get("list", [])
-        print(f"📊 Got {len(tickers)} tickers from API", flush=True)
+        print(f"[GET_TOP_PAIRS] Got {len(tickers)} tickers from API", flush=True)
         
         # Get instruments with sufficient leverage
         valid_instruments = {inst["symbol"] for inst in self.get_instruments()}
@@ -134,9 +149,9 @@ class BybitClient:
         
         # Return top N symbols
         top_symbols = [t["symbol"] for t in usdt_tickers[:limit]]
-        print(f"✅ get_top_pairs: Returning {len(top_symbols)} pairs", flush=True)
+        print(f"[GET_TOP_PAIRS] Returning {len(top_symbols)} pairs", flush=True)
         if top_symbols:
-            print(f"📋 First 5: {', '.join(top_symbols[:5])}", flush=True)
+            print(f"[GET_TOP_PAIRS] First 5: {', '.join(top_symbols[:5])}", flush=True)
         return top_symbols
     
     def get_klines(self, symbol: str, interval: str, limit: int = 100) -> List[Dict]:

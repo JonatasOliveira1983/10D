@@ -32,12 +32,13 @@ class SignalGenerator:
     
     def initialize(self, pair_limit: int = 100):
         """Initialize the generator with top pairs"""
-        print(f"🔄 Fetching top {pair_limit} pairs...", flush=True)
+        print(f"[GENERATOR] Fetching top {pair_limit} pairs...", flush=True)
         self.monitored_pairs = self.client.get_top_pairs(pair_limit)
-        print(f"✅ Monitoring {len(self.monitored_pairs)} pairs", flush=True)
+        print(f"[GENERATOR] Monitoring {len(self.monitored_pairs)} pairs", flush=True)
         
         # Log all pairs being monitored
-        print(f"📋 Pairs: {', '.join(self.monitored_pairs[:10])}... and {len(self.monitored_pairs)-10} more", flush=True)
+        if self.monitored_pairs:
+            print(f"[GENERATOR] Pairs: {', '.join(self.monitored_pairs[:10])}... and {len(self.monitored_pairs)-10} more", flush=True)
         return self.monitored_pairs
     
     def analyze_pair(self, symbol: str) -> Optional[Dict]:
@@ -203,13 +204,13 @@ class SignalGenerator:
         new_signals = []
         total_pairs = len(self.monitored_pairs)
         
-        print(f"\n🔍 Starting scan of {total_pairs} pairs...", flush=True)
+        print(f"[SCAN] Starting scan of {total_pairs} pairs...", flush=True)
         
         for i, symbol in enumerate(self.monitored_pairs):
             try:
                 # Log progress every 10 pairs
                 if (i + 1) % 10 == 0 or i == 0:
-                    print(f"  📊 Progress: [{i+1}/{total_pairs}] - Current: {symbol}", flush=True)
+                    print(f"  [SCAN] Progress: [{i+1}/{total_pairs}] - Current: {symbol}", flush=True)
                 
                 signal = self.analyze_pair(symbol)
                 
@@ -220,18 +221,18 @@ class SignalGenerator:
                         self.signal_history.append(signal)
                         new_signals.append(signal)
                         sig_type = signal['signal_type'].replace('_', ' ')
-                        print(f"🚨 NEW SIGNAL: {signal['emoji']} {symbol} {signal['direction']} ({sig_type}) Score: {signal['score']}", flush=True)
+                        print(f"[NEW SIGNAL] {symbol} {signal['direction']} ({sig_type}) Score: {signal['score']}", flush=True)
                 
                 # Small delay to avoid rate limiting
                 time.sleep(0.1)
                 
             except Exception as e:
-                print(f"⚠️ Error scanning {symbol}: {e}", flush=True)
+                print(f"[SCAN ERROR] {symbol}: {e}", flush=True)
                 continue
         
         # Summary after scan
         active_count = len(self.active_signals)
-        print(f"✅ Scan complete. Found {len(new_signals)} new signals. Total active: {active_count}", flush=True)
+        print(f"[SCAN] Complete. Found {len(new_signals)} new signals. Total active: {active_count}", flush=True)
         return new_signals
     
     def get_active_signals(self) -> List[Dict]:
