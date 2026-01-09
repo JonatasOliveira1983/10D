@@ -3,16 +3,29 @@
 REST API for frontend communication and serving static files
 """
 
+# EARLY DEBUG - before any complex imports
+import sys
+print("[DEBUG] app.py starting - before imports", flush=True)
+
 from flask import Flask, jsonify, request, send_from_directory
+print("[DEBUG] Flask imported OK", flush=True)
+
 from flask_cors import CORS
 import threading
 import time
-import sys
 import os
 
+print("[DEBUG] Basic imports OK", flush=True)
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+print("[DEBUG] About to import config...", flush=True)
 from config import API_HOST, API_PORT, DEBUG, UPDATE_INTERVAL_SECONDS, PAIR_LIMIT
+print(f"[DEBUG] Config imported OK - PAIR_LIMIT={PAIR_LIMIT}", flush=True)
+
+print("[DEBUG] About to import SignalGenerator...", flush=True)
 from services.signal_generator import SignalGenerator
+print("[DEBUG] SignalGenerator imported OK", flush=True)
 
 # Initialize Flask app
 # static_folder points to where Vite builds the frontend
@@ -20,7 +33,9 @@ app = Flask(__name__, static_folder='../frontend/dist', static_url_path='/')
 CORS(app)
 
 # Initialize signal generator
+print("[DEBUG] About to create SignalGenerator instance...", flush=True)
 generator = SignalGenerator()
+print("[DEBUG] SignalGenerator created OK", flush=True)
 
 # Background scanning flag
 scanning = False
