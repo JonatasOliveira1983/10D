@@ -35,8 +35,32 @@ def background_scanner():
             generator.scan_all_pairs()
             time.sleep(UPDATE_INTERVAL_SECONDS)
         except Exception as e:
-            print(f"Scanner error: {e}")
+            print(f"Scanner error: {e}", flush=True)
             time.sleep(5)
+
+
+# =============================================================================
+# Initialize on module load (REQUIRED for Cloud Run)
+# =============================================================================
+print("=" * 60, flush=True)
+print("🚀 10D - Sistema de Sinais - Initializing...", flush=True)
+print("=" * 60, flush=True)
+
+try:
+    print(f"📊 Initializing with {PAIR_LIMIT} pairs...", flush=True)
+    pairs = generator.initialize(pair_limit=PAIR_LIMIT)
+    print(f"✅ Successfully loaded {len(pairs)} pairs", flush=True)
+except Exception as e:
+    print(f"❌ ERROR during initialization: {e}", flush=True)
+    import traceback
+    traceback.print_exc()
+
+# Start background scanner on module load
+print("🔄 Starting background scanner...", flush=True)
+scanning = True
+scan_thread = threading.Thread(target=background_scanner, daemon=True)
+scan_thread.start()
+print(f"✅ Auto-scanner started (updates every {UPDATE_INTERVAL_SECONDS} seconds)", flush=True)
 
 
 # =============================================================================
@@ -172,33 +196,15 @@ def analyze_symbol(symbol):
 
 
 # =============================================================================
-# Main Entry Point
+# Main Entry Point (for local development)
 # =============================================================================
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("🚀 10D - Sistema de Sinais")
-    print("=" * 60)
-    
-    # Initialize with configured pair limit
-    print(f"\n📊 Initializing with {PAIR_LIMIT} pairs...")
-    generator.initialize(pair_limit=PAIR_LIMIT)
-    
-    # Run initial scan
-    print("\n🔍 Running initial scan...")
-    generator.scan_all_pairs()
-    
-    # Start auto-scanner in background
-    scanning = True
-    scan_thread = threading.Thread(target=background_scanner, daemon=True)
-    scan_thread.start()
-    print(f"✅ Auto-scanner started (updates every {UPDATE_INTERVAL_SECONDS} seconds)")
-    
     # Get port from environment variable (required for Google Cloud Run)
     port = int(os.environ.get("PORT", API_PORT))
     
     # Start the server
-    print(f"\n🌐 Starting server on http://{API_HOST}:{port}")
-    print("=" * 60)
+    print(f"\n🌐 Starting server on http://{API_HOST}:{port}", flush=True)
+    print("=" * 60, flush=True)
     
     app.run(host=API_HOST, port=port, debug=False, threaded=True, use_reloader=False)
