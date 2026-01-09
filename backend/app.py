@@ -50,44 +50,32 @@ def background_scanner():
             generator.scan_all_pairs()
             time.sleep(UPDATE_INTERVAL_SECONDS)
         except Exception as e:
-            print(f"Scanner error: {e}", flush=True)
+            print(f"[SCANNER ERROR] {e}", flush=True)
             time.sleep(5)
 
 
 # =============================================================================
-# Initialize on module load (REQUIRED for Cloud Run)
+# Initialize pairs and start scanner (on module load for Cloud Run)
 # =============================================================================
-import sys
-
-# Debug: verificar se o módulo está sendo carregado
-print(">>> APP.PY MODULE LOADING <<<", file=sys.stderr)
-sys.stderr.flush()
-
-print("=" * 60, file=sys.stderr)
-print("[INIT] 10D Trading System - Starting initialization...", file=sys.stderr)
-print("=" * 60, file=sys.stderr)
-sys.stderr.flush()
+print("=" * 60, flush=True)
+print("[INIT] 10D Trading System - Starting initialization...", flush=True)
+print("=" * 60, flush=True)
 
 try:
-    print(f"[INIT] Initializing with {PAIR_LIMIT} pairs...", file=sys.stderr)
-    sys.stderr.flush()
+    print(f"[INIT] Calling generator.initialize({PAIR_LIMIT})...", flush=True)
     pairs = generator.initialize(pair_limit=PAIR_LIMIT)
-    print(f"[INIT] SUCCESS - Loaded {len(pairs)} pairs", file=sys.stderr)
-    sys.stderr.flush()
+    print(f"[INIT] SUCCESS - Loaded {len(pairs)} pairs", flush=True)
 except Exception as e:
-    print(f"[INIT] ERROR during initialization: {e}", file=sys.stderr)
+    print(f"[INIT] ERROR during initialization: {e}", flush=True)
     import traceback
-    traceback.print_exc(file=sys.stderr)
-    sys.stderr.flush()
+    traceback.print_exc()
 
-# Start background scanner on module load
-print("[SCANNER] Starting background scanner...", file=sys.stderr)
-sys.stderr.flush()
+# Start background scanner
+print("[SCANNER] Starting background thread...", flush=True)
 scanning = True
 scan_thread = threading.Thread(target=background_scanner, daemon=True)
 scan_thread.start()
-print(f"[SCANNER] Auto-scanner started (interval: {UPDATE_INTERVAL_SECONDS}s)", file=sys.stderr)
-sys.stderr.flush()
+print(f"[SCANNER] Started (interval: {UPDATE_INTERVAL_SECONDS}s)", flush=True)
 
 
 # =============================================================================
