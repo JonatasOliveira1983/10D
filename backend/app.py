@@ -42,25 +42,37 @@ def background_scanner():
 # =============================================================================
 # Initialize on module load (REQUIRED for Cloud Run)
 # =============================================================================
-print("=" * 60, flush=True)
-print("🚀 10D - Sistema de Sinais - Initializing...", flush=True)
-print("=" * 60, flush=True)
+import sys
+
+# Force unbuffered output
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
+
+sys.stderr.write("=" * 60 + "\n")
+sys.stderr.write("🚀 10D - Sistema de Sinais - Initializing...\n")
+sys.stderr.write("=" * 60 + "\n")
+sys.stderr.flush()
 
 try:
-    print(f"📊 Initializing with {PAIR_LIMIT} pairs...", flush=True)
+    sys.stderr.write(f"📊 Initializing with {PAIR_LIMIT} pairs...\n")
+    sys.stderr.flush()
     pairs = generator.initialize(pair_limit=PAIR_LIMIT)
-    print(f"✅ Successfully loaded {len(pairs)} pairs", flush=True)
+    sys.stderr.write(f"✅ Successfully loaded {len(pairs)} pairs\n")
+    sys.stderr.flush()
 except Exception as e:
-    print(f"❌ ERROR during initialization: {e}", flush=True)
+    sys.stderr.write(f"❌ ERROR during initialization: {e}\n")
     import traceback
     traceback.print_exc()
+    sys.stderr.flush()
 
 # Start background scanner on module load
-print("🔄 Starting background scanner...", flush=True)
+sys.stderr.write("🔄 Starting background scanner...\n")
+sys.stderr.flush()
 scanning = True
 scan_thread = threading.Thread(target=background_scanner, daemon=True)
 scan_thread.start()
-print(f"✅ Auto-scanner started (updates every {UPDATE_INTERVAL_SECONDS} seconds)", flush=True)
+sys.stderr.write(f"✅ Auto-scanner started (updates every {UPDATE_INTERVAL_SECONDS} seconds)\n")
+sys.stderr.flush()
 
 
 # =============================================================================
