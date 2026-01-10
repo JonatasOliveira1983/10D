@@ -6,12 +6,13 @@ O **10D** é um scanner avançado de sinais para criptomoedas que monitora os to
 
 -   **Estratégias Avançadas:** 
     -   **EMA 20/50 + MACD:** Cruzamento de médias exponenciais confirmado pelo histograma MACD.
-    -   **4H Trend Filter:** Filtro global baseado na EMA 50 do gráfico de 4 horas para maior assertividade.
+    -   **4H Trend Filter:** Filtro global baseado na EMA 50 do gráfico de 4 horas.
     -   **RSI + Bollinger Reversão:** Identificação de exaustão em bandas extremas.
     -   **Pullback na Tendência:** Entradas precisas em retrações para a EMA 20.
--   **Scoring Dinâmico:** Avalia a força do sinal de 0 a 100 com emojis e ratings humanizados.
--   **Multi-Pair:** Monitora os 100 maiores pares por volume (BTCUSDT excluído para focar em altcoins).
--   **Totalmente Responsivo:** Interface otimizada para Desktop e Mobile (com Bottom Nav e Sidebar).
+-   **Organizador de Trades (10M):** Planejador de 30 dias com juros compostos, metas diárias e persistência de dados no servidor (`trading_plan.json`).
+-   **PWA & Mobile Ready:** Instalável como aplicativo no celular, com modo offline básico e ícones premium.
+-   **Interface Premium:** Design ultra-moderno com Glassmorphism, ícones SVG customizados (azul envidraçado) e transições suaves.
+-   **Página de Abertura:** Splash screen motivacional com animações e frases inspiradoras.
 -   **Deployment Robusto:** Configurado para **Google Cloud Run** com **Gunicorn** e inicialização assíncrona.
 
 ## 🛠️ Tecnologias
@@ -51,6 +52,7 @@ npm run dev
 -   `GET /api/stats`: Resumo de pares monitorados e estatísticas de sinais.
 -   `GET /api/history`: Histórico dos sinais gerados.
 -   `GET /api/pairs`: Lista dos 100 pares sendo escaneados.
+-   `GET/PUT /api/users/artifacts/trading-plan`: Salva e recupera o plano de trades (10M).
 
 ## 🎯 Configurações da Estratégia
 As definições de média móvel, RSI e filtragem estão localizadas em `backend/config.py`.
