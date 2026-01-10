@@ -232,22 +232,22 @@ def detect_trend_4h(candles_4h: List[Dict]) -> Tuple[Optional[str], Dict]:
 
 def detect_trend_direction(candles: List[Dict]) -> Tuple[Optional[str], Dict]:
     """
-    Detect current trend direction based on SMA position
+    Detect current trend direction based on EMA position
     
     Returns:
         Tuple of (trend_direction, details)
         trend_direction: "UPTREND", "DOWNTREND", or None
     """
-    if len(candles) < max(SMA_FAST_PERIOD, SMA_SLOW_PERIOD) + 1:
+    if len(candles) < max(EMA_FAST_PERIOD, EMA_SLOW_PERIOD) + 1:
         return None, {"error": "Not enough data"}
     
     closes = [c["close"] for c in candles]
     
-    sma_fast = calculate_sma(closes, SMA_FAST_PERIOD)
-    sma_slow = calculate_sma(closes, SMA_SLOW_PERIOD)
+    ema_fast = calculate_ema(closes, EMA_FAST_PERIOD)
+    ema_slow = calculate_ema(closes, EMA_SLOW_PERIOD)
     
-    current_fast = sma_fast[-1]
-    current_slow = sma_slow[-1]
+    current_fast = ema_fast[-1]
+    current_slow = ema_slow[-1]
     
     if current_fast is None or current_slow is None:
         return None, {"error": "SMA not calculated"}
@@ -255,8 +255,8 @@ def detect_trend_direction(candles: List[Dict]) -> Tuple[Optional[str], Dict]:
     diff_percent = ((current_fast - current_slow) / current_slow) * 100
     
     details = {
-        "sma_fast": round(current_fast, 6),
-        "sma_slow": round(current_slow, 6),
+        "ema_fast": round(current_fast, 6),
+        "ema_slow": round(current_slow, 6),
         "diff_percent": round(diff_percent, 4)
     }
     
