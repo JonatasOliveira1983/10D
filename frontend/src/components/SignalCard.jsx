@@ -16,9 +16,9 @@ function formatPrice(price) {
 
 function getSignalTypeLabel(type) {
     const labels = {
-        'SMA_CROSSOVER': 'Cruzamento SMA',
+        'EMA_CROSSOVER': 'EMA 20/50 + MACD',
         'TREND_PULLBACK': 'Pullback',
-        'RSI_EXTREME': 'RSI Extremo'
+        'RSI_BB_REVERSAL': 'RSI + Bollinger Reversão'
     };
     return labels[type] || type;
 }
@@ -74,23 +74,27 @@ export default function SignalCard({ signal }) {
 
             {/* Indicators / Confirmations */}
             <div className="confirmations">
-                <span className={`confirmation-badge ${signal.confirmations.sma_crossover || signal.confirmations.pullback ? 'active' : ''}`}>
-                    <span className="icon">{(signal.confirmations.sma_crossover || signal.confirmations.pullback) ? '✓' : '○'}</span>
-                    SMA 8/21
+                <span className={`confirmation-badge ${signal.confirmations.ema_crossover || signal.confirmations.pullback ? 'active' : ''}`}>
+                    <span className="icon">{(signal.confirmations.ema_crossover || signal.confirmations.pullback) ? '✓' : '○'}</span>
+                    EMA 20/50
+                </span>
+                <span className={`confirmation-badge ${signal.confirmations.macd ? 'active' : ''}`}>
+                    <span className="icon">{signal.confirmations.macd ? '✓' : '○'}</span>
+                    MACD
                 </span>
                 <span className={`confirmation-badge ${signal.confirmations.volume ? 'active' : ''}`}>
                     <span className="icon">{signal.confirmations.volume ? '✓' : '○'}</span>
                     Vol {signal.volume_ratio}x
                 </span>
                 {signal.rsi && (
-                    <span className={`confirmation-badge ${signal.confirmations.rsi_extreme ? 'active' : ''}`}>
-                        <span className="icon">{signal.confirmations.rsi_extreme ? '✓' : '○'}</span>
+                    <span className={`confirmation-badge ${signal.confirmations.rsi_bb_reversal ? 'active' : ''}`}>
+                        <span className="icon">{signal.confirmations.rsi_bb_reversal ? '✓' : '○'}</span>
                         RSI {signal.rsi}
                     </span>
                 )}
-                <span className={`confirmation-badge ${signal.confirmations.pivot_trend ? 'active' : ''}`}>
-                    <span className="icon">{signal.confirmations.pivot_trend ? '✓' : '○'}</span>
-                    Pivot {signal.pivot_trend || 'N/A'}
+                <span className={`confirmation-badge ${signal.confirmations.trend_4h ? 'active' : ''}`}>
+                    <span className="icon">{signal.confirmations.trend_4h ? '✓' : '○'}</span>
+                    Tend. 4H
                 </span>
             </div>
 

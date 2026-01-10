@@ -44,9 +44,9 @@ class SignalGenerator:
     def analyze_pair(self, symbol: str) -> Optional[Dict]:
         """
         Analyze a single pair for ALL signal types:
-        1. SMA Crossover (original)
-        2. Trend Pullback (new)
-        3. RSI Extreme Reversal (new)
+        1. EMA 20/50 Crossover + MACD
+        2. Trend Pullback
+        3. RSI + Bollinger Reversal
         
         Returns the BEST signal if multiple are found
         """
@@ -54,55 +54,62 @@ class SignalGenerator:
         candles_30m = self.client.get_klines(symbol, "30", 100)
         if not candles_30m:
             return None
+            
+        # Fetch 4H candles for trend filter
+        candles_4h = self.client.get_klines(symbol, "240", 60)
         
         # Run indicator analysis
-        analysis = analyze_candles(candles_30m)
+        analysis = analyze_candles(candles_30m, candles_4h)
+        
+        # 4H Trend Filter Logic
+        trend_4h = analysis["trend_4h"]["direction"] # "UPTREND" or "DOWNTREND"
         
         # Collect all potential signals
         potential_signals = []
         
-        # === SIGNAL TYPE 1: SMA Crossover ===
-        sma_signal = analysis["sma"]["signal"]
+        # === SIGNAL TYPE 1: EMA Crossover ===
+        ema_signal = analysis["ema"]["signal"]
         volume_confirmed = analysis["volume"]["confirmed"]
+        macd_confirmed = analysis["ema"]["details"].get("macd_confirmed", False)
         
-        if sma_signal and volume_confirmed:
-            potential_signals.append({
-                "type": "SMA_CROSSOVER",
-                "direction": sma_signal,
-                "base_score": 30,
-                "volume_confirmed": True
-            })
+        if ema_signal:
+            # FILTER: Only allow signal if it matches 4H trend
+            if (ema_signal == "LONG" and trend_4h == "UPTREND") or (ema_signal == "SHORT" and trend_4h == "DOWNTREND"):
+                potential_signals.append({
+                    "type": "EMA_CROSSOVER",
+                    "direction": ema_signal,
+                    "volume_confirmed": volume_confirmed,
+                    "macd_confirmed": macd_confirmed,
+                    "trend_4h_aligned": True
+                })
         
         # === SIGNAL TYPE 2: Trend Pullback ===
         pullback_signal = analysis["pullback"]["signal"]
-        trend_direction = analysis["trend"]["direction"]
         
         if pullback_signal:
-            # Pullback is stronger when volume is moderate (not too high, not too low)
-            vol_ratio = analysis["volume"]["details"].get("volume_ratio", 0)
-            has_decent_volume = vol_ratio >= 0.8  # At least 80% of average
-            
-            if has_decent_volume:
+            # FILTER: Only allow signal if it matches 4H trend
+            if (pullback_signal == "LONG" and trend_4h == "UPTREND") or (pullback_signal == "SHORT" and trend_4h == "DOWNTREND"):
                 potential_signals.append({
                     "type": "TREND_PULLBACK",
                     "direction": pullback_signal,
-                    "base_score": 25,
                     "volume_confirmed": volume_confirmed,
-                    "pullback_details": analysis["pullback"]["details"]
+                    "macd_confirmed": False, # Typically not used for pullback but could be
+                    "trend_4h_aligned": True
                 })
         
-        # === SIGNAL TYPE 3: RSI Extreme Reversal ===
-        rsi_signal = analysis["rsi"]["signal"]
+        # === SIGNAL TYPE 3: RSI + BB Reversal ===
+        rsi_signal = analysis["rsi_bb"]["signal"]
         
         if rsi_signal:
-            # RSI signal is stronger with volume confirmation
+            # Reversal can be counter-trend but we PREFER trend-aligned
+            is_aligned = (rsi_signal == "LONG" and trend_4h == "UPTREND") or (rsi_signal == "SHORT" and trend_4h == "DOWNTREND")
+            
             potential_signals.append({
-                "type": "RSI_EXTREME",
+                "type": "RSI_BB_REVERSAL",
                 "direction": rsi_signal,
-                "base_score": 20,
                 "volume_confirmed": volume_confirmed,
-                "rsi_value": analysis["rsi"]["current_value"],
-                "rsi_details": analysis["rsi"]["details"]
+                "macd_confirmed": False,
+                "trend_4h_aligned": is_aligned
             })
         
         # If no signals found, return None
@@ -137,7 +144,9 @@ class SignalGenerator:
                 sig["volume_confirmed"],
                 pivot_trend,
                 sr_alignment,
-                signal_type=sig["type"]
+                signal_type=sig["type"],
+                macd_confirmed=sig.get("macd_confirmed", False),
+                trend_4h_aligned=sig.get("trend_4h_aligned", False)
             )
             
             scored_signals.append({

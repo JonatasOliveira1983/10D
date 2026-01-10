@@ -6,9 +6,18 @@ CryptoFastSignals - Configuration
 # INDICATOR SETTINGS
 # =============================================================================
 
-# SMA Settings
-SMA_FAST_PERIOD = 8
-SMA_SLOW_PERIOD = 21
+# EMA Settings (Updated from SMA)
+EMA_FAST_PERIOD = 20
+EMA_SLOW_PERIOD = 50
+
+# MACD Settings
+MACD_FAST = 12
+MACD_SLOW = 26
+MACD_SIGNAL = 9
+
+# Bollinger Bands Settings
+BB_PERIOD = 20
+BB_STD_DEV = 2
 
 # Pivot Point S. Trend Settings
 PIVOT_PERIOD = 1
@@ -16,16 +25,16 @@ ATR_FACTOR = 2
 ATR_PERIOD = 10
 
 # Volume Settings
-VOLUME_THRESHOLD = 1.2  # 1.2x average volume (was 1.5x - too restrictive)
+VOLUME_THRESHOLD = 1.2  # 1.2x average volume
 VOLUME_LOOKBACK = 20    # Last 20 candles for average
 
 # RSI Settings
 RSI_PERIOD = 14
-RSI_OVERSOLD = 35       # RSI below this = oversold (was 30)
-RSI_OVERBOUGHT = 65     # RSI above this = overbought (was 70)
+RSI_OVERSOLD = 30       # Back to standard 30
+RSI_OVERBOUGHT = 70     # Back to standard 70
 
 # Pullback Settings
-PULLBACK_THRESHOLD = 0.005  # 0.5% - price within this distance from SMA (was 0.3%)
+PULLBACK_THRESHOLD = 0.005  # 0.5% - price within this distance from EMA
 
 # =============================================================================
 # S/R SETTINGS
@@ -53,15 +62,16 @@ EXCLUDED_PAIRS = [          # Pairs to exclude from monitoring
 # =============================================================================
 
 # Base scores for signal types
-SCORE_SMA_CROSSOVER = 30        # SMA 8 crosses SMA 21
-SCORE_TREND_PULLBACK = 25       # Pullback to SMA during trend
-SCORE_RSI_EXTREME = 20          # RSI oversold/overbought reversal
+SCORE_EMA_CROSSOVER = 35        # EMA 20 crosses EMA 50 (Higher priority)
+SCORE_TREND_PULLBACK = 25       # Pullback to EMA during trend
+SCORE_RSI_BB_REVERSAL = 30      # RSI + BB Reversal
 
 # Confirmation bonuses
-SCORE_VOLUME_CONFIRMED = 25
-SCORE_PIVOT_CONFIRMED = 20
-SCORE_SR_ALIGNED = 25
-SCORE_SR_MISALIGNED = -15
+SCORE_VOLUME_CONFIRMED = 15
+SCORE_MACD_CONFIRMED = 20
+SCORE_4H_TREND_ALIGNED = 30     # Critical filter
+SCORE_SR_ALIGNED = 20
+SCORE_SR_MISALIGNED = -20
 
 # =============================================================================
 # API SETTINGS

@@ -9,7 +9,9 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import (
-    SMA_FAST_PERIOD, SMA_SLOW_PERIOD,
+    EMA_FAST_PERIOD, EMA_SLOW_PERIOD,
+    MACD_FAST, MACD_SLOW, MACD_SIGNAL,
+    BB_PERIOD, BB_STD_DEV,
     PIVOT_PERIOD, ATR_FACTOR, ATR_PERIOD,
     VOLUME_THRESHOLD, VOLUME_LOOKBACK,
     RSI_PERIOD, RSI_OVERSOLD, RSI_OVERBOUGHT,
@@ -19,6 +21,9 @@ from config import (
 
 def calculate_sma(closes: List[float], period: int) -> List[Optional[float]]:
     """Calculate Simple Moving Average"""
+    if len(closes) < period:
+        return [None] * len(closes)
+        
     sma_values = []
     
     for i in range(len(closes)):
@@ -29,6 +34,90 @@ def calculate_sma(closes: List[float], period: int) -> List[Optional[float]]:
             sma_values.append(sum(window) / period)
     
     return sma_values
+
+
+def calculate_ema(closes: List[float], period: int) -> List[Optional[float]]:
+    """Calculate Exponential Moving Average"""
+    if len(closes) < period:
+        return [None] * len(closes)
+    
+    ema_values = [None] * len(closes)
+    multiplier = 2 / (period + 1)
+    
+    # Simple SMA for the first EMA value
+    initial_sma = sum(closes[:period]) / period
+    ema_values[period - 1] = initial_sma
+    
+    for i in range(period, len(closes)):
+        ema_values[i] = (closes[i] - ema_values[i - 1]) * multiplier + ema_values[i - 1]
+    
+    return ema_values
+
+
+def calculate_macd(closes: List[float]) -> Dict[str, List[Optional[float]]]:
+    """Calculate MACD Line, Signal Line, and Histogram"""
+    ema_fast = calculate_ema(closes, MACD_FAST)
+    ema_slow = calculate_ema(closes, MACD_SLOW)
+    
+    macd_line = []
+    for f, s in zip(ema_fast, ema_slow):
+        if f is not None and s is not None:
+            macd_line.append(f - s)
+        else:
+            macd_line.append(None)
+            
+    # Remove None values for signal calculation
+    valid_macd = [m for m in macd_line if m is not None]
+    if len(valid_macd) < MACD_SIGNAL:
+        return {
+            "macd": macd_line,
+            "signal": [None] * len(closes),
+            "histogram": [None] * len(closes)
+        }
+        
+    # Calculate signal line (EMA of MACD line)
+    signal_line_short = calculate_ema(valid_macd, MACD_SIGNAL)
+    
+    # Pad signal line with Nones to match original length
+    none_count = len(closes) - len(signal_line_short)
+    signal_line = [None] * none_count + signal_line_short
+    
+    histogram = []
+    for m, s in zip(macd_line, signal_line):
+        if m is not None and s is not None:
+            histogram.append(m - s)
+        else:
+            histogram.append(None)
+            
+    return {
+        "macd": macd_line,
+        "signal": signal_line,
+        "histogram": histogram
+    }
+
+
+def calculate_bollinger_bands(closes: List[float], period: int = BB_PERIOD, std_dev: int = BB_STD_DEV) -> Dict[str, List[Optional[float]]]:
+    """Calculate Bollinger Bands"""
+    sma = calculate_sma(closes, period)
+    upper_band = []
+    lower_band = []
+    
+    for i in range(len(closes)):
+        if sma[i] is None:
+            upper_band.append(None)
+            lower_band.append(None)
+        else:
+            window = closes[i - period + 1:i + 1]
+            variance = sum((x - sma[i]) ** 2 for x in window) / period
+            stdev = variance ** 0.5
+            upper_band.append(sma[i] + (std_dev * stdev))
+            lower_band.append(sma[i] - (std_dev * stdev))
+            
+    return {
+        "upper": upper_band,
+        "middle": sma,
+        "lower": lower_band
+    }
 
 
 def calculate_rsi(closes: List[float], period: int = RSI_PERIOD) -> List[Optional[float]]:
@@ -72,46 +161,73 @@ def calculate_rsi(closes: List[float], period: int = RSI_PERIOD) -> List[Optiona
     return rsi_values
 
 
-def detect_sma_crossover(candles: List[Dict]) -> Tuple[Optional[str], Dict]:
+def detect_ema_crossover(candles: List[Dict]) -> Tuple[Optional[str], Dict]:
     """
-    Detect SMA crossover on the last closed candle
+    Detect EMA crossover with MACD confirmation
     
     Returns:
         Tuple of (signal_direction, details)
-        signal_direction: "LONG", "SHORT", or None
     """
-    if len(candles) < max(SMA_FAST_PERIOD, SMA_SLOW_PERIOD) + 2:
+    if len(candles) < max(EMA_SLOW_PERIOD, MACD_SLOW + MACD_SIGNAL) + 2:
         return None, {"error": "Not enough data"}
     
     closes = [c["close"] for c in candles]
     
-    sma_fast = calculate_sma(closes, SMA_FAST_PERIOD)
-    sma_slow = calculate_sma(closes, SMA_SLOW_PERIOD)
+    ema_fast = calculate_ema(closes, EMA_FAST_PERIOD)
+    ema_slow = calculate_ema(closes, EMA_SLOW_PERIOD)
+    macd_data = calculate_macd(closes)
     
-    current_fast = sma_fast[-1]
-    current_slow = sma_slow[-1]
-    prev_fast = sma_fast[-2]
-    prev_slow = sma_slow[-2]
+    current_fast = ema_fast[-1]
+    current_slow = ema_slow[-1]
+    prev_fast = ema_fast[-2]
+    prev_slow = ema_slow[-2]
     
-    if any(v is None for v in [current_fast, current_slow, prev_fast, prev_slow]):
-        return None, {"error": "SMA not yet calculated"}
+    current_hist = macd_data["histogram"][-1]
+    
+    if any(v is None for v in [current_fast, current_slow, prev_fast, prev_slow, current_hist]):
+        return None, {"error": "EMA or MACD not yet calculated"}
     
     details = {
-        "sma_fast": round(current_fast, 6),
-        "sma_slow": round(current_slow, 6),
-        "sma_fast_prev": round(prev_fast, 6),
-        "sma_slow_prev": round(prev_slow, 6)
+        "ema_fast": round(current_fast, 6),
+        "ema_slow": round(current_slow, 6),
+        "macd_hist": round(current_hist, 6)
     }
     
-    # LONG: Fast SMA crosses above Slow SMA
+    # LONG: EMA 20 crosses above EMA 50 AND MACD Histogram is positive
     if prev_fast <= prev_slow and current_fast > current_slow:
+        details["macd_confirmed"] = current_hist > 0
         return "LONG", details
     
-    # SHORT: Fast SMA crosses below Slow SMA
+    # SHORT: EMA 20 crosses below EMA 50 AND MACD Histogram is negative
     if prev_fast >= prev_slow and current_fast < current_slow:
+        details["macd_confirmed"] = current_hist < 0
         return "SHORT", details
     
     return None, details
+
+
+def detect_trend_4h(candles_4h: List[Dict]) -> Tuple[Optional[str], Dict]:
+    """
+    Detect trend on 4H timeframe using EMA 50
+    """
+    if len(candles_4h) < EMA_SLOW_PERIOD + 1:
+        return None, {"error": "Not enough 4H data"}
+        
+    closes = [c["close"] for c in candles_4h]
+    ema_50 = calculate_ema(closes, EMA_SLOW_PERIOD)
+    
+    current_price = closes[-1]
+    current_ema = ema_50[-1]
+    
+    if current_ema is None:
+        return None, {"error": "4H EMA not calculated"}
+        
+    direction = "UPTREND" if current_price > current_ema else "DOWNTREND"
+    
+    return direction, {
+        "4h_price": round(current_price, 6),
+        "4h_ema50": round(current_ema, 6)
+    }
 
 
 def detect_trend_direction(candles: List[Dict]) -> Tuple[Optional[str], Dict]:
@@ -157,109 +273,90 @@ def detect_trend_direction(candles: List[Dict]) -> Tuple[Optional[str], Dict]:
 
 def detect_pullback(candles: List[Dict]) -> Tuple[Optional[str], Dict]:
     """
-    Detect pullback to SMA during established trend
-    
-    Returns:
-        Tuple of (signal_direction, details)
-        signal_direction: "LONG" (pullback in uptrend), "SHORT" (pullback in downtrend), or None
+    Detect pullback to EMA during established trend
     """
-    if len(candles) < max(SMA_FAST_PERIOD, SMA_SLOW_PERIOD) + 3:
+    if len(candles) < max(EMA_FAST_PERIOD, EMA_SLOW_PERIOD) + 3:
         return None, {"error": "Not enough data"}
     
     closes = [c["close"] for c in candles]
     current_close = closes[-1]
     prev_close = closes[-2]
     
-    sma_fast = calculate_sma(closes, SMA_FAST_PERIOD)
-    sma_slow = calculate_sma(closes, SMA_SLOW_PERIOD)
+    ema_fast = calculate_ema(closes, EMA_FAST_PERIOD)
+    ema_slow = calculate_ema(closes, EMA_SLOW_PERIOD)
     
-    current_fast = sma_fast[-1]
-    current_slow = sma_slow[-1]
+    current_fast = ema_fast[-1]
+    current_slow = ema_slow[-1]
     
     if current_fast is None or current_slow is None:
-        return None, {"error": "SMA not calculated"}
+        return None, {"error": "EMA not calculated"}
     
-    # Calculate distance from SMA Fast as percentage
-    distance_from_sma = abs(current_close - current_fast) / current_fast
+    # Calculate distance from EMA Fast as percentage
+    distance_from_ema = abs(current_close - current_fast) / current_fast
     
     details = {
         "current_price": round(current_close, 6),
-        "sma_fast": round(current_fast, 6),
-        "sma_slow": round(current_slow, 6),
-        "distance_percent": round(distance_from_sma * 100, 4),
-        "threshold_percent": round(PULLBACK_THRESHOLD * 100, 4)
+        "ema_fast": round(current_fast, 6),
+        "ema_slow": round(current_slow, 6),
+        "distance_percent": round(distance_from_ema * 100, 4)
     }
     
-    # Check if price is near SMA Fast (pullback zone)
-    is_near_sma = distance_from_sma <= PULLBACK_THRESHOLD
-    
-    if not is_near_sma:
-        return None, details
-    
-    # UPTREND pullback: SMA Fast > SMA Slow AND price touches SMA Fast from above AND bouncing up
+    # UPTREND pullback: EMA Fast > EMA Slow AND price touches EMA Fast from above AND bouncing up
     if current_fast > current_slow:
-        # Price touched SMA from above and is now bouncing (current > prev)
-        if current_close <= current_fast and current_close > prev_close:
+        if current_close <= current_fast * (1 + PULLBACK_THRESHOLD) and current_close > prev_close:
             details["pullback_type"] = "UPTREND_PULLBACK"
             return "LONG", details
     
-    # DOWNTREND pullback: SMA Fast < SMA Slow AND price touches SMA Fast from below AND bouncing down
+    # DOWNTREND pullback: EMA Fast < EMA Slow AND price touches EMA Fast from below AND bouncing down
     if current_fast < current_slow:
-        # Price touched SMA from below and is now falling (current < prev)
-        if current_close >= current_fast and current_close < prev_close:
+        if current_close >= current_fast * (1 - PULLBACK_THRESHOLD) and current_close < prev_close:
             details["pullback_type"] = "DOWNTREND_PULLBACK"
             return "SHORT", details
     
     return None, details
 
 
-def detect_rsi_extreme(candles: List[Dict]) -> Tuple[Optional[str], Dict]:
+def detect_rsi_bb_reversal(candles: List[Dict]) -> Tuple[Optional[str], Dict]:
     """
-    Detect RSI extreme levels (oversold/overbought) with reversal
-    
-    Returns:
-        Tuple of (signal_direction, details)
-        signal_direction: "LONG" (oversold reversal), "SHORT" (overbought reversal), or None
+    Detect RSI + Bollinger Bands extreme reversal
     """
-    if len(candles) < RSI_PERIOD + 3:
-        return None, {"error": "Not enough data for RSI"}
+    if len(candles) < max(RSI_PERIOD, BB_PERIOD) + 3:
+        return None, {"error": "Not enough data"}
     
     closes = [c["close"] for c in candles]
+    highs = [c["high"] for c in candles]
+    lows = [c["low"] for c in candles]
+    
     rsi_values = calculate_rsi(closes, RSI_PERIOD)
+    bb_data = calculate_bollinger_bands(closes, BB_PERIOD, BB_STD_DEV)
     
     current_rsi = rsi_values[-1]
-    prev_rsi = rsi_values[-2]
+    current_close = closes[-1]
+    current_upper = bb_data["upper"][-1]
+    current_lower = bb_data["lower"][-1]
     
-    if current_rsi is None or prev_rsi is None:
-        return None, {"error": "RSI not calculated"}
+    if any(v is None for v in [current_rsi, current_upper, current_lower]):
+        return None, {"error": "RSI or BB not calculated"}
     
     details = {
-        "current_rsi": current_rsi,
-        "prev_rsi": prev_rsi,
-        "oversold_level": RSI_OVERSOLD,
-        "overbought_level": RSI_OVERBOUGHT
+        "rsi": round(current_rsi, 2),
+        "bb_upper": round(current_upper, 6),
+        "bb_lower": round(current_lower, 6),
+        "close": round(current_close, 6)
     }
     
-    # Check last 3 RSI values for extreme levels
-    rsi_last_3 = [r for r in rsi_values[-3:] if r is not None]
+    # Reversal candle logic (simplified version of Hammer/Shooting Star)
+    # Hammer-like (for LONG): Close above Open and bounced from BB Lower
+    is_hammer = current_close > candles[-1]["open"] and candles[-1]["low"] <= current_lower
+    # Shooting star-like (for SHORT): Close below Open and bounced from BB Upper
+    is_star = current_close < candles[-1]["open"] and candles[-1]["high"] >= current_upper
     
-    if len(rsi_last_3) < 2:
-        return None, details
-    
-    min_rsi = min(rsi_last_3)
-    max_rsi = max(rsi_last_3)
-    
-    details["min_rsi_3"] = min_rsi
-    details["max_rsi_3"] = max_rsi
-    
-    # LONG: RSI was oversold in last 3 candles and current is rising
-    if min_rsi <= RSI_OVERSOLD and current_rsi > min_rsi:
-        details["signal_type"] = "OVERSOLD_REVERSAL"
+    # LONG: RSI Oversold (<30) + Touch/Fura BB Lower + Bullish Reversal
+    if current_rsi <= RSI_OVERSOLD and (candles[-1]["low"] <= current_lower) and current_close > candles[-1]["open"]:
         return "LONG", details
     
-    # SHORT: RSI was overbought in last 3 candles and current is falling
-    if max_rsi >= RSI_OVERBOUGHT and current_rsi < max_rsi:
-        details["signal_type"] = "OVERBOUGHT_REVERSAL"
+    # SHORT: RSI Overbought (>70) + Touch/Fura BB Upper + Bearish Reversal
+    if current_rsi >= RSI_OVERBOUGHT and (candles[-1]["high"] >= current_upper) and current_close < candles[-1]["open"]:
         return "SHORT", details
     
     return None, details
@@ -364,30 +461,23 @@ def check_volume_confirmation(candles: List[Dict]) -> Tuple[bool, Dict]:
     return is_confirmed, details
 
 
-def analyze_candles(candles: List[Dict]) -> Dict:
+def analyze_candles(candles: List[Dict], candles_4h: Optional[List[Dict]] = None) -> Dict:
     """
     Run all indicator analysis on candles
-    
-    Returns:
-        Dictionary with all analysis results including:
-        - SMA crossover signal
-        - Trend direction
-        - Pullback signal
-        - RSI extreme signal
-        - Volume confirmation
-        - Pivot Trend
     """
-    # SMA Crossover
-    sma_signal, sma_details = detect_sma_crossover(candles)
-    
-    # Trend Direction
-    trend_direction, trend_details = detect_trend_direction(candles)
+    # 4H Trend Filter
+    trend_4h, trend_4h_details = None, {}
+    if candles_4h:
+        trend_4h, trend_4h_details = detect_trend_4h(candles_4h)
+
+    # EMA Crossover
+    ema_signal, ema_details = detect_ema_crossover(candles)
     
     # Pullback Detection
     pullback_signal, pullback_details = detect_pullback(candles)
     
-    # RSI Extreme
-    rsi_signal, rsi_details = detect_rsi_extreme(candles)
+    # RSI + BB Reversal
+    rsi_signal, rsi_details = detect_rsi_bb_reversal(candles)
     
     # Volume confirmation
     volume_confirmed, volume_details = check_volume_confirmation(candles)
@@ -395,8 +485,12 @@ def analyze_candles(candles: List[Dict]) -> Dict:
     # Pivot Trend
     pivot_trend, pivot_details = calculate_pivot_trend(candles)
     
-    # RSI current value
+    # MACD Current Data
     closes = [c["close"] for c in candles]
+    macd_data = calculate_macd(closes)
+    current_hist = macd_data["histogram"][-1] if macd_data["histogram"] else None
+    
+    # RSI current value
     rsi_values = calculate_rsi(closes, RSI_PERIOD)
     current_rsi = rsi_values[-1] if rsi_values else None
     
@@ -406,19 +500,19 @@ def analyze_candles(candles: List[Dict]) -> Dict:
     return {
         "current_price": current_candle.get("close", 0),
         "timestamp": current_candle.get("timestamp", 0),
-        "sma": {
-            "signal": sma_signal,
-            "details": sma_details
+        "trend_4h": {
+            "direction": trend_4h,
+            "details": trend_4h_details
         },
-        "trend": {
-            "direction": trend_direction,
-            "details": trend_details
+        "ema": {
+            "signal": ema_signal,
+            "details": ema_details
         },
         "pullback": {
             "signal": pullback_signal,
             "details": pullback_details
         },
-        "rsi": {
+        "rsi_bb": {
             "signal": rsi_signal,
             "current_value": current_rsi,
             "details": rsi_details
@@ -430,5 +524,8 @@ def analyze_candles(candles: List[Dict]) -> Dict:
         "pivot_trend": {
             "direction": pivot_trend,
             "details": pivot_details
+        },
+        "macd": {
+            "histogram": current_hist
         }
     }

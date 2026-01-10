@@ -31,31 +31,36 @@ def diagnose_pair(symbol):
     # Current price
     print(f"\nPreco Atual: ${analysis['current_price']:,.2f}")
     
-    # SMA Analysis
-    print(f"\n--- SMA 8/21 ---")
-    sma_fast = analysis['sma']['details'].get('sma_fast', 0)
-    sma_slow = analysis['sma']['details'].get('sma_slow', 0)
-    print(f"SMA 8:  ${sma_fast:,.2f}")
-    print(f"SMA 21: ${sma_slow:,.2f}")
+    # EMA Analysis
+    print(f"\n--- EMA 20/50 ---")
+    ema_fast = analysis['ema']['details'].get('ema_fast', 0)
+    ema_slow = analysis['ema']['details'].get('ema_slow', 0)
+    print(f"EMA 20: ${ema_fast:,.2f}")
+    print(f"EMA 50: ${ema_slow:,.2f}")
     
-    if sma_fast and sma_slow:
-        diff = ((sma_fast - sma_slow) / sma_slow) * 100
-        position = "ACIMA" if sma_fast > sma_slow else "ABAIXO"
-        print(f"SMA 8 esta {position} da SMA 21 ({diff:+.2f}%)")
+    if ema_fast and ema_slow:
+        diff = ((ema_fast - ema_slow) / ema_slow) * 100
+        position = "ACIMA" if ema_fast > ema_slow else "ABAIXO"
+        print(f"EMA 20 esta {position} da EMA 50 ({diff:+.2f}%)")
     
-    sma_signal = analysis['sma']['signal']
-    if sma_signal:
-        print(f">>> CRUZAMENTO DETECTADO: {sma_signal} <<<")
+    ema_signal = analysis['ema']['signal']
+    if ema_signal:
+        print(f">>> CRUZAMENTO EMA DETECTADO: {ema_signal} <<<")
+        print(f"Confirmacao MACD: {'SIM' if analysis['ema']['details'].get('macd_confirmed') else 'NAO'}")
     else:
-        print("Nenhum cruzamento no ultimo candle")
+        print("Nenhum cruzamento EMA no ultimo candle")
     
+    # MACD 
+    print(f"\n--- MACD ---")
+    print(f"Histograma: {analysis['macd'].get('histogram', 0):.6f}")
+
     # Volume
     print(f"\n--- Volume ---")
     vol = analysis['volume']['details']
     print(f"Volume Atual: {vol.get('current_volume', 0):,.0f}")
     print(f"Volume Medio: {vol.get('avg_volume', 0):,.0f}")
     print(f"Ratio: {vol.get('volume_ratio', 0):.2f}x")
-    print(f"Confirmado (>=1.5x): {'SIM' if analysis['volume']['confirmed'] else 'NAO'}")
+    print(f"Confirmado (>=1.2x): {'SIM' if analysis['volume']['confirmed'] else 'NAO'}")
     
     # Pivot Trend
     print(f"\n--- Pivot Point S. Trend ---")
@@ -83,12 +88,12 @@ def diagnose_pair(symbol):
     
     # Final verdict
     print(f"\n--- Veredicto ---")
-    if sma_signal and analysis['volume']['confirmed']:
-        print(">>> SINAL SERIA GERADO! <<<")
-    elif sma_signal and not analysis['volume']['confirmed']:
-        print("Cruzamento detectado MAS volume nao confirmou")
+    if ema_signal and analysis['ema']['details'].get('macd_confirmed'):
+        print(">>> SINAL EMA + MACD SERIA GERADO! <<<")
+    elif ema_signal:
+        print("Cruzamento EMA detectado MAS MACD nao confirmou")
     else:
-        print("Sem cruzamento SMA no momento - aguardando...")
+        print("Sem cruzamento EMA no momento - aguardando...")
     
     print(f"{'='*60}\n")
 

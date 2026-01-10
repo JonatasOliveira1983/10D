@@ -9,10 +9,12 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import (
-    SCORE_SMA_CROSSOVER,
+    SCORE_EMA_CROSSOVER,
     SCORE_TREND_PULLBACK,
-    SCORE_RSI_EXTREME,
+    SCORE_RSI_BB_REVERSAL,
     SCORE_VOLUME_CONFIRMED,
+    SCORE_MACD_CONFIRMED,
+    SCORE_4H_TREND_ALIGNED,
     SCORE_PIVOT_CONFIRMED,
     SCORE_SR_ALIGNED,
     SCORE_SR_MISALIGNED
@@ -24,31 +26,35 @@ def calculate_signal_score(
     volume_confirmed: bool,
     pivot_trend_direction: Optional[str],
     sr_alignment: str,
-    signal_type: str = "SMA_CROSSOVER"
+    signal_type: str = "EMA_CROSSOVER",
+    macd_confirmed: bool = False,
+    trend_4h_aligned: bool = False
 ) -> Dict:
     """
     Calculate the total score for a signal
     
     Args:
         signal_direction: "LONG" or "SHORT"
-        volume_confirmed: True if volume >= 1.5x average
+        volume_confirmed: True if volume >= 1.2x average
         pivot_trend_direction: "UP" or "DOWN"
         sr_alignment: "ALIGNED", "MISALIGNED", or "NEUTRAL"
-        signal_type: "SMA_CROSSOVER", "TREND_PULLBACK", or "RSI_EXTREME"
+        signal_type: "EMA_CROSSOVER", "TREND_PULLBACK", or "RSI_BB_REVERSAL"
+        macd_confirmed: True if MACD histogram matches direction
+        trend_4h_aligned: True if 30M signal matches 4H trend
     
     Returns:
         Dictionary with score breakdown
     """
     # Determine base score based on signal type
-    if signal_type == "SMA_CROSSOVER":
-        base_score = SCORE_SMA_CROSSOVER
-        base_label = "sma_crossover"
+    if signal_type == "EMA_CROSSOVER":
+        base_score = SCORE_EMA_CROSSOVER
+        base_label = "ema_crossover"
     elif signal_type == "TREND_PULLBACK":
         base_score = SCORE_TREND_PULLBACK
         base_label = "trend_pullback"
-    elif signal_type == "RSI_EXTREME":
-        base_score = SCORE_RSI_EXTREME
-        base_label = "rsi_extreme"
+    elif signal_type == "RSI_BB_REVERSAL":
+        base_score = SCORE_RSI_BB_REVERSAL
+        base_label = "rsi_bb_reversal"
     else:
         base_score = 20
         base_label = "base"
@@ -56,6 +62,8 @@ def calculate_signal_score(
     breakdown = {
         base_label: base_score,
         "volume": 0,
+        "macd": 0,
+        "trend_4h": 0,
         "pivot_trend": 0,
         "sr_alignment": 0
     }
@@ -66,6 +74,16 @@ def calculate_signal_score(
     if volume_confirmed:
         breakdown["volume"] = SCORE_VOLUME_CONFIRMED
         total += SCORE_VOLUME_CONFIRMED
+    
+    # MACD confirmation
+    if macd_confirmed:
+        breakdown["macd"] = SCORE_MACD_CONFIRMED
+        total += SCORE_MACD_CONFIRMED
+        
+    # 4H Trend alignment (Massive bonus/filter)
+    if trend_4h_aligned:
+        breakdown["trend_4h"] = SCORE_4H_TREND_ALIGNED
+        total += SCORE_4H_TREND_ALIGNED
     
     # Pivot Trend confirmation
     pivot_confirms = False
@@ -92,17 +110,19 @@ def calculate_signal_score(
     # Build confirmations dict
     confirmations = {
         "volume": volume_confirmed,
+        "macd": macd_confirmed,
+        "trend_4h": trend_4h_aligned,
         "pivot_trend": pivot_confirms,
         "sr_aligned": sr_alignment == "ALIGNED"
     }
     
     # Add signal type specific confirmation
-    if signal_type == "SMA_CROSSOVER":
-        confirmations["sma_crossover"] = True
+    if signal_type == "EMA_CROSSOVER":
+        confirmations["ema_crossover"] = True
     elif signal_type == "TREND_PULLBACK":
         confirmations["pullback"] = True
-    elif signal_type == "RSI_EXTREME":
-        confirmations["rsi_extreme"] = True
+    elif signal_type == "RSI_BB_REVERSAL":
+        confirmations["rsi_bb_reversal"] = True
     
     return {
         "score": total,
@@ -143,8 +163,8 @@ def get_score_emoji(score: int) -> str:
 def get_signal_type_label(signal_type: str) -> str:
     """Get human-readable label for signal type"""
     labels = {
-        "SMA_CROSSOVER": "Cruzamento SMA",
+        "EMA_CROSSOVER": "EMA 20/50 + MACD",
         "TREND_PULLBACK": "Pullback na Tendência",
-        "RSI_EXTREME": "RSI Extremo"
+        "RSI_BB_REVERSAL": "RSI + Bollinger Reversão"
     }
     return labels.get(signal_type, signal_type)
