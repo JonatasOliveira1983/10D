@@ -17,7 +17,11 @@ from config import (
     SCORE_4H_TREND_ALIGNED,
     SCORE_PIVOT_CONFIRMED,
     SCORE_SR_ALIGNED,
-    SCORE_SR_MISALIGNED
+    SCORE_SR_MISALIGNED,
+    SCORE_INSTITUTIONAL_JUDAS,
+    SCORE_CVD_DIVERGENCE,
+    SCORE_OI_ACCUMULATION,
+    SCORE_LSR_CLEANUP
 )
 
 
@@ -28,7 +32,10 @@ def calculate_signal_score(
     sr_alignment: str,
     signal_type: str = "EMA_CROSSOVER",
     macd_confirmed: bool = False,
-    trend_4h_aligned: bool = False
+    trend_4h_aligned: bool = False,
+    cvd_divergence: bool = False,
+    oi_accumulation: bool = False,
+    lsr_cleanup: bool = False
 ) -> Dict:
     """
     Calculate the total score for a signal
@@ -55,6 +62,9 @@ def calculate_signal_score(
     elif signal_type == "RSI_BB_REVERSAL":
         base_score = SCORE_RSI_BB_REVERSAL
         base_label = "rsi_bb_reversal"
+    elif signal_type == "JUDAS_SWING":
+        base_score = SCORE_INSTITUTIONAL_JUDAS
+        base_label = "institutional_judas"
     else:
         base_score = 20
         base_label = "base"
@@ -65,7 +75,10 @@ def calculate_signal_score(
         "macd": 0,
         "trend_4h": 0,
         "pivot_trend": 0,
-        "sr_alignment": 0
+        "sr_alignment": 0,
+        "cvd": 0,
+        "oi": 0,
+        "lsr": 0
     }
     
     total = base_score
@@ -104,6 +117,21 @@ def calculate_signal_score(
         breakdown["sr_alignment"] = SCORE_SR_MISALIGNED
         total += SCORE_SR_MISALIGNED
     
+    # CVD Divergence
+    if cvd_divergence:
+        breakdown["cvd"] = SCORE_CVD_DIVERGENCE
+        total += SCORE_CVD_DIVERGENCE
+        
+    # OI Accumulation
+    if oi_accumulation:
+        breakdown["oi"] = SCORE_OI_ACCUMULATION
+        total += SCORE_OI_ACCUMULATION
+        
+    # LSR Cleanup
+    if lsr_cleanup:
+        breakdown["lsr"] = SCORE_LSR_CLEANUP
+        total += SCORE_LSR_CLEANUP
+    
     # Ensure score is within 0-100
     total = max(0, min(100, total))
     
@@ -113,7 +141,10 @@ def calculate_signal_score(
         "macd": macd_confirmed,
         "trend_4h": trend_4h_aligned,
         "pivot_trend": pivot_confirms,
-        "sr_aligned": sr_alignment == "ALIGNED"
+        "sr_aligned": sr_alignment == "ALIGNED",
+        "cvd_divergence": cvd_divergence,
+        "oi_accumulation": oi_accumulation,
+        "lsr_cleanup": lsr_cleanup
     }
     
     # Add signal type specific confirmation
@@ -123,6 +154,8 @@ def calculate_signal_score(
         confirmations["pullback"] = True
     elif signal_type == "RSI_BB_REVERSAL":
         confirmations["rsi_bb_reversal"] = True
+    elif signal_type == "JUDAS_SWING":
+        confirmations["judas_swing"] = True
     
     return {
         "score": total,
@@ -165,6 +198,7 @@ def get_signal_type_label(signal_type: str) -> str:
     labels = {
         "EMA_CROSSOVER": "EMA 20/50 + MACD",
         "TREND_PULLBACK": "Pullback na Tendência",
-        "RSI_BB_REVERSAL": "RSI + Bollinger Reversão"
+        "RSI_BB_REVERSAL": "RSI + Bollinger Reversão",
+        "JUDAS_SWING": "Institutional Judas Swing"
     }
     return labels.get(signal_type, signal_type)

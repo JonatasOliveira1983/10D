@@ -28,7 +28,11 @@ export default function Header({ stats, isConnected }) {
                     </div>
                     <div className="stat-item">
                         <span className="stat-value">{stats.average_score}</span>
-                        <span className="stat-label">Score</span>
+                        <span className="stat-label">Score Avg</span>
+                    </div>
+                    <div className="stat-item">
+                        <span className="stat-value">{stats.total_historical}</span>
+                        <span className="stat-label">Histórico</span>
                     </div>
                 </div>
             </div>

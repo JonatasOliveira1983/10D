@@ -431,6 +431,21 @@ body {
   box-shadow: var(--shadow-glow-red);
 }
 
+.signal-card.finalized {
+  opacity: 0.9;
+  filter: grayscale(0.2);
+}
+
+.signal-card.finalized.tp-hit {
+  border-color: var(--long-color);
+  box-shadow: 0 0 20px rgba(0, 212, 170, 0.2);
+}
+
+.signal-card.finalized.sl-hit {
+  border-color: var(--short-color);
+  box-shadow: 0 0 20px rgba(255, 71, 87, 0.2);
+}
+
 /* Card Header */
 .card-header {
   display: flex;
@@ -487,6 +502,31 @@ body {
   background: var(--short-bg);
   color: var(--short-color);
   border: 1px solid var(--short-border);
+}
+
+.status-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.status-badge.active {
+  background: rgba(0, 212, 170, 0.1);
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+}
+
+.status-badge.tp-hit {
+  background: var(--long-color);
+  color: var(--bg-primary);
+}
+
+.status-badge.sl-hit {
+  background: var(--short-color);
+  color: white;
 }
 
 /* Score */
@@ -595,6 +635,20 @@ body {
 
 .price-value.tp {
   color: var(--long-color);
+}
+
+.price-item.roi {
+  background: var(--accent-gradient);
+  color: white;
+}
+
+.price-item.roi .price-label {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.price-item.roi .price-value {
+  font-size: 1.1rem;
+  color: white;
 }
 
 /* Confirmations */
@@ -1145,6 +1199,7 @@ body {
   background: linear-gradient(135deg, #ffffff 0%, #00d4aa 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
   filter: drop-shadow(0 0 20px rgba(0, 212, 170, 0.5));
   margin-bottom: var(--space-lg);
   display: block;
@@ -1227,6 +1282,7 @@ body {
   transform: scale(1.1);
   pointer-events: none;
 }
+
 /* =============================================================================
    Trades Organizer Page
    ============================================================================= */
@@ -1365,8 +1421,13 @@ body {
   font-family: 'JetBrains Mono', monospace;
 }
 
-.result-text.positive { color: var(--long-color); }
-.result-text.negative { color: var(--short-color); }
+.result-text.positive {
+  color: var(--long-color);
+}
+
+.result-text.negative {
+  color: var(--short-color);
+}
 
 .btn-table {
   padding: 6px 12px;
@@ -1394,7 +1455,10 @@ body {
 /* Modal Styles */
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(5px);
   z-index: 2000;
@@ -1508,7 +1572,8 @@ body {
   .trades-organizer {
     padding: var(--space-md);
     gap: var(--space-lg);
-    padding-bottom: 100px; /* Space for mobile nav */
+    padding-bottom: 100px;
+    /* Space for mobile nav */
   }
 
   .page-header-simple {
@@ -1539,7 +1604,8 @@ body {
     font-size: 1.5rem;
   }
 
-  .plan-table th, .plan-table td {
+  .plan-table th,
+  .plan-table td {
     padding: var(--space-sm);
     font-size: 0.8rem;
   }
@@ -1572,12 +1638,12 @@ body {
 }
 
 .logout-btn .nav-icon-wrapper {
-    background: rgba(239, 68, 68, 0.1) !important;
-    border-color: rgba(239, 68, 68, 0.2) !important;
-    color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.2) !important;
+  color: #ef4444 !important;
 }
 
 .logout-btn:hover .nav-icon-wrapper {
-    background: rgba(239, 68, 68, 0.2) !important;
-    box-shadow: 0 0 15px rgba(239, 68, 68, 0.3) !important;
+  background: rgba(239, 68, 68, 0.2) !important;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.3) !important;
 }

@@ -59,7 +59,22 @@ class SignalGenerator:
         candles_4h = self.client.get_klines(symbol, "240", 60)
         
         # Run indicator analysis
-        analysis = analyze_candles(candles_30m, candles_4h)
+        # Fetch institutional data
+        trades = self.client.get_recent_trades(symbol, 100)
+        oi_data = self.client.get_open_interest(symbol, "30min", 10)
+        lsr_data = self.client.get_long_short_ratio(symbol, "30min", 10)
+        
+        # Use existing btc_candles if available (should be passed or stored)
+        btc_candles = getattr(self, "current_btc_candles", None)
+        
+        analysis = analyze_candles(
+            candles_30m, 
+            candles_4h, 
+            recent_trades=trades,
+            oi_data=oi_data,
+            lsr_data=lsr_data,
+            btc_candles=btc_candles
+        )
         
         # 4H Trend Filter Logic
         trend_4h = analysis["trend_4h"]["direction"] # "UPTREND" or "DOWNTREND"
@@ -111,6 +126,51 @@ class SignalGenerator:
                 "macd_confirmed": False,
                 "trend_4h_aligned": is_aligned
             })
+            
+        # === SIGNAL TYPE 4: Institutional Judas Swing ===
+        judas_signal = analysis["institutional"]["judas_signal"]
+        
+        if judas_signal:
+            # Judas Swing MUST match 4H trend
+            if (judas_signal == "LONG" and trend_4h == "UPTREND") or (judas_signal == "SHORT" and trend_4h == "DOWNTREND"):
+                # Order Flow Confluences
+                cvd = analysis["institutional"]["cvd"]
+                rs_score = analysis["institutional"]["rs_score"]
+                
+                # CVD Divergence Check
+                cvd_div = False
+                if judas_signal == "LONG" and cvd >= 0: # Price dipped but CVD is positive
+                    cvd_div = True
+                elif judas_signal == "SHORT" and cvd <= 0: # Price ripped but CVD is negative
+                    cvd_div = True
+                    
+                # OI Accumulation (Simple check: latest OI > prev OI)
+                oi_acc = False
+                inst_data = analysis["institutional"]
+                if inst_data["oi_latest"] and len(oi_data) > 1:
+                    if inst_data["oi_latest"] > oi_data[1]["openInterest"]:
+                        oi_acc = True
+                        
+                # LSR Cleanup (LSR should fall for Long, rise for Short - clearing retail)
+                lsr_clean = False
+                if inst_data["lsr_latest"] and len(lsr_data) > 1:
+                    if judas_signal == "LONG" and inst_data["lsr_latest"] < lsr_data[1]["ratio"]:
+                        lsr_clean = True
+                    elif judas_signal == "SHORT" and inst_data["lsr_latest"] > lsr_data[1]["ratio"]:
+                        lsr_clean = True
+
+                potential_signals.append({
+                    "type": "JUDAS_SWING",
+                    "direction": judas_signal,
+                    "volume_confirmed": volume_confirmed,
+                    "macd_confirmed": False,
+                    "trend_4h_aligned": True,
+                    "cvd_divergence": cvd_div,
+                    "oi_accumulation": oi_acc,
+                    "lsr_cleanup": lsr_clean,
+                    "rs_score": rs_score,
+                    "details": analysis["institutional"]["judas_details"]
+                })
         
         # If no signals found, return None
         if not potential_signals:
@@ -146,7 +206,10 @@ class SignalGenerator:
                 sr_alignment,
                 signal_type=sig["type"],
                 macd_confirmed=sig.get("macd_confirmed", False),
-                trend_4h_aligned=sig.get("trend_4h_aligned", False)
+                trend_4h_aligned=sig.get("trend_4h_aligned", False),
+                cvd_divergence=sig.get("cvd_divergence", False),
+                oi_accumulation=sig.get("oi_accumulation", False),
+                lsr_cleanup=sig.get("lsr_cleanup", False)
             )
             
             scored_signals.append({
@@ -154,7 +217,12 @@ class SignalGenerator:
                 "score": score_result["score"],
                 "score_result": score_result,
                 "sr_alignment": sr_alignment,
-                "pivot_trend": pivot_trend
+                "pivot_trend": pivot_trend,
+                "lsr_cleanup": sig.get("lsr_cleanup", False),
+                "oi_accumulation": sig.get("oi_accumulation", False),
+                "cvd_divergence": sig.get("cvd_divergence", False),
+                "rs_score": sig.get("rs_score", 0.0),
+                "institutional_details": sig.get("details", {})
             })
         
         # Select the BEST signal (highest score)
@@ -204,6 +272,16 @@ class SignalGenerator:
                 "nearest_support": sr_proximity.get("nearest_support"),
                 "distance_to_resistance": sr_proximity.get("distance_to_resistance"),
                 "distance_to_support": sr_proximity.get("distance_to_support")
+            },
+            "institutional": {
+                "rs_score": best_signal.get("rs_score"),
+                "cvd": analysis["institutional"]["cvd"],
+                "oi_latest": analysis["institutional"]["oi_latest"],
+                "lsr_latest": analysis["institutional"]["lsr_latest"],
+                "judas_details": best_signal.get("institutional_details"),
+                "cvd_divergence": best_signal.get("cvd_divergence"),
+                "oi_accumulation": best_signal.get("oi_accumulation"),
+                "lsr_cleanup": best_signal.get("lsr_cleanup")
             }
         }
         
@@ -216,6 +294,12 @@ class SignalGenerator:
         
         print(f"[SCAN] Starting scan of {total_pairs} pairs...", flush=True)
         
+        # Fetch BTC candles once for RS calculation
+        try:
+            self.current_btc_candles = self.client.get_klines("BTCUSDT", "30", 100)
+        except:
+            self.current_btc_candles = None
+            
         for i, symbol in enumerate(self.monitored_pairs):
             try:
                 # Log progress every 10 pairs
@@ -274,6 +358,72 @@ class SignalGenerator:
             del self.active_signals[symbol]
         
         return len(expired)
+
+    def monitor_active_signals(self):
+        """Monitor active signals for TP or SL hits"""
+        if not self.active_signals:
+            return []
+            
+        print(f"[MONITOR] Checking {len(self.active_signals)} active signals...", flush=True)
+        
+        # Get all tickers in one call for efficiency
+        tickers = self.client.get_all_tickers()
+        if not tickers:
+            return []
+            
+        ticker_map = {t["symbol"]: float(t["lastPrice"]) for t in tickers}
+        
+        finalized = []
+        current_time = int(time.time() * 1000)
+        
+        for symbol, signal in list(self.active_signals.items()):
+            current_price = ticker_map.get(symbol)
+            if not current_price:
+                continue
+                
+            entry_price = signal["entry_price"]
+            tp = signal["take_profit"]
+            sl = signal["stop_loss"]
+            direction = signal["direction"]
+            
+            hit = False
+            status = "ACTIVE"
+            
+            if direction == "LONG":
+                if current_price >= tp:
+                    hit = True
+                    status = "TP_HIT"
+                elif current_price <= sl:
+                    hit = True
+                    status = "SL_HIT"
+            else: # SHORT
+                if current_price <= tp:
+                    hit = True
+                    status = "TP_HIT"
+                elif current_price >= sl:
+                    hit = True
+                    status = "SL_HIT"
+                    
+            if hit:
+                # Update signal object
+                signal["status"] = status
+                signal["exit_price"] = current_price
+                signal["exit_timestamp"] = current_time
+                signal["exit_timestamp_readable"] = (datetime.now() - timedelta(hours=3)).strftime("%Y-%m-%d %H:%M:%S")
+                
+                # Calculate final ROI
+                if direction == "LONG":
+                    roi = ((current_price - entry_price) / entry_price) * 100
+                else:
+                    roi = ((entry_price - current_price) / entry_price) * 100
+                signal["final_roi"] = round(roi, 2)
+                
+                # Remove from active
+                print(f"[FINALIZED] {symbol} {status} at ${current_price} (ROI: {roi:.2f}%)", flush=True)
+                del self.active_signals[symbol]
+                finalized.append(signal)
+                
+        return finalized
     
     def get_stats(self) -> Dict:
         """Get summary statistics"""

@@ -36,6 +36,13 @@ RSI_OVERBOUGHT = 70     # Back to standard 70
 # Pullback Settings
 PULLBACK_THRESHOLD = 0.005  # 0.5% - price within this distance from EMA
 
+# Institutional Settings (Judas Swing)
+JUDAS_ATR_MIN = 0.5
+JUDAS_ATR_MAX = 1.5
+JUDAS_RECLAIM_CANDLES = 3
+JUDAS_WICK_PERCENT = 50
+RS_LOOKBACK = 14
+
 # =============================================================================
 # S/R SETTINGS
 # =============================================================================
@@ -65,6 +72,7 @@ EXCLUDED_PAIRS = [          # Pairs to exclude from monitoring
 SCORE_EMA_CROSSOVER = 35        # EMA 20 crosses EMA 50 (Higher priority)
 SCORE_TREND_PULLBACK = 25       # Pullback to EMA during trend
 SCORE_RSI_BB_REVERSAL = 30      # RSI + BB Reversal
+SCORE_INSTITUTIONAL_JUDAS = 45  # Stop Hunt + Reclaim (Institutional)
 
 # Confirmation bonuses
 SCORE_VOLUME_CONFIRMED = 15
@@ -73,6 +81,9 @@ SCORE_4H_TREND_ALIGNED = 30     # Critical filter
 SCORE_PIVOT_CONFIRMED = 15
 SCORE_SR_ALIGNED = 20
 SCORE_SR_MISALIGNED = -20
+SCORE_CVD_DIVERGENCE = 15
+SCORE_OI_ACCUMULATION = 15
+SCORE_LSR_CLEANUP = 10
 
 # =============================================================================
 # API SETTINGS

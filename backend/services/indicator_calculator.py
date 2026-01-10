@@ -1,6 +1,6 @@
 """
 10D - Indicator Calculator
-Calculates SMA, RSI, Pivot Point S. Trend, Volume, and Pullback indicators
+3: Calculates SMA, RSI, Pivot Point S. Trend, Volume, Pullback, CVD, and Judas Swing indicators
 """
 
 from typing import List, Dict, Tuple, Optional
@@ -15,7 +15,7 @@ from config import (
     PIVOT_PERIOD, ATR_FACTOR, ATR_PERIOD,
     VOLUME_THRESHOLD, VOLUME_LOOKBACK,
     RSI_PERIOD, RSI_OVERSOLD, RSI_OVERBOUGHT,
-    PULLBACK_THRESHOLD
+    PULLBACK_THRESHOLD, RS_LOOKBACK
 )
 
 
@@ -395,6 +395,187 @@ def calculate_atr(candles: List[Dict], period: int = ATR_PERIOD) -> List[Optiona
     return atr_values
 
 
+def calculate_cvd(recent_trades: List[Dict]) -> float:
+    """
+    Calculate Cumulative Volume Delta from recent trades
+    Delta = Buy Volume - Sell Volume
+    """
+    if not recent_trades:
+        return 0.0
+        
+    delta = 0.0
+    for trade in recent_trades:
+        if trade["side"] == "Buy":
+            delta += trade["size"]
+        else:
+            delta -= trade["size"]
+            
+    return delta
+
+
+def calculate_relative_strength(alt_candles: List[Dict], btc_candles: List[Dict], lookback: int = 14) -> float:
+    """
+    Calculate Relative Strength (RS) of Alt vs BTC
+    Returns average ratio of % change during drop candles
+    """
+    if len(alt_candles) < lookback or len(btc_candles) < lookback:
+        return 0.0
+        
+    alt_changes = []
+    btc_changes = []
+    
+    # Analyze the last N candles
+    for i in range(-lookback, 0):
+        alt_change = (alt_candles[i]["close"] - alt_candles[i-1]["close"]) / alt_candles[i-1]["close"]
+        btc_change = (btc_candles[i]["close"] - btc_candles[i-1]["close"]) / btc_candles[i-1]["close"]
+        
+        alt_changes.append(alt_change)
+        btc_changes.append(btc_change)
+        
+    # During BTC drop, how did Alt perform?
+    rs_score = 0
+    count = 0
+    for a, b in zip(alt_changes, btc_changes):
+        if b < 0: # BTC dropped
+            # If alt dropped less than btc (a > b since both are negative), it's strong
+            rs_score += (a - b)
+            count += 1
+            
+    return rs_score / count if count > 0 else 0.0
+
+
+def find_ranges_30m(candles: List[Dict], lookback: int = 50) -> Dict[str, List[float]]:
+    """
+    Identify horizontal support and resistance levels in the 30M timeframe
+    A level is defined where price touched at least 2 times (within a tolerance)
+    """
+    if len(candles) < lookback:
+        return {"supports": [], "resistances": []}
+        
+    recent_candles = candles[-lookback:]
+    
+    # Extract highs and lows
+    highs = [c["high"] for c in recent_candles]
+    lows = [c["low"] for c in recent_candles]
+    
+    # Parameters for grouping
+    tolerance = 0.001 # 0.1% tolerance
+    
+    def get_clusters(values):
+        clusters = []
+        for val in values:
+            found = False
+            for group in clusters:
+                avg = sum(group) / len(group)
+                if abs(val - avg) / avg <= tolerance:
+                    group.append(val)
+                    found = True
+                    break
+            if not found:
+                clusters.append([val])
+        
+        # Filter for clusters with at least 2 touches
+        return [sum(c) / len(c) for c in clusters if len(c) >= 2]
+
+    return {
+        "supports": sorted(get_clusters(lows)),
+        "resistances": sorted(get_clusters(highs), reverse=True)
+    }
+
+
+def detect_judas_swing(
+    candles: List[Dict], 
+    ranges: Dict[str, List[float]], 
+    atr_values: List[Optional[float]]
+) -> Tuple[Optional[str], Dict]:
+    """
+    Detect Judas Swing (Institutional Stop Hunt)
+    Criteria:
+    1. Rompimento de S/R.
+    2. Desvio entre 0.5x e 1.5x ATR.
+    3. Reclaiming em no máximo 3 candles.
+    4. Vela de reversão com pavio >= 50%.
+    """
+    if len(candles) < 5 or not atr_values[-1]:
+        return None, {"error": "Not enough data"}
+        
+    current = candles[-1]
+    atr = atr_values[-1]
+    
+    # Check for Long: False Break of Support
+    # Look back at last 4 candles to see if we breached a support and then reclaimed it
+    for support in ranges["supports"]:
+        # Requirement: Breach must have happened recently
+        # Check last 3 candles for the "Incursion"
+        for i in range(-4, -1):
+            low_candle = candles[i]
+            if low_candle["low"] < support:
+                desvio = (support - low_candle["low"]) / atr
+                
+                # Desvio entre 0.5x e 1.5x ATR
+                if 0.5 <= desvio <= 1.5:
+                    # Closing back inside the range (Reclaiming)
+                    # Current candle or any of the last 2 must close back above support
+                    reclaimed = False
+                    for j in range(i + 1, 0 if i < -1 else 1): # Indexing trick for candles list
+                        if candles[j]["close"] > support:
+                            reclaimed = True
+                            reclaim_index = j
+                            break
+                    
+                    if reclaimed:
+                        # Reclaim must happen within 3 candles from breach
+                        if (reclaim_index - i) <= 3:
+                            # Candle signature: Reversal candle has >50% wick
+                            # Using the candle that reclaimed
+                            target_candle = candles[reclaim_index]
+                            body = abs(target_candle["close"] - target_candle["open"])
+                            total = target_candle["high"] - target_candle["low"]
+                            wick = total - body
+                            
+                            if total > 0 and (wick / total) >= 0.5:
+                                return "LONG", {
+                                    "type": "JUDAS_SWING",
+                                    "level": round(support, 6),
+                                    "deviation_atr": round(desvio, 2),
+                                    "reclaim_candles": reclaim_index - i,
+                                    "wick_percent": round((wick/total)*100, 2)
+                                }
+
+    # Check for Short: False Break of Resistance
+    for resistance in ranges["resistances"]:
+        for i in range(-4, -1):
+            high_candle = candles[i]
+            if high_candle["high"] > resistance:
+                desvio = (high_candle["high"] - resistance) / atr
+                
+                if 0.5 <= desvio <= 1.5:
+                    reclaimed = False
+                    for j in range(i + 1, 0 if i < -1 else 1):
+                        if candles[j]["close"] < resistance:
+                            reclaimed = True
+                            reclaim_index = j
+                            break
+                    
+                    if reclaimed:
+                        if (reclaim_index - i) <= 3:
+                            target_candle = candles[reclaim_index]
+                            body = abs(target_candle["close"] - target_candle["open"])
+                            total = target_candle["high"] - target_candle["low"]
+                            wick = total - body
+                            
+                            if total > 0 and (wick / total) >= 0.5:
+                                return "SHORT", {
+                                    "type": "JUDAS_SWING",
+                                    "level": round(resistance, 6),
+                                    "deviation_atr": round(desvio, 2),
+                                    "reclaim_candles": reclaim_index - i,
+                                    "wick_percent": round((wick/total)*100, 2)
+                                }
+                                
+    return None, {}
+
+
 def calculate_pivot_trend(candles: List[Dict]) -> Tuple[Optional[str], Dict]:
     """Calculate Pivot Point Standard Trend"""
     if len(candles) < ATR_PERIOD + 2:
@@ -461,10 +642,32 @@ def check_volume_confirmation(candles: List[Dict]) -> Tuple[bool, Dict]:
     return is_confirmed, details
 
 
-def analyze_candles(candles: List[Dict], candles_4h: Optional[List[Dict]] = None) -> Dict:
+def analyze_candles(
+    candles: List[Dict], 
+    candles_4h: Optional[List[Dict]] = None,
+    recent_trades: Optional[List[Dict]] = None,
+    oi_data: Optional[List[Dict]] = None,
+    lsr_data: Optional[List[Dict]] = None,
+    btc_candles: Optional[List[Dict]] = None
+) -> Dict:
     """
-    Run all indicator analysis on candles
+    Run all indicator analysis on candles including Institutional metrics
     """
+    # ATR calculation (needed for Judas Swing)
+    atr_values = calculate_atr(candles, ATR_PERIOD)
+    
+    # 30M Range detection
+    ranges_30m = find_ranges_30m(candles)
+    
+    # Judas Swing detection
+    judas_signal, judas_details = detect_judas_swing(candles, ranges_30m, atr_values)
+    
+    # CVD calculation
+    cvd_value = calculate_cvd(recent_trades) if recent_trades else 0.0
+    
+    # Relative Strength
+    rs_score = calculate_relative_strength(candles, btc_candles, RS_LOOKBACK) if btc_candles else 0.0
+
     # 4H Trend Filter
     trend_4h, trend_4h_details = None, {}
     if candles_4h:
@@ -527,5 +730,14 @@ def analyze_candles(candles: List[Dict], candles_4h: Optional[List[Dict]] = None
         },
         "macd": {
             "histogram": current_hist
+        },
+        "institutional": {
+            "judas_signal": judas_signal,
+            "judas_details": judas_details,
+            "cvd": cvd_value,
+            "rs_score": rs_score,
+            "ranges_30m": ranges_30m,
+            "oi_latest": oi_data[0]["openInterest"] if oi_data else None,
+            "lsr_latest": lsr_data[0]["ratio"] if lsr_data else None
         }
     }

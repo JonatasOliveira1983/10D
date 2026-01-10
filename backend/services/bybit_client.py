@@ -104,6 +104,17 @@ class BybitClient:
             print(f"[API] REQUEST FAILED: {e}", flush=True)
             return None
     
+    def get_all_tickers(self, category: str = "linear") -> List[Dict]:
+        """ Get all tickers for a category """
+        result = self._make_request("/v5/market/tickers", {
+            "category": category
+        })
+        
+        if not result or not result.get("list"):
+            return []
+            
+        return result["list"]
+
     def get_instruments(self, category: str = "linear") -> List[Dict]:
         """
         Get all perpetual instruments with leverage >= MIN_LEVERAGE
@@ -258,6 +269,64 @@ class BybitClient:
             "turnover24h": float(ticker.get("turnover24h", "0")),
             "price24hPcnt": float(ticker.get("price24hPcnt", "0")) * 100
         }
+
+    def get_open_interest(self, symbol: str, interval: str, limit: int = 50) -> List[Dict]:
+        """
+        Get Open Interest history
+        Interval: 5min, 15min, 30min, 1h, 4h, 1d
+        """
+        result = self._make_request("/v5/market/open-interest", {
+            "category": "linear",
+            "symbol": symbol,
+            "intervalTime": interval,
+            "limit": limit
+        })
+        
+        if not result or not result.get("list"):
+            return []
+            
+        return [{
+            "openInterest": float(item["openInterest"]),
+            "timestamp": int(item["timestamp"])
+        } for item in result["list"]]
+
+    def get_long_short_ratio(self, symbol: str, period: str, limit: int = 50) -> List[Dict]:
+        """
+        Get Long/Short Ratio history
+        Period: 5min, 15min, 30min, 1h, 4h, 1d
+        """
+        result = self._make_request("/v5/market/account-ratio", {
+            "category": "linear",
+            "symbol": symbol,
+            "period": period,
+            "limit": limit
+        })
+        
+        if not result or not result.get("list"):
+            return []
+            
+        return [{
+            "ratio": float(item["buyRatio"]), # Bybit v5 uses buyRatio
+            "timestamp": int(item["timestamp"])
+        } for item in result["list"]]
+
+    def get_recent_trades(self, symbol: str, limit: int = 100) -> List[Dict]:
+        """Get recent public trades for CVD calculation"""
+        result = self._make_request("/v5/market/recent-trade", {
+            "category": "linear",
+            "symbol": symbol,
+            "limit": limit
+        })
+        
+        if not result or not result.get("list"):
+            return []
+            
+        return [{
+            "price": float(item["price"]),
+            "size": float(item["size"]),
+            "side": item["side"], # Buy or Sell
+            "timestamp": int(item["time"])
+        } for item in result["list"]]
 
 
 # Test the client

@@ -46,11 +46,16 @@ scan_thread = None
 
 
 def background_scanner():
-    """Background thread for continuous scanning"""
+    """Background thread for continuous scanning and monitoring"""
     global scanning
     while scanning:
         try:
+            # 1. Monitor active signals for TP/SL hits
+            generator.monitor_active_signals()
+            
+            # 2. Scan for new signals
             generator.scan_all_pairs()
+            
             time.sleep(UPDATE_INTERVAL_SECONDS)
         except Exception as e:
             print(f"[SCANNER ERROR] {e}", flush=True)

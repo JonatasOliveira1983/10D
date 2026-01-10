@@ -5,13 +5,15 @@ import Dashboard from './components/Dashboard';
 import MobileNav from './components/MobileNav';
 import OpeningPage from './components/OpeningPage';
 import TradesOrganizerPage from './components/TradesOrganizer/TradesOrganizerPage';
-import { fetchSignals, fetchStats } from './services/api';
+import HistoryView from './components/HistoryView';
+import { fetchSignals, fetchStats, fetchHistory } from './services/api';
 
 const POLL_INTERVAL = 5000; // 5 seconds
 
 export default function App() {
     const [showOpening, setShowOpening] = useState(true);
     const [signals, setSignals] = useState([]);
+    const [history, setHistory] = useState([]);
     const [stats, setStats] = useState({
         monitored_pairs: 0,
         active_signals: 0,
@@ -34,13 +36,15 @@ export default function App() {
     // Fetch data
     const fetchData = useCallback(async () => {
         try {
-            const [signalsData, statsData] = await Promise.all([
+            const [signalsData, statsData, historyData] = await Promise.all([
                 fetchSignals(),
-                fetchStats()
+                fetchStats(),
+                fetchHistory(20)
             ]);
 
             setSignals(signalsData.signals || []);
             setStats(statsData);
+            setHistory(historyData.history || []);
             setLoading(false);
             setIsConnected(true);
         } catch (error) {
@@ -95,10 +99,10 @@ export default function App() {
                                 <TradesOrganizerPage />
                             )}
                             {currentPage === 'history' && (
-                                <div className="page-placeholder">
-                                    <h2>📜 Histórico de Sinais</h2>
-                                    <p>Em breve...</p>
-                                </div>
+                                <HistoryView
+                                    history={history}
+                                    loading={loading}
+                                />
                             )}
                             {currentPage === 'settings' && (
                                 <div className="page-placeholder">
