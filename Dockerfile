@@ -32,5 +32,9 @@ EXPOSE 8080
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8080
 
-# Run the application
-CMD ["python", "app.py"]
+# Run the application using gunicorn
+# -b 0.0.0.0:$PORT: binds to the port provided by Cloud Run
+# --workers 1: one worker is enough for this app
+# --threads 4: handle multiple concurrent requests
+# --timeout 0: disable timeout for long-running initialization if needed (though we use threads)
+CMD exec gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 0 app:app

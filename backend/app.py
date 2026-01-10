@@ -4,7 +4,7 @@ REST API for frontend communication and serving static files
 """
 
 # VERSION STAMP - to verify which code is running
-BUILD_VERSION = "2026-01-09-2055"
+BUILD_VERSION = "2026-01-10-0026"
 
 # EARLY DEBUG - before any complex imports
 import sys
@@ -37,9 +37,8 @@ app = Flask(__name__, static_folder='../frontend/dist', static_url_path='/')
 CORS(app)
 
 # Initialize signal generator
-print("[DEBUG] About to create SignalGenerator instance...", flush=True)
+print("[DEBUG] Creating SignalGenerator instance...", flush=True)
 generator = SignalGenerator()
-print("[DEBUG] SignalGenerator created OK", flush=True)
 
 # Background scanning flag
 scanning = False
@@ -57,29 +56,36 @@ def background_scanner():
             print(f"[SCANNER ERROR] {e}", flush=True)
             time.sleep(5)
 
+def delayed_init():
+    """Delayed initialization to satisfy Cloud Run health check"""
+    global scanning, scan_thread
+    print("=" * 60, flush=True)
+    print("[INIT] Starting delayed initialization in background...", flush=True)
+    print("=" * 60, flush=True)
+    
+    # Wait a few seconds for server to bind
+    time.sleep(2)
+    
+    try:
+        print(f"[INIT] Calling generator.initialize({PAIR_LIMIT})...", flush=True)
+        pairs = generator.initialize(pair_limit=PAIR_LIMIT)
+        print(f"[INIT] SUCCESS - Loaded {len(pairs)} pairs", flush=True)
+        
+        # Start background scanner only after successful initialization
+        print("[SCANNER] Starting background thread...", flush=True)
+        scanning = True
+        scan_thread = threading.Thread(target=background_scanner, daemon=True)
+        scan_thread.start()
+        print(f"[SCANNER] Started (interval: {UPDATE_INTERVAL_SECONDS}s)", flush=True)
+        
+    except Exception as e:
+        print(f"[INIT] ERROR during initialization: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
 
-# =============================================================================
-# Initialize pairs and start scanner (on module load for Cloud Run)
-# =============================================================================
-print("=" * 60, flush=True)
-print("[INIT] 10D Trading System - Starting initialization...", flush=True)
-print("=" * 60, flush=True)
-
-try:
-    print(f"[INIT] Calling generator.initialize({PAIR_LIMIT})...", flush=True)
-    pairs = generator.initialize(pair_limit=PAIR_LIMIT)
-    print(f"[INIT] SUCCESS - Loaded {len(pairs)} pairs", flush=True)
-except Exception as e:
-    print(f"[INIT] ERROR during initialization: {e}", flush=True)
-    import traceback
-    traceback.print_exc()
-
-# Start background scanner
-print("[SCANNER] Starting background thread...", flush=True)
-scanning = True
-scan_thread = threading.Thread(target=background_scanner, daemon=True)
-scan_thread.start()
-print(f"[SCANNER] Started (interval: {UPDATE_INTERVAL_SECONDS}s)", flush=True)
+# Start delayed initialization thread
+print("[BOOT] Launching delayed init thread...", flush=True)
+threading.Thread(target=delayed_init, daemon=True).start()
 
 
 # =============================================================================
