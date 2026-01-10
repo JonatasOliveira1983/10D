@@ -186,17 +186,18 @@ class SignalGenerator:
             "sr_alignment": best_signal["sr_alignment"],
             "pivot_trend": best_signal["pivot_trend"],
             "volume_ratio": analysis["volume"]["details"].get("volume_ratio", 0),
-            "rsi": analysis["rsi"]["current_value"],
-            "trend": analysis["trend"]["direction"],
+            "rsi": analysis["rsi_bb"].get("current_value"),
+            "trend": analysis["trend_4h"].get("direction"),
             "timestamp": int(time.time() * 1000),
             "timestamp_readable": (datetime.now() - timedelta(hours=3)).strftime("%Y-%m-%d %H:%M:%S"),
             "indicators": {
-                "sma_fast": analysis["sma"]["details"].get("sma_fast"),
-                "sma_slow": analysis["sma"]["details"].get("sma_slow"),
-                "rsi": analysis["rsi"]["current_value"],
+                "ema_fast": analysis["ema"]["details"].get("ema_fast"),
+                "ema_slow": analysis["ema"]["details"].get("ema_slow"),
+                "rsi": analysis["rsi_bb"].get("current_value"),
                 "atr": analysis["pivot_trend"]["details"].get("atr"),
                 "upper_band": analysis["pivot_trend"]["details"].get("upper_band"),
-                "lower_band": analysis["pivot_trend"]["details"].get("lower_band")
+                "lower_band": analysis["pivot_trend"]["details"].get("lower_band"),
+                "macd_hist": analysis["ema"]["details"].get("macd_hist")
             },
             "sr_levels": {
                 "nearest_resistance": sr_proximity.get("nearest_resistance"),
