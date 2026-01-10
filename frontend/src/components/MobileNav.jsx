@@ -1,10 +1,12 @@
 import React from 'react';
+import { IconDashboard, IconOrganizer, IconHistory, IconSettings, IconSun, IconMoon } from './Icons';
 
 export default function MobileNav({ currentPage, onNavigate, theme, onToggleTheme }) {
     const menuItems = [
-        { id: 'dashboard', icon: '📊', label: 'Dashboard' },
-        { id: 'history', icon: '📜', label: 'Histórico' },
-        { id: 'settings', icon: '⚙️', label: 'Config' }
+        { id: 'dashboard', icon: <IconDashboard size={20} />, label: 'Dash' },
+        { id: 'organizer', icon: <IconOrganizer size={20} />, label: 'Plan' },
+        { id: 'history', icon: <IconHistory size={20} />, label: 'Hist' },
+        { id: 'settings', icon: <IconSettings size={20} />, label: 'Conf' }
     ];
 
     return (
@@ -15,7 +17,9 @@ export default function MobileNav({ currentPage, onNavigate, theme, onToggleThem
                     className={`mobile-nav-item ${currentPage === item.id ? 'active' : ''}`}
                     onClick={() => onNavigate(item.id)}
                 >
-                    <span className="nav-icon">{item.icon}</span>
+                    <div className="nav-icon-wrapper mobile">
+                        {item.icon}
+                    </div>
                     <span className="nav-label">{item.label}</span>
                 </button>
             ))}
@@ -24,7 +28,9 @@ export default function MobileNav({ currentPage, onNavigate, theme, onToggleThem
                 className="mobile-nav-item"
                 onClick={onToggleTheme}
             >
-                <span className="nav-icon">{theme === 'dark' ? '☀️' : '🌙'}</span>
+                <div className="nav-icon-wrapper mobile">
+                    {theme === 'dark' ? <IconSun size={20} /> : <IconMoon size={20} />}
+                </div>
                 <span className="nav-label">Tema</span>
             </button>
         </nav>

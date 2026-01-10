@@ -1,11 +1,12 @@
 import React from 'react';
+import { IconDashboard, IconOrganizer, IconHistory, IconSettings, IconSun, IconMoon } from './Icons';
 
 export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme }) {
     const menuItems = [
-        { id: 'dashboard', icon: '📊', label: 'Dashboard' },
-        { id: 'organizer', icon: '📁', label: 'Organizador' },
-        { id: 'history', icon: '📜', label: 'Histórico' },
-        { id: 'settings', icon: '⚙️', label: 'Configurações' }
+        { id: 'dashboard', icon: <IconDashboard />, label: 'Dashboard' },
+        { id: 'organizer', icon: <IconOrganizer />, label: 'Organizador' },
+        { id: 'history', icon: <IconHistory />, label: 'Histórico' },
+        { id: 'settings', icon: <IconSettings />, label: 'Configurações' }
     ];
 
     return (
@@ -22,7 +23,9 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme 
                         onClick={() => onNavigate(item.id)}
                         title={item.label}
                     >
-                        <span className="nav-icon">{item.icon}</span>
+                        <div className="nav-icon-wrapper">
+                            {item.icon}
+                        </div>
                         <span className="nav-label">{item.label}</span>
                     </button>
                 ))}
@@ -34,7 +37,9 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme 
                     onClick={onToggleTheme}
                     title={theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
                 >
-                    <span className="theme-icon">{theme === 'dark' ? '☀️' : '🌙'}</span>
+                    <div className="nav-icon-wrapper">
+                        {theme === 'dark' ? <IconSun /> : <IconMoon />}
+                    </div>
                 </button>
             </div>
         </aside>

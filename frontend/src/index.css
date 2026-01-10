@@ -1446,3 +1446,56 @@ body {
   gap: var(--space-md);
   margin-top: var(--space-md);
 }
+
+/* =============================================================================
+   Premium Icons - Glassmorphism System
+   ============================================================================= */
+
+.nav-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  color: var(--text-secondary);
+  transition: all var(--transition-normal);
+  margin-right: var(--space-md);
+}
+
+.nav-item:hover .nav-icon-wrapper {
+  background: rgba(30, 58, 138, 0.5);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--accent-primary);
+  transform: translateY(-2px);
+}
+
+.nav-item.active .nav-icon-wrapper {
+  background: rgba(0, 212, 170, 0.15);
+  border-color: var(--accent-primary);
+  color: white;
+  box-shadow: 0 0 15px rgba(0, 212, 170, 0.3);
+}
+
+.nav-icon-wrapper.mobile {
+  width: 36px;
+  height: 36px;
+  margin-right: 0;
+  margin-bottom: 4px;
+  border-radius: 10px;
+}
+
+.mobile-nav-item.active .nav-icon-wrapper {
+  background: rgba(30, 58, 138, 0.6);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* Remove old icon margins if any */
+.nav-icon {
+  display: none !important;
+}
