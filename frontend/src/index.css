@@ -1091,6 +1091,7 @@ body {
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
 /* =============================================================================
    Opening Page (Splash Screen)
    ============================================================================= */
@@ -1122,7 +1123,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.8) 100%);
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.8) 100%);
   z-index: 1;
 }
 
@@ -1137,10 +1138,10 @@ body {
 }
 
 .opening-main-title {
-  font-size: 5rem;
+  font-size: 3.5rem;
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 15px;
+  letter-spacing: 10px;
   background: linear-gradient(135deg, #ffffff 0%, #00d4aa 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1188,19 +1189,19 @@ body {
 }
 
 .btn-enter {
-  margin-top: var(--space-2xl);
-  padding: var(--space-md) var(--space-2xl);
+  margin-top: var(--space-xl);
+  padding: var(--space-sm) var(--space-xl);
   background: var(--accent-gradient);
   border: none;
   border-radius: var(--radius-full);
   color: white;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
   transition: all var(--transition-normal);
   box-shadow: 0 0 20px rgba(0, 212, 170, 0.4);
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
 }
 
 .btn-enter:hover {
@@ -1213,6 +1214,7 @@ body {
     opacity: 0;
     transform: translateY(30px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
