@@ -233,6 +233,38 @@ def analyze_symbol(symbol):
 
 
 # =============================================================================
+# TradesOrganizer Persistence
+# =============================================================================
+
+PLAN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trading_plan.json")
+
+@app.route("/api/users/artifacts/trading-plan", methods=["GET", "PUT"])
+@app.route("/api/users/artifacts/trading-plan-public", methods=["GET", "PUT"])
+def manage_trading_plan():
+    """Handle loading and saving of the trading plan data"""
+    import json
+    
+    if request.method == "PUT":
+        try:
+            data = request.json
+            with open(PLAN_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4)
+            return jsonify({"success": True, "message": "Plan saved successfully"})
+        except Exception as e:
+            return jsonify({"success": False, "message": str(e)}), 500
+            
+    # GET method
+    try:
+        if os.path.exists(PLAN_FILE):
+            with open(PLAN_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return jsonify({"success": True, "data": data})
+        return jsonify({"success": False, "message": "No data found"}), 404
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+# =============================================================================
 # Main Entry Point (for local development)
 # =============================================================================
 

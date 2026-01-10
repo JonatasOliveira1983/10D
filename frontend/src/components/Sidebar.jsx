@@ -3,6 +3,7 @@ import React from 'react';
 export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme }) {
     const menuItems = [
         { id: 'dashboard', icon: '📊', label: 'Dashboard' },
+        { id: 'organizer', icon: '📁', label: 'Organizador' },
         { id: 'history', icon: '📜', label: 'Histórico' },
         { id: 'settings', icon: '⚙️', label: 'Configurações' }
     ];

@@ -4,6 +4,7 @@ import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import MobileNav from './components/MobileNav';
 import OpeningPage from './components/OpeningPage';
+import TradesOrganizerPage from './components/TradesOrganizer/TradesOrganizerPage';
 import { fetchSignals, fetchStats } from './services/api';
 
 const POLL_INTERVAL = 5000; // 5 seconds
@@ -88,6 +89,9 @@ export default function App() {
                                     signals={signals}
                                     loading={loading}
                                 />
+                            )}
+                            {currentPage === 'organizer' && (
+                                <TradesOrganizerPage />
                             )}
                             {currentPage === 'history' && (
                                 <div className="page-placeholder">
