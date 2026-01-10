@@ -9,12 +9,14 @@ O **10D** é um scanner avançado de sinais para criptomoedas que monitora os to
 -   **Multi-Pair:** Monitora os 100 maiores pares por volume (BTCUSDT excluído para focar em altcoins).
 -   **Totalmente Responsivo:** Interface otimizada para Desktop e Mobile (com Bottom Nav e Sidebar).
 -   **Scanner Real-time:** Atualizações a cada 5 segundos.
+-   **Cloud Native:** Otimizado para Google Cloud Run com suporte regional e autenticação Bybit v5.
 
 ## 🛠️ Tecnologias
 
 -   **Backend:** Python 3.10+ (Flask, Pandas, Requests).
 -   **Frontend:** React (Vite, CSS Vanilla, Glassmorphism).
--   **API:** Bybit V5 API.
+-   **Fuso Horário:** Ajustado para São Paulo (UTC-3).
+-   **API:** Bybit V5 API (com suporte a HMAC Signature).
 
 ## 🚀 Como Começar
 
