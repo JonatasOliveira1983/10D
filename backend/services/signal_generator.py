@@ -8,7 +8,7 @@ Main signal generation engine with multiple signal types:
 
 import time
 from typing import List, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import sys
 import os
 
@@ -180,7 +180,7 @@ class SignalGenerator:
             "rsi": analysis["rsi"]["current_value"],
             "trend": analysis["trend"]["direction"],
             "timestamp": int(time.time() * 1000),
-            "timestamp_readable": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "timestamp_readable": (datetime.now() - timedelta(hours=3)).strftime("%Y-%m-%d %H:%M:%S"),
             "indicators": {
                 "sma_fast": analysis["sma"]["details"].get("sma_fast"),
                 "sma_slow": analysis["sma"]["details"].get("sma_slow"),
