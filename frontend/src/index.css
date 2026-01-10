@@ -1499,3 +1499,85 @@ body {
 .nav-icon {
   display: none !important;
 }
+
+/* =============================================================================
+   Trades Organizer - Responsive Refinements
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .trades-organizer {
+    padding: var(--space-md);
+    gap: var(--space-lg);
+    padding-bottom: 100px; /* Space for mobile nav */
+  }
+
+  .page-header-simple {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-md);
+  }
+
+  .page-header-simple h1 {
+    font-size: 1.4rem;
+  }
+
+  .organizer-config-card {
+    grid-template-columns: 1fr;
+    gap: var(--space-lg);
+    padding: var(--space-lg);
+  }
+
+  .stats-summary-box {
+    align-items: flex-start;
+    background: rgba(255, 255, 255, 0.03);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    width: 100%;
+  }
+
+  .stats-summary-box .value {
+    font-size: 1.5rem;
+  }
+
+  .plan-table th, .plan-table td {
+    padding: var(--space-sm);
+    font-size: 0.8rem;
+  }
+
+  .day-badge {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+  }
+
+  .modal-content {
+    padding: var(--space-lg);
+    width: 95%;
+  }
+
+  .trade-row {
+    grid-template-columns: 30px 1fr;
+    grid-template-rows: auto auto;
+    gap: var(--space-xs);
+  }
+
+  .trade-row .idx {
+    grid-row: span 2;
+  }
+
+  .btn-table {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+  }
+}
+
+.logout-btn .nav-icon-wrapper {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border-color: rgba(239, 68, 68, 0.2) !important;
+    color: #ef4444 !important;
+}
+
+.logout-btn:hover .nav-icon-wrapper {
+    background: rgba(239, 68, 68, 0.2) !important;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.3) !important;
+}

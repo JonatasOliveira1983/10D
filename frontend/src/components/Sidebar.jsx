@@ -1,7 +1,7 @@
 import React from 'react';
-import { IconDashboard, IconOrganizer, IconHistory, IconSettings, IconSun, IconMoon } from './Icons';
+import { IconDashboard, IconOrganizer, IconHistory, IconSettings, IconSun, IconMoon, IconLogout } from './Icons';
 
-export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme }) {
+export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme, onLogout }) {
     const menuItems = [
         { id: 'dashboard', icon: <IconDashboard />, label: 'Dashboard' },
         { id: 'organizer', icon: <IconOrganizer />, label: 'Organizador' },
@@ -39,6 +39,15 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme 
                 >
                     <div className="nav-icon-wrapper">
                         {theme === 'dark' ? <IconSun /> : <IconMoon />}
+                    </div>
+                </button>
+                <button
+                    className="theme-toggle logout-btn"
+                    onClick={onLogout}
+                    title="Sair"
+                >
+                    <div className="nav-icon-wrapper">
+                        <IconLogout />
                     </div>
                 </button>
             </div>

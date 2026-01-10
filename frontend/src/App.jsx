@@ -75,6 +75,7 @@ export default function App() {
                         onNavigate={setCurrentPage}
                         theme={theme}
                         onToggleTheme={toggleTheme}
+                        onLogout={() => setShowOpening(true)}
                     />
 
                     <div className="app-main">
@@ -114,6 +115,7 @@ export default function App() {
                         onNavigate={setCurrentPage}
                         theme={theme}
                         onToggleTheme={toggleTheme}
+                        onLogout={() => setShowOpening(true)}
                     />
                 </>
             )}
