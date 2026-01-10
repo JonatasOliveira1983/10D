@@ -3,11 +3,13 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import MobileNav from './components/MobileNav';
+import OpeningPage from './components/OpeningPage';
 import { fetchSignals, fetchStats } from './services/api';
 
 const POLL_INTERVAL = 5000; // 5 seconds
 
 export default function App() {
+    const [showOpening, setShowOpening] = useState(true);
     const [signals, setSignals] = useState([]);
     const [stats, setStats] = useState({
         monitored_pairs: 0,
@@ -63,48 +65,54 @@ export default function App() {
 
     return (
         <div className="app">
-            <Sidebar
-                currentPage={currentPage}
-                onNavigate={setCurrentPage}
-                theme={theme}
-                onToggleTheme={toggleTheme}
-            />
+            {showOpening && <OpeningPage onEnter={() => setShowOpening(false)} />}
 
-            <div className="app-main">
-                <Header
-                    stats={stats}
-                    isConnected={isConnected}
-                />
+            {!showOpening && (
+                <>
+                    <Sidebar
+                        currentPage={currentPage}
+                        onNavigate={setCurrentPage}
+                        theme={theme}
+                        onToggleTheme={toggleTheme}
+                    />
 
-                <main className="main-content">
-                    {currentPage === 'dashboard' && (
-                        <Dashboard
-                            signals={signals}
-                            loading={loading}
+                    <div className="app-main">
+                        <Header
+                            stats={stats}
+                            isConnected={isConnected}
                         />
-                    )}
-                    {currentPage === 'history' && (
-                        <div className="page-placeholder">
-                            <h2>📜 Histórico de Sinais</h2>
-                            <p>Em breve...</p>
-                        </div>
-                    )}
-                    {currentPage === 'settings' && (
-                        <div className="page-placeholder">
-                            <h2>⚙️ Configurações</h2>
-                            <p>Em breve...</p>
-                        </div>
-                    )}
-                </main>
-            </div>
 
-            {/* Mobile bottom navigation */}
-            <MobileNav
-                currentPage={currentPage}
-                onNavigate={setCurrentPage}
-                theme={theme}
-                onToggleTheme={toggleTheme}
-            />
+                        <main className="main-content">
+                            {currentPage === 'dashboard' && (
+                                <Dashboard
+                                    signals={signals}
+                                    loading={loading}
+                                />
+                            )}
+                            {currentPage === 'history' && (
+                                <div className="page-placeholder">
+                                    <h2>📜 Histórico de Sinais</h2>
+                                    <p>Em breve...</p>
+                                </div>
+                            )}
+                            {currentPage === 'settings' && (
+                                <div className="page-placeholder">
+                                    <h2>⚙️ Configurações</h2>
+                                    <p>Em breve...</p>
+                                </div>
+                            )}
+                        </main>
+                    </div>
+
+                    {/* Mobile bottom navigation */}
+                    <MobileNav
+                        currentPage={currentPage}
+                        onNavigate={setCurrentPage}
+                        theme={theme}
+                        onToggleTheme={toggleTheme}
+                    />
+                </>
+            )}
         </div>
     );
 }
