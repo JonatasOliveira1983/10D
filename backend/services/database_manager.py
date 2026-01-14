@@ -61,9 +61,10 @@ class DatabaseManager:
             response = self.client.table("signals").select("*").eq("status", "ACTIVE").execute()
             signals = {}
             for row in response.data:
-                # Usamos o payload completo salvo no JSONB para manter compatibilidade
-                sig_data = row["payload"]
-                signals[row["symbol"]] = sig_data
+                # Usamos o payload completo salvo no JSONB, ou fallback para dados da raiz
+                sig_data = row.get("payload") or row
+                if sig_data and "symbol" in sig_data:
+                    signals[row["symbol"]] = sig_data
             return signals
         except Exception as e:
             print(f"[DB ERROR] Erro ao recuperar sinais ativos: {e}", flush=True)
@@ -81,7 +82,16 @@ class DatabaseManager:
                 .limit(limit) \
                 .execute()
             
-            return [row["payload"] for row in response.data]
+            results = []
+            for row in response.data:
+                # Preferimos o payload (objeto completo), senão usamos os dados da raiz
+                sig_data = row.get("payload")
+                if sig_data and isinstance(sig_data, dict) and "symbol" in sig_data:
+                    results.append(sig_data)
+                elif row.get("symbol"):
+                    # Fallback: usa os campos da raiz
+                    results.append(row)
+            return results
         except Exception as e:
             print(f"[DB ERROR] Erro ao recuperar histórico: {e}", flush=True)
             return []
