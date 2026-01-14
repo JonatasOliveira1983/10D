@@ -520,9 +520,16 @@ class SignalGenerator:
 
         return sorted(active_list, key=sort_priority, reverse=True)
     
-    def get_signal_history(self, limit: int = 50) -> List[Dict]:
-        """Get signal history (most recent first)"""
-        return self.signal_history[-limit:][::-1]
+    def get_signal_history(self, limit: int = 50, hours_limit: int = 0) -> List[Dict]:
+        """Get signal history (most recent first) with optional time filtering"""
+        filtered_history = self.signal_history
+        
+        if hours_limit > 0:
+            current_time = int(time.time() * 1000)
+            cutoff = current_time - (hours_limit * 60 * 60 * 1000)
+            filtered_history = [s for s in self.signal_history if s.get("timestamp", 0) > cutoff]
+            
+        return filtered_history[-limit:][::-1]
     
     def clear_signal(self, symbol: str):
         """Remove a signal from active signals"""
