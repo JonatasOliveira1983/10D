@@ -54,6 +54,7 @@
     font-weight: 700;
     background: var(--accent-gradient);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     line-height: 1.2;
 }
@@ -220,22 +221,75 @@
 
 /* Responsive */
 @media (max-width: 768px) {
-    .history-header {
-        flex-direction: column;
+    .history-view {
         gap: var(--space-md);
     }
 
+    /* Compact Header for Mobile */
+    .history-header {
+        flex-direction: row;
+        /* Keep row */
+        align-items: center;
+        padding: var(--space-md);
+        gap: var(--space-sm);
+    }
+
+    .history-icon-wrapper {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        /* Prevent shrink */
+    }
+
+    .history-icon-wrapper svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .history-title {
+        font-size: 1.1rem;
+    }
+
+    .history-subtitle {
+        font-size: 0.75rem;
+        display: none;
+        /* Optional: hide subtitle on very small screens if needed, or keep small */
+    }
+
+    /* Show subtitle but smaller */
+    .history-subtitle {
+        display: block;
+        font-size: 0.7rem;
+        margin-top: 2px;
+    }
+
     .history-badge {
-        align-self: flex-start;
+        padding: 4px 8px;
+        font-size: 0.7rem;
+        margin-left: auto;
+        /* Push to right */
+        align-self: center;
+        white-space: nowrap;
     }
 
     .history-controls {
         width: 100%;
         overflow-x: auto;
+        justify-content: flex-start;
+        padding-bottom: 4px;
+        /* Scrollbar space */
     }
 
     .h-tab {
-        flex: 1;
+        padding: 6px 12px;
+        font-size: 0.8rem;
         white-space: nowrap;
+    }
+}
+
+@media (max-width: 480px) {
+    .history-subtitle {
+        display: none;
+        /* Maximally compact on small phones */
     }
 }

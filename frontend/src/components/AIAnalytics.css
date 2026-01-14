@@ -640,22 +640,45 @@
     }
 
     .analytics-header {
-        flex-direction: column;
-        gap: 16px;
-        padding-bottom: 20px;
+        flex-direction: row;
+        /* Compact Row */
+        align-items: center;
+        gap: 12px;
+        padding-bottom: 16px;
+        margin-bottom: 24px;
     }
 
     .header-content h1 {
-        font-size: 1.5rem;
+        font-size: 1.1rem;
+        margin-bottom: 2px;
+    }
+
+    .header-content p {
+        font-size: 0.75rem;
+        max-width: 200px;
+        /* Prevent text overflow issues */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .header-badge {
-        align-items: flex-start;
-        width: 100%;
+        align-items: flex-end;
+        width: auto;
+        margin-left: auto;
+        /* Push to right */
+    }
+
+    .badge-label {
+        display: none;
+        /* Hide label to save space */
     }
 
     .badge-value {
+        padding: 4px 10px;
+        font-size: 0.75rem;
         width: auto;
+        white-space: nowrap;
     }
 
     .analytics-grid {
