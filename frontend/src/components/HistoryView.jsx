@@ -62,19 +62,47 @@ export default function HistoryView({ history, loading }) {
     return (
         <div className="history-view">
             {/* Header Redesign */}
+            {/* Header Redesign */}
             <div className="history-header">
-                <div className="history-title-group">
-                    <div className="history-icon-wrapper">
-                        <IconHistory size={28} />
+                <div className="history-header-main">
+                    <div className="history-title-group">
+                        <div className="history-icon-wrapper">
+                            <IconHistory size={28} />
+                        </div>
+                        <div>
+                            <h2 className="history-title">Histórico de Sinais</h2>
+                            <p className="history-subtitle">Registro das últimas 24 horas</p>
+                        </div>
                     </div>
-                    <div>
-                        <h2 className="history-title">Histórico de Sinais</h2>
-                        <p className="history-subtitle">Registro das últimas 24 horas</p>
+                    <div className="history-badge">
+                        <div className="dot"></div>
+                        {stats.total} Sinais
                     </div>
                 </div>
-                <div className="history-badge">
-                    <div className="dot"></div>
-                    {stats.total} Sinais
+
+                {/* Mobile Compact Stats Bar */}
+                <div className="mobile-header-stats">
+                    <div className="m-stat-item">
+                        <span className="m-label">WIN</span>
+                        <span className="m-value highlight">{stats.winRate}%</span>
+                    </div>
+                    <div className="m-divider"></div>
+                    <div className="m-stat-item">
+                        <span className="m-label">ROI</span>
+                        <span className={`m-value ${parseFloat(stats.totalROI) >= 0 ? 'win' : 'loss'}`}>
+                            {stats.totalROI > 0 ? '+' : ''}{stats.totalROI}%
+                        </span>
+                    </div>
+                    <div className="m-divider"></div>
+                    <div className="m-stat-item">
+                        <span className="m-label">G</span>
+                        <span className="m-value win">{stats.gains}</span>
+                    </div>
+                    <div className="m-divider"></div>
+                    <div className="m-stat-item">
+                        <span className="m-label">L</span>
+                        <span className="m-value loss">{stats.losses}</span>
+                    </div>
                 </div>
             </div>
 

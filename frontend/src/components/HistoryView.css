@@ -8,6 +8,7 @@
 }
 
 /* Header Section */
+/* Header Section */
 .history-header {
     display: flex;
     justify-content: space-between;
@@ -29,6 +30,135 @@
     width: 4px;
     height: 100%;
     background: var(--accent-gradient);
+}
+
+/* Mobile Stats Bar - Default Hidden */
+.mobile-header-stats {
+    display: none;
+}
+
+.history-header-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .history-view {
+        gap: var(--space-md);
+    }
+
+    /* Compact Header for Mobile */
+    .history-header {
+        flex-direction: column;
+        /* Stack main header and stats bar */
+        padding: var(--space-md);
+        gap: 12px;
+    }
+
+    .history-header-main {
+        align-items: center;
+    }
+
+    .history-icon-wrapper {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+    }
+
+    .history-icon-wrapper svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .history-title {
+        font-size: 1.1rem;
+    }
+
+    .history-subtitle {
+        display: block;
+        font-size: 0.7rem;
+        margin-top: 2px;
+    }
+
+    .history-badge {
+        padding: 4px 8px;
+        font-size: 0.7rem;
+        margin-left: auto;
+        align-self: center;
+        white-space: nowrap;
+    }
+
+    /* Reveal Mobile Stats */
+    .mobile-header-stats {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding-top: 12px;
+        border-top: 1px solid var(--border-color);
+        margin-top: 4px;
+        gap: 8px;
+    }
+
+    .m-stat-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        flex: 1;
+    }
+
+    .m-label {
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        font-weight: 600;
+    }
+
+    .m-value {
+        font-size: 0.9rem;
+        font-weight: 800;
+        color: var(--text-primary);
+    }
+
+    .m-value.highlight {
+        color: var(--accent-primary);
+    }
+
+    .m-value.win {
+        color: var(--long-color);
+    }
+
+    .m-value.loss {
+        color: var(--short-color);
+    }
+
+    .m-divider {
+        width: 1px;
+        height: 24px;
+        background: var(--border-color);
+    }
+
+    .history-controls {
+        width: 100%;
+        overflow-x: auto;
+        justify-content: flex-start;
+        padding-bottom: 4px;
+    }
+
+    .h-tab {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 480px) {
+    .history-subtitle {
+        display: none;
+    }
 }
 
 .history-title-group {
@@ -220,6 +350,7 @@
 }
 
 /* Responsive */
+/* Responsive */
 @media (max-width: 768px) {
     .history-view {
         gap: var(--space-md);
@@ -227,18 +358,20 @@
 
     /* Compact Header for Mobile */
     .history-header {
-        flex-direction: row;
-        /* Keep row */
-        align-items: center;
+        flex-direction: column;
+        /* Stack main header and stats bar */
         padding: var(--space-md);
-        gap: var(--space-sm);
+        gap: 12px;
+    }
+
+    .history-header-main {
+        align-items: center;
     }
 
     .history-icon-wrapper {
         width: 36px;
         height: 36px;
         min-width: 36px;
-        /* Prevent shrink */
     }
 
     .history-icon-wrapper svg {
@@ -251,13 +384,6 @@
     }
 
     .history-subtitle {
-        font-size: 0.75rem;
-        display: none;
-        /* Optional: hide subtitle on very small screens if needed, or keep small */
-    }
-
-    /* Show subtitle but smaller */
-    .history-subtitle {
         display: block;
         font-size: 0.7rem;
         margin-top: 2px;
@@ -267,9 +393,63 @@
         padding: 4px 8px;
         font-size: 0.7rem;
         margin-left: auto;
-        /* Push to right */
         align-self: center;
         white-space: nowrap;
+    }
+
+    /* Reveal Mobile Stats with Divider */
+    .mobile-header-stats {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding-top: 12px;
+        border-top: 1px solid var(--border-color);
+        margin-top: 4px;
+        gap: 8px;
+    }
+
+    .m-stat-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        flex: 1;
+    }
+
+    .m-label {
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        font-weight: 600;
+    }
+
+    .m-value {
+        font-size: 0.9rem;
+        font-weight: 800;
+        color: var(--text-primary);
+    }
+
+    .m-value.highlight {
+        color: var(--accent-primary);
+    }
+
+    .m-value.win {
+        color: var(--long-color);
+    }
+
+    .m-value.loss {
+        color: var(--short-color);
+    }
+
+    .m-divider {
+        width: 1px;
+        height: 24px;
+        background: var(--border-color);
+    }
+
+    /* Hide the big stats grid on mobile to save space */
+    .history-stats-grid {
+        display: none;
     }
 
     .history-controls {
@@ -277,7 +457,6 @@
         overflow-x: auto;
         justify-content: flex-start;
         padding-bottom: 4px;
-        /* Scrollbar space */
     }
 
     .h-tab {
@@ -290,6 +469,5 @@
 @media (max-width: 480px) {
     .history-subtitle {
         display: none;
-        /* Maximally compact on small phones */
     }
 }
