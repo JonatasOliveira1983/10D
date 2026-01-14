@@ -89,23 +89,51 @@ class DatabaseManager:
                 .limit(limit)
                 
             # Filtro por tempo (retenção)
+                
+            # Execute query without .gt() filter to avoid type mismatch
+            # We fetch a bit more than limit to allow for filtering
             if hours_limit > 0:
-                # Calcular timestamp de corte (agora - horas) * 1000 (ms)
-                cutoff = int((time.time() - (hours_limit * 3600)) * 1000)
-                query = query.gt("timestamp", cutoff)
+                query = query.limit(limit * 2) 
             
             response = query.execute()
             
+            # Calculate cutoff for Python-side filtering
+            cutoff = 0
+            if hours_limit > 0:
+                cutoff = int((time.time() - (hours_limit * 3600)) * 1000)
+
             results = []
             for row in response.data:
                 # Preferimos o payload (objeto completo), senão usamos os dados da raiz
                 sig_data = row.get("payload")
+                
+                # Normalize data source
+                final_data = None
                 if sig_data and isinstance(sig_data, dict) and "symbol" in sig_data:
-                    results.append(sig_data)
+                    final_data = sig_data
                 elif row.get("symbol"):
-                    # Fallback: usa os campos da raiz
-                    results.append(row)
-            return results
+                    final_data = row
+                
+                if final_data:
+                    # Apply time filter if needed
+                    ts = final_data.get("timestamp")
+                    # Handle if timestamp is string (ISO) or int (Epoch)
+                    is_valid = True
+                    if hours_limit > 0 and ts:
+                        try:
+                            # If ts is large int/float -> epoch ms
+                            if isinstance(ts, (int, float)):
+                                if ts < cutoff: is_valid = False
+                            # If ts is string, it might be ISO... skipping complex parsing for safety
+                            # assuming our system saves as int/float ms based on signal_generator.py
+                        except:
+                            pass
+                            
+                    if is_valid:
+                        results.append(final_data)
+                        
+            # Apply final limit after filtering
+            return results[:limit]
         except Exception as e:
             print(f"[DB ERROR] Erro ao recuperar histórico: {e}", flush=True)
             return []
