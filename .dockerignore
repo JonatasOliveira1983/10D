@@ -1,0 +1,22 @@
+# Docker ignore list
+.git
+.github
+node_modules
+dist
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+.pytest_cache
+backend/tests
+backend/diagnose.py
+README.md
+task_boundary.md
+implementation_plan*.md
+walkthrough.md
+docker-compose.yml
+Dockerfile
+cloudbuild.yaml
+frontend/node_modules
+frontend/dist

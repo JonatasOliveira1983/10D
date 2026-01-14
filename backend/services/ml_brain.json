@@ -1,0 +1,21 @@
+{
+    "last_training": "2026-01-14T13:55:47.780322",
+    "samples_analyzed": 73,
+    "feature_importance": {
+        "rs_score": 0.1577,
+        "cvd_delta": 0.2088,
+        "rsi_value": 0.2151,
+        "master_score": 0.0331,
+        "oi_change_pct": 0.1271,
+        "trend_aligned": 0.029,
+        "lsr_change_pct": 0.2184,
+        "volatility_idx": 0.0903
+    },
+    "optimal_thresholds": {
+        "min_master_score": 84.12,
+        "optimal_rsi_range": [
+            45.3,
+            63.9
+        ]
+    }
+}

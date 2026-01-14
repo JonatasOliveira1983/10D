@@ -1,0 +1,31 @@
+﻿{
+    "data":  {
+                 "avg_master_score_losses":  70.0,
+                 "avg_master_score_wins":  100.0,
+                 "best_edge":  {
+                                   "type":  "EMA_CROSSOVER",
+                                   "win_rate":  100.0
+                               },
+                 "oi_impact":  {
+                                   "avg_oi_change_losses":  0.0877,
+                                   "avg_oi_change_wins":  1.2024
+                               },
+                 "performance_by_type":  {
+                                             "EMA_CROSSOVER":  {
+                                                                   "count":  1,
+                                                                   "win_rate":  100.0
+                                                               },
+                                             "JUDAS_SWING":  {
+                                                                 "count":  2,
+                                                                 "win_rate":  100.0
+                                                             },
+                                             "TREND_PULLBACK":  {
+                                                                    "count":  3,
+                                                                    "win_rate":  0.0
+                                                                }
+                                         },
+                 "total_samples":  6,
+                 "win_rate":  50.0
+             },
+    "status":  "READY"
+}
