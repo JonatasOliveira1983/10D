@@ -4,7 +4,7 @@ REST API for frontend communication and serving static files
 """
 
 # VERSION STAMP - to verify which code is running
-BUILD_VERSION = "2026-01-14-1600"
+BUILD_VERSION = "2026-01-14-1620"
 
 # EARLY DEBUG - before any complex imports
 import sys

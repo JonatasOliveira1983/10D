@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import SignalCard from './SignalCard';
+import { IconHistory } from './Icons';
+import './HistoryView.css';
 
 export default function HistoryView({ history, loading }) {
     const [activeFilter, setActiveFilter] = useState('ALL');
@@ -59,64 +61,79 @@ export default function HistoryView({ history, loading }) {
 
     return (
         <div className="history-view">
-            <h2 className="section-title">
-                📜 Histórico de Sinais ({stats.total})
-            </h2>
+            {/* Header Redesign */}
+            <div className="history-header">
+                <div className="history-title-group">
+                    <div className="history-icon-wrapper">
+                        <IconHistory size={28} />
+                    </div>
+                    <div>
+                        <h2 className="history-title">Histórico de Sinais</h2>
+                        <p className="history-subtitle">Registro das últimas 24 horas</p>
+                    </div>
+                </div>
+                <div className="history-badge">
+                    <div className="dot"></div>
+                    {stats.total} Sinais
+                </div>
+            </div>
 
             {/* Performance Stats */}
             {stats.total > 0 && (
-                <div className="history-stats">
-                    <div className="stat-card win">
-                        <span className="stat-label">Ganhos (TP)</span>
-                        <span className="stat-value">{stats.gains}</span>
-                        <span className="stat-detail">+{stats.avgGain}% avg</span>
+                <div className="history-stats-grid">
+                    <div className="h-stat-card win">
+                        <span className="h-stat-label">Ganhos (TP)</span>
+                        <span className="h-stat-value">{stats.gains}</span>
+                        <span className="h-stat-detail">+{stats.avgGain}% avg</span>
                     </div>
-                    <div className="stat-card loss">
-                        <span className="stat-label">Perdas (SL)</span>
-                        <span className="stat-value">{stats.losses}</span>
-                        <span className="stat-detail">{stats.avgLoss}% avg</span>
+                    <div className="h-stat-card loss">
+                        <span className="h-stat-label">Perdas (SL)</span>
+                        <span className="h-stat-value">{stats.losses}</span>
+                        <span className="h-stat-detail">{stats.avgLoss}% avg</span>
                     </div>
-                    <div className="stat-card rate">
-                        <span className="stat-label">Win Rate</span>
-                        <span className="stat-value">{stats.winRate}%</span>
+                    <div className="h-stat-card rate">
+                        <span className="h-stat-label">Win Rate</span>
+                        <span className="h-stat-value">{stats.winRate}%</span>
                     </div>
-                    <div className={`stat-card ${parseFloat(stats.totalROI) >= 0 ? 'win' : 'loss'}`}>
-                        <span className="stat-label">ROI Total</span>
-                        <span className="stat-value">{stats.totalROI > 0 ? '+' : ''}{stats.totalROI}%</span>
+                    <div className={`h-stat-card ${parseFloat(stats.totalROI) >= 0 ? 'win' : 'loss'}`}>
+                        <span className="h-stat-label">ROI Total</span>
+                        <span className="h-stat-value">{stats.totalROI > 0 ? '+' : ''}{stats.totalROI}%</span>
                     </div>
                 </div>
             )}
 
-            {/* Filter Tabs */}
-            <div className="filter-tabs">
+            {/* Clean Filter Tabs */}
+            <div className="history-controls">
                 <button
-                    className={`filter-tab ${activeFilter === 'ALL' ? 'active' : ''}`}
+                    className={`h-tab ${activeFilter === 'ALL' ? 'active' : ''}`}
                     onClick={() => setActiveFilter('ALL')}
                 >
-                    Todos ({stats.total})
+                    Todos
                 </button>
                 <button
-                    className={`filter-tab gain ${activeFilter === 'GAINS' ? 'active' : ''}`}
+                    className={`h-tab gain ${activeFilter === 'GAINS' ? 'active' : ''}`}
                     onClick={() => setActiveFilter('GAINS')}
                 >
-                    ✓ Gains ({stats.gains})
+                    Gains
                 </button>
                 <button
-                    className={`filter-tab loss ${activeFilter === 'LOSSES' ? 'active' : ''}`}
+                    className={`h-tab loss ${activeFilter === 'LOSSES' ? 'active' : ''}`}
                     onClick={() => setActiveFilter('LOSSES')}
                 >
-                    ✗ Losses ({stats.losses})
+                    Losses
                 </button>
             </div>
 
             {filteredHistory.length === 0 ? (
-                <div className="empty-state">
-                    <div className="empty-icon">📂</div>
+                <div className="history-empty">
+                    <div className="empty-icon-circle">
+                        <IconHistory size={32} />
+                    </div>
                     <h3 className="empty-title">
-                        {activeFilter === 'ALL' ? 'Nenhum sinal no histórico' : `Nenhum sinal ${activeFilter.toLowerCase()}`}
+                        {activeFilter === 'ALL' ? 'Nenhum sinal no histórico' : `Nenhum sinal de ${activeFilter.toLowerCase()}`}
                     </h3>
                     <p className="empty-text">
-                        Sinais finalizados aparecerão aqui.
+                        Sinais finalizados aparecerão aqui automaticamente.
                     </p>
                 </div>
             ) : (
