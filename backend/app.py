@@ -4,7 +4,7 @@ REST API for frontend communication and serving static files
 """
 
 # VERSION STAMP - to verify which code is running
-BUILD_VERSION = "2026-01-14-1535"
+BUILD_VERSION = "2026-01-14-1600"
 
 # EARLY DEBUG - before any complex imports
 import sys
@@ -166,13 +166,15 @@ def get_signals():
 
 @app.route("/api/history")
 def get_history():
-    """Get signal history"""
+    """Get signal history (limited to last 24h for clean UI)"""
     limit = request.args.get("limit", 50, type=int)
-    history = generator.get_signal_history(limit)
+    # Hardcoded 24h retention as requested
+    history = generator.get_signal_history(limit, hours_limit=24)
     
     return jsonify({
         "history": history,
-        "count": len(history)
+        "count": len(history),
+        "retention_policy": "24h"
     })
 
 

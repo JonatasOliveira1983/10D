@@ -1,5 +1,6 @@
 import os
 import json
+import time
 from typing import List, Dict, Optional
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -70,17 +71,30 @@ class DatabaseManager:
             print(f"[DB ERROR] Erro ao recuperar sinais ativos: {e}", flush=True)
             return {}
 
-    def get_signal_history(self, limit: int = 50) -> List[Dict]:
-        """Recupera histórico de sinais finalizados"""
+    def get_signal_history(self, limit: int = 50, hours_limit: int = 0) -> List[Dict]:
+        """
+        Recupera histórico de sinais finalizados
+        
+        Args:
+            limit (int): Número máximo de registros
+            hours_limit (int): Se > 0, retorna apenas sinais das últimas N horas
+        """
         if not self.client: return []
         
         try:
-            response = self.client.table("signals") \
+            query = self.client.table("signals") \
                 .select("*") \
                 .neq("status", "ACTIVE") \
                 .order("timestamp", desc=True) \
-                .limit(limit) \
-                .execute()
+                .limit(limit)
+                
+            # Filtro por tempo (retenção)
+            if hours_limit > 0:
+                # Calcular timestamp de corte (agora - horas) * 1000 (ms)
+                cutoff = int((time.time() - (hours_limit * 3600)) * 1000)
+                query = query.gt("timestamp", cutoff)
+            
+            response = query.execute()
             
             results = []
             for row in response.data:
