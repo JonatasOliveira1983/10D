@@ -40,6 +40,11 @@ class MLPredictor:
         self.last_train_count = 0
         self.tz = pytz.timezone('America/Sao_Paulo')
         
+        # Auto-training state
+        self.is_training = False
+        self.auto_train_interval = 30  # Retrain every 30 new samples (more aggressive)
+        self.min_samples_for_training = 100
+        
         # Try to load existing model
         self.load_model()
     
@@ -110,90 +115,95 @@ class MLPredictor:
         Train Random Forest model on historical data
         Returns: metrics dictionary
         """
+        self.is_training = True
         print("[ML] Starting model training...", flush=True)
         
-        # Prepare data
-        X, y, signals = self.prepare_training_data()
-        
-        if len(X) < min_samples:
-            msg = f"Insufficient data: {len(X)}/{min_samples} samples"
-            print(f"[ML] {msg}", flush=True)
-            return {
-                "status": "INSUFFICIENT_DATA",
-                "message": msg,
-                "current_samples": len(X),
-                "required_samples": min_samples
+        try:
+            # Prepare data
+            X, y, signals = self.prepare_training_data()
+            
+            if len(X) < min_samples:
+                msg = f"Insufficient data: {len(X)}/{min_samples} samples"
+                print(f"[ML] {msg}", flush=True)
+                return {
+                    "status": "INSUFFICIENT_DATA",
+                    "message": msg,
+                    "current_samples": len(X),
+                    "required_samples": min_samples
+                }
+            
+            # Split data (80/20 temporal split to avoid data leakage)
+            split_idx = int(len(X) * 0.8)
+            X_train, X_test = X[:split_idx], X[split_idx:]
+            y_train, y_test = y[:split_idx], y[split_idx:]
+            
+            print(f"[ML] Training set: {len(X_train)}, Test set: {len(X_test)}", flush=True)
+            
+            # Train Random Forest
+            self.model = RandomForestClassifier(
+                n_estimators=100,
+                max_depth=10,
+                min_samples_split=5,
+                min_samples_leaf=2,
+                random_state=42,
+                class_weight='balanced'  # Handle imbalanced data
+            )
+            
+            self.model.fit(X_train, y_train)
+            
+            # Calculate metrics
+            y_pred = self.model.predict(X_test)
+            y_pred_proba = self.model.predict_proba(X_test)[:, 1]
+            
+            accuracy = accuracy_score(y_test, y_pred)
+            precision = precision_score(y_test, y_pred, zero_division=0)
+            recall = recall_score(y_test, y_pred, zero_division=0)
+            f1 = f1_score(y_test, y_pred, zero_division=0)
+            cm = confusion_matrix(y_test, y_pred)
+            
+            # Feature importance
+            feature_importance = dict(zip(self.feature_names, self.model.feature_importances_))
+            feature_importance_sorted = dict(sorted(feature_importance.items(), key=lambda x: x[1], reverse=True))
+            
+            metrics = {
+                "status": "SUCCESS",
+                "timestamp": int(time.time() * 1000),
+                "timestamp_readable": datetime.now(self.tz).strftime("%Y-%m-%d %H:%M:%S"),
+                "samples": {
+                    "total": len(X),
+                    "train": len(X_train),
+                    "test": len(X_test),
+                    "wins": int(sum(y)),
+                    "losses": int(len(y) - sum(y))
+                },
+                "metrics": {
+                    "accuracy": round(accuracy, 4),
+                    "precision": round(precision, 4),
+                    "recall": round(recall, 4),
+                    "f1_score": round(f1, 4)
+                },
+                "confusion_matrix": {
+                    "true_negative": int(cm[0][0]) if cm.shape[0] > 0 else 0,
+                    "false_positive": int(cm[0][1]) if cm.shape[0] > 1 else 0,
+                    "false_negative": int(cm[1][0]) if cm.shape[0] > 1 else 0,
+                    "true_positive": int(cm[1][1]) if cm.shape[0] > 1 else 0
+                },
+                "feature_importance": {k: round(v, 4) for k, v in feature_importance_sorted.items()}
             }
-        
-        # Split data (80/20 temporal split to avoid data leakage)
-        split_idx = int(len(X) * 0.8)
-        X_train, X_test = X[:split_idx], X[split_idx:]
-        y_train, y_test = y[:split_idx], y[split_idx:]
-        
-        print(f"[ML] Training set: {len(X_train)}, Test set: {len(X_test)}", flush=True)
-        
-        # Train Random Forest
-        self.model = RandomForestClassifier(
-            n_estimators=100,
-            max_depth=10,
-            min_samples_split=5,
-            min_samples_leaf=2,
-            random_state=42,
-            class_weight='balanced'  # Handle imbalanced data
-        )
-        
-        self.model.fit(X_train, y_train)
-        
-        # Calculate metrics
-        y_pred = self.model.predict(X_test)
-        y_pred_proba = self.model.predict_proba(X_test)[:, 1]
-        
-        accuracy = accuracy_score(y_test, y_pred)
-        precision = precision_score(y_test, y_pred, zero_division=0)
-        recall = recall_score(y_test, y_pred, zero_division=0)
-        f1 = f1_score(y_test, y_pred, zero_division=0)
-        cm = confusion_matrix(y_test, y_pred)
-        
-        # Feature importance
-        feature_importance = dict(zip(self.feature_names, self.model.feature_importances_))
-        feature_importance_sorted = dict(sorted(feature_importance.items(), key=lambda x: x[1], reverse=True))
-        
-        metrics = {
-            "status": "SUCCESS",
-            "timestamp": int(time.time() * 1000),
-            "timestamp_readable": datetime.now(self.tz).strftime("%Y-%m-%d %H:%M:%S"),
-            "samples": {
-                "total": len(X),
-                "train": len(X_train),
-                "test": len(X_test),
-                "wins": int(sum(y)),
-                "losses": int(len(y) - sum(y))
-            },
-            "metrics": {
-                "accuracy": round(accuracy, 4),
-                "precision": round(precision, 4),
-                "recall": round(recall, 4),
-                "f1_score": round(f1, 4)
-            },
-            "confusion_matrix": {
-                "true_negative": int(cm[0][0]) if cm.shape[0] > 0 else 0,
-                "false_positive": int(cm[0][1]) if cm.shape[0] > 1 else 0,
-                "false_negative": int(cm[1][0]) if cm.shape[0] > 1 else 0,
-                "true_positive": int(cm[1][1]) if cm.shape[0] > 1 else 0
-            },
-            "feature_importance": {k: round(v, 4) for k, v in feature_importance_sorted.items()}
-        }
-        
-        # Save model and metrics
-        self.save_model()
-        self.save_metrics(metrics)
-        
-        self.last_train_count = len(X)
-        
-        print(f"[ML] ✅ Model trained successfully - Accuracy: {accuracy:.2%}", flush=True)
-        print(f"[ML] Top features: {list(feature_importance_sorted.keys())[:3]}", flush=True)
-        
-        return metrics
+            
+            # Save model and metrics
+            self.save_model()
+            self.save_metrics(metrics)
+            
+            self.last_train_count = len(X)
+            
+            print(f"[ML] ✅ Model trained successfully - Accuracy: {accuracy:.2%}", flush=True)
+            print(f"[ML] Top features: {list(feature_importance_sorted.keys())[:3]}", flush=True)
+            
+            return metrics
+            
+        finally:
+            self.is_training = False
     
     def predict_probability(self, features: Dict) -> float:
         """
@@ -293,9 +303,13 @@ class MLPredictor:
         """Get current ML system status"""
         metrics = self.get_metrics()
         
-        # Count available samples
+        # Count available labeled samples
         signals = self.db.get_signals_with_features(limit=1000)
         labeled_count = len([s for s in signals if s.get("status") in ["TP_HIT", "SL_HIT", "EXPIRED"]])
+        
+        # Calculate progress to next training
+        samples_since_last_train = labeled_count - self.last_train_count
+        samples_to_next_train = max(0, self.auto_train_interval - samples_since_last_train)
         
         return {
             "model_loaded": self.model is not None,
@@ -303,31 +317,46 @@ class MLPredictor:
             "available_samples": labeled_count,
             "last_training": metrics.get("timestamp_readable") if metrics else None,
             "last_accuracy": metrics.get("metrics", {}).get("accuracy") if metrics else None,
-            "is_ready": self.model is not None and labeled_count >= self.config.get("ML_MIN_SAMPLES", 100)
+            "is_ready": self.model is not None and labeled_count >= self.min_samples_for_training,
+            # Auto-training status
+            "is_training": self.is_training,
+            "auto_train_enabled": True,
+            "samples_since_last_train": samples_since_last_train,
+            "samples_to_next_train": samples_to_next_train,
+            "auto_train_interval": self.auto_train_interval,
+            "min_samples_required": self.min_samples_for_training,
+            "training_progress_pct": min(100, int((samples_since_last_train / self.auto_train_interval) * 100)) if self.model else min(100, int((labeled_count / self.min_samples_for_training) * 100))
         }
     
     def should_retrain(self) -> bool:
-        """Check if model should be retrained"""
-        if not self.model:
-            return True
-        
+        """Check if model should be retrained automatically"""
+        # Don't trigger if already training
+        if self.is_training:
+            return False
+            
         # Get current sample count
         signals = self.db.get_signals_with_features(limit=1000)
         current_count = len([s for s in signals if s.get("status") in ["TP_HIT", "SL_HIT", "EXPIRED"]])
         
-        # Retrain if we have enough new samples
-        new_samples = current_count - self.last_train_count
-        retrain_interval = self.config.get("ML_AUTO_RETRAIN_INTERVAL", 50)
+        # First-time training: if no model and enough samples
+        if not self.model:
+            if current_count >= self.min_samples_for_training:
+                print(f"[ML] Auto-train triggered: first training with {current_count} samples", flush=True)
+                return True
+            return False
         
-        if new_samples >= retrain_interval:
-            print(f"[ML] Auto-retrain triggered: {new_samples} new samples", flush=True)
+        # Retrain if we have enough new samples since last training
+        new_samples = current_count - self.last_train_count
+        
+        if new_samples >= self.auto_train_interval:
+            print(f"[ML] Auto-retrain triggered: {new_samples} new samples since last training", flush=True)
             return True
         
-        # Check if accuracy is too low
+        # Check if accuracy is too low (retrain to improve)
         metrics = self.get_metrics()
         if metrics:
             accuracy = metrics.get("metrics", {}).get("accuracy", 1.0)
-            if accuracy < 0.60:
+            if accuracy < 0.55:  # More aggressive threshold
                 print(f"[ML] Auto-retrain triggered: low accuracy {accuracy:.2%}", flush=True)
                 return True
         

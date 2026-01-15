@@ -6,7 +6,6 @@ export default function MLPerformance() {
     const [mlStatus, setMlStatus] = useState(null);
     const [mlMetrics, setMlMetrics] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [training, setTraining] = useState(false);
 
     const fetchMLData = async () => {
         try {
@@ -25,30 +24,10 @@ export default function MLPerformance() {
 
     useEffect(() => {
         fetchMLData();
-        const interval = setInterval(fetchMLData, 30000); // Refresh every 30s
+        // Update every 15 seconds to show real-time training status
+        const interval = setInterval(fetchMLData, 15000);
         return () => clearInterval(interval);
     }, []);
-
-    const handleTrain = async () => {
-        setTraining(true);
-        try {
-            const response = await fetch('/api/ml/train', { method: 'POST' });
-            const result = await response.json();
-
-            if (result.status === 'SUCCESS') {
-                alert(`Modelo treinado com sucesso!\nAccuracy: ${(result.metrics.accuracy * 100).toFixed(1)}%`);
-                fetchMLData(); // Refresh data
-            } else if (result.status === 'INSUFFICIENT_DATA') {
-                alert(`Dados insuficientes\n${result.current_samples}/${result.required_samples} amostras`);
-            } else {
-                alert(`Erro: ${result.message}`);
-            }
-        } catch (error) {
-            alert(`Erro ao treinar: ${error.message}`);
-        } finally {
-            setTraining(false);
-        }
-    };
 
     if (loading) return <div className="loading-state">Carregando ML Performance...</div>;
 
@@ -101,21 +80,69 @@ export default function MLPerformance() {
             </div>
 
             <div className="analytics-grid">
-                {/* Model Status Card */}
+                {/* Auto-Training Status Card */}
                 <div className="analytics-card progress-card glass">
                     <div className="card-header">
-                        <h3>Status do Modelo</h3>
-                        <span className="card-tag">ML System</span>
+                        <h3>🤖 Auto-Training</h3>
+                        <span className={`card-tag ${mlStatus?.is_training ? 'training' : mlStatus?.model_loaded ? 'active' : 'pending'}`}>
+                            {mlStatus?.is_training ? 'Treinando...' : mlStatus?.model_loaded ? 'Ativo' : 'Aguardando'}
+                        </span>
                     </div>
+
+                    {/* Training Progress */}
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                            <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>
+                                {mlStatus?.model_loaded ? 'Próximo retreino' : 'Primeiro treino'}
+                            </span>
+                            <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>
+                                {mlStatus?.model_loaded
+                                    ? `${mlStatus?.samples_since_last_train || 0}/${mlStatus?.auto_train_interval || 30} amostras`
+                                    : `${mlStatus?.available_samples || 0}/${mlStatus?.min_samples_required || 100} amostras`
+                                }
+                            </span>
+                        </div>
+                        <div style={{
+                            height: '8px',
+                            background: 'rgba(255,255,255,0.1)',
+                            borderRadius: '4px',
+                            overflow: 'hidden'
+                        }}>
+                            <div style={{
+                                height: '100%',
+                                width: `${mlStatus?.training_progress_pct || 0}%`,
+                                background: mlStatus?.is_training
+                                    ? 'linear-gradient(90deg, #667eea, #764ba2)'
+                                    : 'linear-gradient(90deg, #00d4aa, #00e676)',
+                                borderRadius: '4px',
+                                transition: 'width 0.5s ease',
+                                animation: mlStatus?.is_training ? 'pulse 1.5s ease-in-out infinite' : 'none'
+                            }} />
+                        </div>
+                        {mlStatus?.is_training && (
+                            <div style={{
+                                marginTop: '0.5rem',
+                                fontSize: '0.8rem',
+                                color: '#667eea',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem'
+                            }}>
+                                <span className="spinner-small" />
+                                Retreinando modelo automaticamente...
+                            </div>
+                        )}
+                    </div>
+
                     <div className="feature-list">
                         <div className="feature-item">
                             <span className="feature-label">Modelo Carregado</span>
                             <span className={`feature-value-inline ${mlStatus?.model_loaded ? 'success' : 'danger'}`}>
-                                {mlStatus?.model_loaded ? 'Sim' : 'Não'}
+                                {mlStatus?.model_loaded ? '✓ Sim' : '✗ Não'}
                             </span>
                         </div>
                         <div className="feature-item">
-                            <span className="feature-label">Amostras Disponíveis</span>
+                            <span className="feature-label">Total de Amostras</span>
                             <span className="feature-value-inline">{mlStatus?.available_samples || 0}</span>
                         </div>
                         <div className="feature-item">
@@ -125,32 +152,18 @@ export default function MLPerformance() {
                             </span>
                         </div>
                         <div className="feature-item">
-                            <span className="feature-label">Accuracy</span>
+                            <span className="feature-label">Accuracy Atual</span>
                             <span className="feature-value-inline" style={{ color: getMetricColor(mlStatus?.last_accuracy || 0) }}>
                                 {mlStatus?.last_accuracy ? `${(mlStatus.last_accuracy * 100).toFixed(1)}%` : 'N/A'}
                             </span>
                         </div>
+                        <div className="feature-item">
+                            <span className="feature-label">Intervalo de Retreino</span>
+                            <span className="feature-value-inline">
+                                A cada {mlStatus?.auto_train_interval || 30} amostras
+                            </span>
+                        </div>
                     </div>
-                    <button
-                        onClick={handleTrain}
-                        disabled={training}
-                        className="train-button"
-                        style={{
-                            marginTop: '1rem',
-                            padding: '0.75rem 1.5rem',
-                            background: training ? 'rgba(102, 126, 234, 0.5)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            cursor: training ? 'not-allowed' : 'pointer',
-                            fontWeight: '600',
-                            fontSize: '0.95rem',
-                            transition: 'all 0.3s ease',
-                            boxShadow: training ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)'
-                        }}
-                    >
-                        {training ? 'Treinando...' : 'Treinar Modelo'}
-                    </button>
                 </div>
 
                 {/* Metrics Overview */}
