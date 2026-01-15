@@ -55,19 +55,17 @@ class SignalGenerator:
         }
         self.ml_predictor = MLPredictor(self.db, ml_config) if ML_ENABLED else None
         
-        # VALIDAÇÃO: Se ML está habilitado, modelo DEVE estar treinado
+        # INFO: Se ML está habilitado mas modelo não treinado, sistema funciona em modo fallback
         if ML_ENABLED:
             if not self.ml_predictor or not self.ml_predictor.model:
                 print("\n" + "="*80, flush=True)
-                print("❌ ERRO CRÍTICO: ML está habilitado mas o modelo não está treinado!", flush=True)
+                print("⚠️ AVISO: ML está habilitado mas o modelo ainda não foi treinado.", flush=True)
                 print("="*80, flush=True)
-                print("\nO sistema NÃO PODE gerar sinais sem um modelo ML treinado.", flush=True)
-                print("\nOpções:", flush=True)
-                print("  1. Treinar o modelo ML com sinais históricos", flush=True)
-                print("  2. Desabilitar ML temporariamente (ML_ENABLED = False em config.py)", flush=True)
-                print("\nPara treinar o modelo, você precisa de pelo menos 50-100 sinais finalizados.", flush=True)
+                print("\nO sistema vai funcionar em MODO FALLBACK (apenas regras, sem ML).", flush=True)
+                print("Quando houver 100+ amostras finalizadas, o modelo será treinado automaticamente.", flush=True)
                 print("="*80 + "\n", flush=True)
-                raise RuntimeError("ML habilitado mas modelo não treinado. Sistema bloqueado.")
+            else:
+                print("[ML] ✅ Modelo ML carregado com sucesso!", flush=True)
         
         self.load_state()
     
