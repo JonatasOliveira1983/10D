@@ -54,9 +54,9 @@ class DatabaseManager:
                 "entry_price": signal.get("entry_price"),
                 "stop_loss": signal.get("stop_loss"),
                 "take_profit": signal.get("take_profit"),
-                "score": signal.get("score"),
+                "score": int(signal.get("score", 0)),  # Convert to int for DB
                 "status": signal.get("status", "ACTIVE"),
-                "final_roi": signal.get("final_roi"),
+                "final_roi": int(signal.get("final_roi", 0)) if signal.get("final_roi") is not None else None,
                 "timestamp": signal.get("timestamp"),
                 "exit_timestamp": signal.get("exit_timestamp"),
                 "payload": signal # Objeto completo
