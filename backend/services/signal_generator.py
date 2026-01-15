@@ -55,6 +55,20 @@ class SignalGenerator:
         }
         self.ml_predictor = MLPredictor(self.db, ml_config) if ML_ENABLED else None
         
+        # VALIDAÇÃO: Se ML está habilitado, modelo DEVE estar treinado
+        if ML_ENABLED:
+            if not self.ml_predictor or not self.ml_predictor.model:
+                print("\n" + "="*80, flush=True)
+                print("❌ ERRO CRÍTICO: ML está habilitado mas o modelo não está treinado!", flush=True)
+                print("="*80, flush=True)
+                print("\nO sistema NÃO PODE gerar sinais sem um modelo ML treinado.", flush=True)
+                print("\nOpções:", flush=True)
+                print("  1. Treinar o modelo ML com sinais históricos", flush=True)
+                print("  2. Desabilitar ML temporariamente (ML_ENABLED = False em config.py)", flush=True)
+                print("\nPara treinar o modelo, você precisa de pelo menos 50-100 sinais finalizados.", flush=True)
+                print("="*80 + "\n", flush=True)
+                raise RuntimeError("ML habilitado mas modelo não treinado. Sistema bloqueado.")
+        
         self.load_state()
     
     def initialize(self, pair_limit: int = 100):
@@ -776,10 +790,22 @@ class SignalGenerator:
                 roi = self._calculate_roi(direction, entry_price, current_price)
                 signal["final_roi"] = round(roi, 2)
                 
-                # REGRA: Todos os sinais finalizados vão para o histórico local (se recente) e DB
-                if status in ["TP_HIT", "SL_HIT"]:
-                    self.signal_history.append(signal)
-                    finalized.append(signal)
+                # VALIDAÇÃO: Garantir consistência entre status e ROI
+                # Se ROI > 0 mas status é SL_HIT, corrigir para TP_HIT
+                # Se ROI < 0 mas status é TP_HIT, corrigir para SL_HIT
+                if status in ["TP_HIT", "SL_HIT"]:  # Não validar EXPIRED
+                    if roi > 0 and status == "SL_HIT":
+                        print(f"[VALIDATION] {symbol} ROI +{roi:.2f}% but status was SL_HIT, correcting to TP_HIT", flush=True)
+                        signal["status"] = "TP_HIT"
+                        status = "TP_HIT"
+                    elif roi < 0 and status == "TP_HIT":
+                        print(f"[VALIDATION] {symbol} ROI {roi:.2f}% but status was TP_HIT, correcting to SL_HIT", flush=True)
+                        signal["status"] = "SL_HIT"
+                        status = "SL_HIT"
+                
+                # REGRA: Todos os sinais finalizados vão para o histórico local e DB (incluindo EXPIRED)
+                self.signal_history.append(signal)
+                finalized.append(signal)
                 
                 self.save_signal_to_db(signal) # Salva SEMPRE no Supabase
                 print(f"[FINALIZED] {symbol} {status} at ${current_price} (ROI: {roi:.2f}%) - Persistido no DB", flush=True)
@@ -788,34 +814,65 @@ class SignalGenerator:
     
     def _verify_with_klines(self, symbol: str, direction: str, entry: float, tp: float, sl: float) -> tuple:
         """
-        Realiza uma auditoria fina usando candles de 1 minuto para confirmar 
-        qual alvo (TP ou SL) foi atingido primeiro.
+        Verifica se TP ou SL foi atingido e retorna o status apropriado.
+        IMPORTANTE: A classificação final será baseada no ROI real, não apenas em qual nível foi tocado.
+        Esta função serve para confirmar que houve um hit válido.
         """
         try:
             # Pegamos as últimas candles de 1min (cobertura de 60 min)
             klines = self.client.get_klines(symbol, "1", 60)
             if not klines:
-                return True, "TP_HIT" if direction == "LONG" else "SL_HIT" # Fallback para o trigger original
+                # Fallback: usar preço atual para determinar
+                ticker = self.client.get_ticker(symbol)
+                if ticker:
+                    current_price = float(ticker["lastPrice"])
+                    roi = self._calculate_roi(direction, entry, current_price)
+                    return True, "TP_HIT" if roi > 0 else "SL_HIT"
+                return True, "TP_HIT"
 
+            # Verificar se TP ou SL foram atingidos nas candles
+            touched_tp = False
+            touched_sl = False
+            
             for candle in klines:
                 high = candle["high"]
                 low = candle["low"]
 
                 if direction == "LONG":
-                    # Se em 1min a mínima atingiu o SL antes/junto com a máxima atingindo o TP
-                    # Marcamos como SL para sermos conservadores no treinamento da IA
                     if low <= sl:
-                        return True, "SL_HIT"
+                        touched_sl = True
                     if high >= tp:
-                        return True, "TP_HIT"
+                        touched_tp = True
                 else: # SHORT
                     if high >= sl:
-                        return True, "SL_HIT"
+                        touched_sl = True
                     if low <= tp:
-                        return True, "TP_HIT"
+                        touched_tp = True
             
-            # Se não encontrou nas candles (delay de API?), mantém o trigger original
-            return True, "TP_HIT" # Assume TP por padrão
+            # Determinar status baseado no que foi tocado
+            # Se ambos foram tocados, usar o preço atual para decidir (ROI final)
+            if touched_tp and touched_sl:
+                ticker = self.client.get_ticker(symbol)
+                if ticker:
+                    current_price = float(ticker["lastPrice"])
+                    roi = self._calculate_roi(direction, entry, current_price)
+                    status = "TP_HIT" if roi > 0 else "SL_HIT"
+                    print(f"[VERIFY] {symbol} touched both TP and SL, using ROI ({roi:.2f}%) -> {status}", flush=True)
+                    return True, status
+                return True, "TP_HIT"  # Default to TP if can't determine
+            elif touched_tp:
+                return True, "TP_HIT"
+            elif touched_sl:
+                return True, "SL_HIT"
+            else:
+                # Nenhum foi tocado nas candles, usar preço atual
+                ticker = self.client.get_ticker(symbol)
+                if ticker:
+                    current_price = float(ticker["lastPrice"])
+                    roi = self._calculate_roi(direction, entry, current_price)
+                    return True, "TP_HIT" if roi > 0 else "SL_HIT"
+                return True, "TP_HIT"
+                
         except Exception as e:
             print(f"[VERIFY ERROR] {symbol}: {e}", flush=True)
             return True, "TP_HIT"

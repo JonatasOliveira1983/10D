@@ -2096,24 +2096,7 @@ body {
   box-shadow: 0 0 15px rgba(0, 212, 170, 0.3);
 }
 
-.nav-icon-wrapper.mobile {
-  width: 36px;
-  height: 36px;
-  margin-right: 0;
-  margin-bottom: 4px;
-  border-radius: 10px;
-}
-
-.mobile-nav-item.active .nav-icon-wrapper {
-  background: rgba(30, 58, 138, 0.6);
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
-}
-
-/* Remove old icon margins if any */
-.nav-icon {
-  display: none !important;
-}
+/* Old mobile nav styles removed - now handled in @media (max-width: 768px) */
 
 /* =============================================================================
    Trades Organizer - Responsive Refinements

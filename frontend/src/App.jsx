@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
-import MobileNav from './components/MobileNav';
 import OpeningPage from './components/OpeningPage';
 import TradesOrganizerPage from './components/TradesOrganizer/TradesOrganizerPage';
 import HistoryView from './components/HistoryView';
@@ -138,15 +137,6 @@ export default function App() {
                             )}
                         </main>
                     </div>
-
-                    {/* Mobile bottom navigation */}
-                    <MobileNav
-                        currentPage={currentPage}
-                        onNavigate={setCurrentPage}
-                        theme={theme}
-                        onToggleTheme={toggleTheme}
-                        onLogout={() => setShowOpening(true)}
-                    />
                 </>
             )}
         </div>

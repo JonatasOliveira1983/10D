@@ -22,7 +22,7 @@ export default function HistoryView({ history, loading }) {
     // Calculate stats
     const stats = useMemo(() => {
         const gains = sortedHistory.filter(s => s.status === 'TP_HIT' || s.status === 'VOL_CLIMAX');
-        const losses = sortedHistory.filter(s => s.status === 'SL_HIT');
+        const losses = sortedHistory.filter(s => s.status === 'SL_HIT' || s.status === 'EXPIRED');
 
         const total = sortedHistory.length;
         const winRate = total > 0 ? ((gains.length / total) * 100).toFixed(1) : 0;
@@ -57,7 +57,7 @@ export default function HistoryView({ history, loading }) {
             case 'GAINS':
                 return sortedHistory.filter(s => s.status === 'TP_HIT' || s.status === 'VOL_CLIMAX');
             case 'LOSSES':
-                return sortedHistory.filter(s => s.status === 'SL_HIT');
+                return sortedHistory.filter(s => s.status === 'SL_HIT' || s.status === 'EXPIRED');
             default:
                 return sortedHistory;
         }
