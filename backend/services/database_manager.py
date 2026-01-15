@@ -18,18 +18,25 @@ class DatabaseManager:
         print(f"[DB INIT] SUPABASE_URL present: {bool(self.url)}", flush=True)
         print(f"[DB INIT] SUPABASE_ANON_KEY present: {bool(self.key)}", flush=True)
         
+        if self.url:
+            print(f"[DB INIT] SUPABASE_URL value: {self.url[:50]}...", flush=True)
+        if self.key:
+            print(f"[DB INIT] SUPABASE_ANON_KEY length: {len(self.key)} chars", flush=True)
+        
         if not self.url or not self.key:
             print("[DB ERROR] SUPABASE_URL ou SUPABASE_ANON_KEY não encontradas no .env", flush=True)
             self.client = None
         else:
             try:
+                print("[DB INIT] Attempting to create Supabase client...", flush=True)
                 self.client: Client = create_client(self.url, self.key)
-                print(f"[DB] Conexão com Supabase estabelecida - URL: {self.url[:30]}...", flush=True)
+                print(f"[DB] ✅ Conexão com Supabase estabelecida - URL: {self.url[:30]}...", flush=True)
             except Exception as e:
-                print(f"[DB ERROR] Falha ao conectar ao Supabase: {e}", flush=True)
+                print(f"[DB ERROR] ❌ Falha ao conectar ao Supabase: {type(e).__name__}: {e}", flush=True)
                 import traceback
                 traceback.print_exc()
                 self.client = None
+                print("[DB ERROR] Client set to None due to initialization failure", flush=True)
 
     # --- Métodos para Sinais ---
 
