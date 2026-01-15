@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'; // Force deploy update
 import { IconDashboard, IconOrganizer, IconHistory, IconSun, IconMoon, IconLogout, IconAI } from './Icons';
 
 export default function MobileNav({ currentPage, onNavigate, theme, onToggleTheme, onLogout }) {
