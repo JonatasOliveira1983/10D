@@ -18,7 +18,10 @@ from config import (
     STOP_LOSS_PERCENT, TAKE_PROFIT_PERCENT,
     RS_MIN_THRESHOLD, VOLUME_CLIMAX_THRESHOLD,
     HISTORY_RETENTION_HOURS, SIGNAL_TTL_MINUTES,
-    ENTRY_ZONE_IDEAL, ENTRY_ZONE_LATE, ENTRY_MISSED_PERCENT
+    ENTRY_ZONE_IDEAL, ENTRY_ZONE_LATE, ENTRY_MISSED_PERCENT,
+    ML_ENABLED, ML_PROBABILITY_THRESHOLD, ML_MIN_SAMPLES,
+    ML_AUTO_RETRAIN_INTERVAL, ML_MODEL_PATH, ML_METRICS_PATH,
+    ML_HYBRID_SCORE_WEIGHT
 )
 
 import json
@@ -28,6 +31,7 @@ from services.indicator_calculator import analyze_candles
 from services.sr_detector import get_all_sr_levels, check_sr_proximity, get_sr_alignment
 from services.signal_scorer import calculate_signal_score, get_score_rating, get_score_emoji
 from services.database_manager import DatabaseManager
+from services.ml_predictor import MLPredictor
 
 
 class SignalGenerator:
@@ -41,6 +45,16 @@ class SignalGenerator:
         self.monitored_pairs: List[str] = []
         self.instruments_info: Dict[str, Dict] = {}
         self.tz = pytz.timezone('America/Sao_Paulo')
+        
+        # Initialize ML Predictor
+        ml_config = {
+            "ML_MODEL_PATH": ML_MODEL_PATH,
+            "ML_METRICS_PATH": ML_METRICS_PATH,
+            "ML_MIN_SAMPLES": ML_MIN_SAMPLES,
+            "ML_AUTO_RETRAIN_INTERVAL": ML_AUTO_RETRAIN_INTERVAL
+        }
+        self.ml_predictor = MLPredictor(self.db, ml_config) if ML_ENABLED else None
+        
         self.load_state()
     
     def initialize(self, pair_limit: int = 100):
@@ -358,6 +372,38 @@ class SignalGenerator:
             "ai_features": self._capture_ai_features(symbol, analysis, best_signal)
         }
         
+        # === ML PREDICTION INTEGRATION ===
+        if self.ml_predictor and ML_ENABLED:
+            try:
+                # Get ML probability prediction
+                ml_probability = self.ml_predictor.predict_probability(signal["ai_features"])
+                signal["ml_probability"] = round(ml_probability, 4)
+                
+                # Create hybrid score: 40% rules + 60% ML
+                rules_score = signal["score"]
+                ml_score = ml_probability * 100
+                hybrid_score = (rules_score * (1 - ML_HYBRID_SCORE_WEIGHT)) + (ml_score * ML_HYBRID_SCORE_WEIGHT)
+                
+                signal["score_breakdown"] = {
+                    "rules_score": rules_score,
+                    "ml_score": round(ml_score, 2),
+                    "hybrid_score": round(hybrid_score, 2),
+                    "ml_probability": round(ml_probability, 4)
+                }
+                
+                # Update final score with hybrid
+                signal["score"] = round(hybrid_score, 2)
+                signal["rating"] = get_score_rating(signal["score"])
+                signal["emoji"] = get_score_emoji(signal["score"])
+                
+                print(f"[ML] {symbol} - Rules: {rules_score}% | ML: {ml_score:.1f}% | Hybrid: {hybrid_score:.1f}%", flush=True)
+                
+            except Exception as e:
+                print(f"[ML ERROR] Failed to predict for {symbol}: {e}", flush=True)
+                signal["ml_probability"] = None
+        else:
+            signal["ml_probability"] = None
+        
         return signal
     
     def _capture_ai_features(self, symbol: str, analysis: Dict, best_signal: Dict) -> Dict:
@@ -428,14 +474,22 @@ class SignalGenerator:
                 if signal:
                     # Check if we already have an active signal for this pair
                     if symbol not in self.active_signals:
-                        # REGRA: Apenas sinais com score 100% são monitorados
+                        # REGRA 1: Apenas sinais com score 100% são monitorados
                         if signal["score"] < 100:
-                            print(f"[SKIP] {symbol} score {signal['score']}% < 100%, não será monitorado", flush=True)
+                            print(f"[SKIP] {symbol} score {signal['score']:.1f}% < 100%, não será monitorado", flush=True)
                             continue
+                        
+                        # REGRA 2: ML Probability Filter (if ML enabled)
+                        if ML_ENABLED and self.ml_predictor and signal.get("ml_probability") is not None:
+                            if signal["ml_probability"] < ML_PROBABILITY_THRESHOLD:
+                                print(f"[ML FILTER] {symbol} probability {signal['ml_probability']:.2%} < {ML_PROBABILITY_THRESHOLD:.0%}, bloqueado", flush=True)
+                                continue
+                        
                         self.active_signals[symbol] = signal
                         new_signals.append(signal)
                         sig_type = signal['signal_type'].replace('_', ' ')
-                        print(f"[NEW SIGNAL] {symbol} {signal['direction']} ({sig_type}) Score: {signal['score']}", flush=True)
+                        ml_info = f" | ML: {signal['ml_probability']:.2%}" if signal.get('ml_probability') else ""
+                        print(f"[NEW SIGNAL] {symbol} {signal['direction']} ({sig_type}) Score: {signal['score']:.1f}%{ml_info}", flush=True)
                         self.save_signal_to_db(signal) # Save on new signal
                 
                 # Periodic cleanup of history (every scan)
@@ -451,6 +505,17 @@ class SignalGenerator:
         # Summary after scan
         active_count = len(self.active_signals)
         print(f"[SCAN] Complete. Found {len(new_signals)} new signals. Total active: {active_count}", flush=True)
+        
+        # Check if ML model should be retrained
+        if ML_ENABLED and self.ml_predictor and self.ml_predictor.should_retrain():
+            print("[ML] Auto-retrain triggered...", flush=True)
+            try:
+                metrics = self.ml_predictor.train_model(min_samples=ML_MIN_SAMPLES)
+                if metrics.get("status") == "SUCCESS":
+                    print(f"[ML] ✅ Auto-retrain complete - Accuracy: {metrics['metrics']['accuracy']:.2%}", flush=True)
+            except Exception as e:
+                print(f"[ML ERROR] Auto-retrain failed: {e}", flush=True)
+        
         return new_signals
     
     def get_active_signals(self) -> List[Dict]:

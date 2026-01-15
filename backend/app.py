@@ -289,6 +289,98 @@ def get_ai_brain():
     except Exception as e:
         return jsonify({"status": "ERROR", "message": str(e)}), 500
 
+
+# =============================================================================
+# ML Predictor Routes
+# =============================================================================
+
+@app.route("/api/ml/train", methods=["POST"])
+def train_ml_model():
+    """Train ML model with historical data"""
+    try:
+        if not generator.ml_predictor:
+            return jsonify({"status": "DISABLED", "message": "ML is not enabled"}), 400
+        
+        print("[API] Manual ML training triggered...", flush=True)
+        from config import ML_MIN_SAMPLES
+        metrics = generator.ml_predictor.train_model(min_samples=ML_MIN_SAMPLES)
+        
+        return jsonify(metrics)
+    except Exception as e:
+        print(f"[ML TRAIN ERROR] {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "ERROR", "message": str(e)}), 500
+
+
+@app.route("/api/ml/status")
+def get_ml_status():
+    """Get ML system status"""
+    try:
+        if not generator.ml_predictor:
+            return jsonify({
+                "status": "DISABLED",
+                "ml_enabled": False,
+                "message": "ML Predictor is not enabled"
+            })
+        
+        status = generator.ml_predictor.get_status()
+        return jsonify({
+            "status": "OK",
+            "ml_enabled": True,
+            **status
+        })
+    except Exception as e:
+        print(f"[ML STATUS ERROR] {e}", flush=True)
+        return jsonify({"status": "ERROR", "message": str(e)}), 500
+
+
+@app.route("/api/ml/metrics")
+def get_ml_metrics():
+    """Get detailed ML model metrics"""
+    try:
+        if not generator.ml_predictor:
+            return jsonify({"status": "DISABLED", "message": "ML is not enabled"}), 400
+        
+        metrics = generator.ml_predictor.get_metrics()
+        
+        if not metrics:
+            return jsonify({
+                "status": "NOT_TRAINED",
+                "message": "Model has not been trained yet"
+            }), 404
+        
+        return jsonify(metrics)
+    except Exception as e:
+        print(f"[ML METRICS ERROR] {e}", flush=True)
+        return jsonify({"status": "ERROR", "message": str(e)}), 500
+
+
+@app.route("/api/ml/predict", methods=["POST"])
+def test_ml_prediction():
+    """Test ML prediction with custom features"""
+    try:
+        if not generator.ml_predictor:
+            return jsonify({"status": "DISABLED", "message": "ML is not enabled"}), 400
+        
+        features = request.json.get("features", {})
+        
+        if not features:
+            return jsonify({"status": "ERROR", "message": "No features provided"}), 400
+        
+        probability = generator.ml_predictor.predict_probability(features)
+        
+        return jsonify({
+            "status": "SUCCESS",
+            "probability": round(probability, 4),
+            "probability_pct": round(probability * 100, 2),
+            "features": features
+        })
+    except Exception as e:
+        print(f"[ML PREDICT ERROR] {e}", flush=True)
+        return jsonify({"status": "ERROR", "message": str(e)}), 500
+
+
 @app.route("/api/debug/supabase")
 def debug_supabase():
     """Debug endpoint to check Supabase connection and data availability"""

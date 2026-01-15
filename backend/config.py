@@ -131,3 +131,16 @@ CANDLES_DAILY = 30
 API_HOST = "0.0.0.0"
 API_PORT = 5001
 DEBUG = False  # Disabled to prevent auto-restart and state loss
+
+# =============================================================================
+# MACHINE LEARNING SETTINGS
+# =============================================================================
+
+ML_ENABLED = True
+ML_PROBABILITY_THRESHOLD = 0.70  # 70% minimum probability to activate signal
+ML_MIN_SAMPLES = 100             # Minimum samples required to train model
+ML_AUTO_RETRAIN_INTERVAL = 50    # Retrain every 50 new finalized signals
+ML_MODEL_PATH = "services/ml_model.pkl"
+ML_METRICS_PATH = "services/ml_metrics.json"
+ML_HYBRID_SCORE_WEIGHT = 0.6     # 60% ML, 40% rules-based score
+

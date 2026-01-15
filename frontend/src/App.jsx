@@ -7,6 +7,7 @@ import OpeningPage from './components/OpeningPage';
 import TradesOrganizerPage from './components/TradesOrganizer/TradesOrganizerPage';
 import HistoryView from './components/HistoryView';
 import AIAnalytics from './components/AIAnalytics';
+import MLPerformance from './components/MLPerformance';
 import { fetchSignals, fetchStats, fetchHistory } from './services/api';
 
 const POLL_INTERVAL = 5000; // 5 seconds
@@ -125,6 +126,9 @@ export default function App() {
                             )}
                             {currentPage === 'ai' && (
                                 <AIAnalytics />
+                            )}
+                            {currentPage === 'ml' && (
+                                <MLPerformance />
                             )}
                             {currentPage === 'settings' && (
                                 <div className="page-placeholder">

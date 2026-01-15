@@ -6,16 +6,29 @@ import './HistoryView.css';
 export default function HistoryView({ history, loading }) {
     const [activeFilter, setActiveFilter] = useState('ALL');
 
+    // Sort history: newest first, then by score
+    const sortedHistory = useMemo(() => {
+        return [...history].sort((a, b) => {
+            // Sort by timestamp (newest first)
+            const timeA = a.exit_timestamp || a.timestamp || 0;
+            const timeB = b.exit_timestamp || b.timestamp || 0;
+            if (timeB !== timeA) return timeB - timeA;
+
+            // If timestamps are equal, sort by score (highest first)
+            return (b.score || 0) - (a.score || 0);
+        });
+    }, [history]);
+
     // Calculate stats
     const stats = useMemo(() => {
-        const gains = history.filter(s => s.status === 'TP_HIT' || s.status === 'VOL_CLIMAX');
-        const losses = history.filter(s => s.status === 'SL_HIT');
+        const gains = sortedHistory.filter(s => s.status === 'TP_HIT' || s.status === 'VOL_CLIMAX');
+        const losses = sortedHistory.filter(s => s.status === 'SL_HIT');
 
-        const total = history.length;
+        const total = sortedHistory.length;
         const winRate = total > 0 ? ((gains.length / total) * 100).toFixed(1) : 0;
 
         // Calculate total ROI
-        const totalROI = history.reduce((acc, s) => acc + (s.final_roi || 0), 0);
+        const totalROI = sortedHistory.reduce((acc, s) => acc + (s.final_roi || 0), 0);
         const avgROI = total > 0 ? (totalROI / total).toFixed(2) : 0;
 
         // Calculate avg gain and avg loss
@@ -36,19 +49,19 @@ export default function HistoryView({ history, loading }) {
             avgGain,
             avgLoss
         };
-    }, [history]);
+    }, [sortedHistory]);
 
     // Filter history based on active filter
     const filteredHistory = useMemo(() => {
         switch (activeFilter) {
             case 'GAINS':
-                return history.filter(s => s.status === 'TP_HIT' || s.status === 'VOL_CLIMAX');
+                return sortedHistory.filter(s => s.status === 'TP_HIT' || s.status === 'VOL_CLIMAX');
             case 'LOSSES':
-                return history.filter(s => s.status === 'SL_HIT');
+                return sortedHistory.filter(s => s.status === 'SL_HIT');
             default:
-                return history;
+                return sortedHistory;
         }
-    }, [history, activeFilter]);
+    }, [sortedHistory, activeFilter]);
 
     if (loading) {
         return (

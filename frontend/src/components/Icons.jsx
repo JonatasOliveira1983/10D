@@ -66,3 +66,12 @@ export const IconAI = ({ size = 24, className = "" }) => (
         <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
 );
+
+export const IconBrain = ({ size = 24, className = "" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+        <path d="M9.5 2C8.96957 2 8.46086 2.21071 8.08579 2.58579C7.71071 2.96086 7.5 3.46957 7.5 4C6.43913 4 5.42172 4.42143 4.67157 5.17157C3.92143 5.92172 3.5 6.93913 3.5 8C3.5 9.06087 3.92143 10.0783 4.67157 10.8284C5.42172 11.5786 6.43913 12 7.5 12V13C7.5 14.0609 7.92143 15.0783 8.67157 15.8284C9.42172 16.5786 10.4391 17 11.5 17H12.5C13.5609 17 14.5783 16.5786 15.3284 15.8284C16.0786 15.0783 16.5 14.0609 16.5 13V12C17.5609 12 18.5783 11.5786 19.3284 10.8284C20.0786 10.0783 20.5 9.06087 20.5 8C20.5 6.93913 20.0786 5.92172 19.3284 5.17157C18.5783 4.42143 17.5609 4 16.5 4C16.5 3.46957 16.2893 2.96086 15.9142 2.58579C15.5391 2.21071 15.0304 2 14.5 2H9.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M12 17V22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M9 22H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+);
+

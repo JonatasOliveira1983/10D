@@ -1,5 +1,6 @@
 import React from 'react';
 import SignalCard from './SignalCard';
+import { IconHistory } from './Icons';
 
 export default function Dashboard({ signals, pinnedSymbol, onPin, loading }) {
     if (loading) {
@@ -14,12 +15,14 @@ export default function Dashboard({ signals, pinnedSymbol, onPin, loading }) {
     return (
         <div className="dashboard">
             <h2 className="section-title">
-                🚨 Sinais Ativos ({signals.length})
+                Sinais Ativos ({signals.length})
             </h2>
 
             {signals.length === 0 ? (
                 <div className="empty-state">
-                    <div className="empty-icon">📭</div>
+                    <div className="empty-icon-circle">
+                        <IconHistory size={32} />
+                    </div>
                     <h3 className="empty-title">Nenhum sinal ativo no momento</h3>
                     <p className="empty-text">
                         O sistema está monitorando os pares. Novos sinais aparecerão aqui quando detectados.

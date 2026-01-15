@@ -1,5 +1,5 @@
 import React from 'react';
-import { IconDashboard, IconOrganizer, IconHistory, IconSettings, IconSun, IconMoon, IconLogout, IconAI } from './Icons';
+import { IconDashboard, IconOrganizer, IconHistory, IconSettings, IconSun, IconMoon, IconLogout, IconAI, IconBrain } from './Icons';
 
 export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme, onLogout }) {
     const menuItems = [
@@ -7,6 +7,7 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
         { id: 'organizer', icon: <IconOrganizer />, label: 'Organizador' },
         { id: 'history', icon: <IconHistory />, label: 'Histórico' },
         { id: 'ai', icon: <IconAI />, label: 'Auditoria IA' },
+        { id: 'ml', icon: <IconBrain />, label: 'ML Performance' },
         { id: 'settings', icon: <IconSettings />, label: 'Configurações' }
     ];
 

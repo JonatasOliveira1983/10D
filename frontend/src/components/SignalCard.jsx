@@ -83,10 +83,47 @@ export default function SignalCard({ signal, isPinned, onPin }) {
                         </div>
                     )}
 
+                    {/* ML Probability Badge */}
+                    {signal.ml_probability !== null && signal.ml_probability !== undefined && (
+                        <div
+                            className="ml-probability-badge"
+                            style={{
+                                background: signal.ml_probability >= 0.80 ? 'linear-gradient(135deg, #00e676 0%, #00c853 100%)' :
+                                    signal.ml_probability >= 0.70 ? 'linear-gradient(135deg, #ffd700 0%, #ffa000 100%)' :
+                                        'linear-gradient(135deg, #ff5252 0%, #d32f2f 100%)',
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                fontSize: '0.75rem',
+                                fontWeight: '600',
+                                color: '#fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                marginBottom: '6px',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                            }}
+                            title={`ML Confidence: ${(signal.ml_probability * 100).toFixed(1)}%`}
+                        >
+                            ML {(signal.ml_probability * 100).toFixed(0)}%
+                        </div>
+                    )}
 
                     <div className="score-container">
                         <span className={`score-value ${scoreClass}`}>
                             Score {signal.score}
+                            {signal.score_breakdown && (
+                                <span
+                                    style={{
+                                        fontSize: '0.65rem',
+                                        opacity: 0.7,
+                                        marginLeft: '4px',
+                                        fontWeight: 'normal'
+                                    }}
+                                    title={`Rules: ${signal.score_breakdown.rules_score} | ML: ${signal.score_breakdown.ml_score.toFixed(1)}`}
+                                >
+                                    (Híbrido)
+                                </span>
+                            )}
                         </span>
                         <div className="score-bar">
                             <div
