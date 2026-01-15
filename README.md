@@ -1,147 +1,305 @@
 # 🚀 10D - Sistema de Sinais de Trading com IA
 
-O **10D** é um scanner avançado de sinais para criptomoedas que monitora os top 100 pares da Bybit em tempo real (TF 30M), utilizando estratégias avançadas filtradas por tendência de tempo gráfico maior (4H) e **Machine Learning** para otimização contínua.
+Sistema avançado de análise e geração de sinais para criptomoedas que monitora os **top 100 pares da Bybit** em tempo real, utilizando estratégias técnicas filtradas por tendência e **Machine Learning** para otimização contínua.
 
-## ✨ Recursos
+---
 
-### 📈 Estratégias de Trading
--   **Institutional Judas Swing (30M):** Detecção de capturas de liquidez (stop hunts) em níveis de Suporte/Resistência, confirmadas por volume e reclaims rápidos.
--   **Order Flow Analysis:** Confirmações por Cumulative Volume Delta (CVD), Open Interest (OI) e Long/Short Ratio (LSR).
--   **Relative Strength (RS):** Comparação de performance entre altcoins e BTC para identificar força relativa institucional.
--   **EMA 20/50 + MACD:** Cruzamento de médias exponenciais filtrado por histograma.
--   **RSI + Bollinger Bands Reversal:** Detecção de reversões em extremos de RSI com confirmação de Bandas de Bollinger.
--   **Trend Pullback:** Entrada em pullbacks dentro de tendências fortes.
--   **4H Trend Filter:** Filtro global de tendência baseado no tempo gráfico de 4 horas.
+## 📊 Diagrama do Sistema
 
-### 🤖 Sistema de Machine Learning (M.E.)
--   **ML Training Bridge:** Serviço que coleta dados históricos do Supabase e gera insights para otimização.
--   **AI Features:** Captura automática de métricas de mercado (OI%, LSR%, CVD, RS, Volatilidade) em cada sinal.
--   **Brain JSON:** Arquivo de "cérebro" gerado com:
-    -   Importância das features (correlação com Gain/Loss)
-    -   Thresholds ótimos (Score mínimo, Range ideal de RSI)
--   **Feedback Loop:** Sinais finalizados (TP_HIT, SL_HIT, EXPIRED) são todos salvos no Supabase para treinamento contínuo.
+![System Flow Diagram](C:/Users/spcom/.gemini/antigravity/brain/33428682-b703-452a-81e2-7793345a2290/system_flow_diagram_1768441484224.png)
 
-### 📊 Monitoramento e Histórico
--   **Monitoramento Ativo em Tempo Real:** Acompanhamento contínuo de preços para todos os sinais gerados.
--   **Finalização Automática:** Detecção de Take Profit, Stop Loss e Expiração com salvamento no banco de dados.
--   **Cálculo de ROI Real:** ROI calculado automaticamente no momento da finalização.
--   **Histórico de Performance:** Dashboard dedicado para visualizar o desempenho de sinais anteriores.
+---
 
-### 🎨 Interface e Deploy
--   **Organizador de Trades (10M):** Planejador de 30 dias com juros compostos, metas diárias e persistência de dados.
--   **Interface Ultra-Premium:** Design moderno com Glassmorphism, ícones SVG customizados e feedbacks visuais dinâmicos.
--   **Mentor 10D:** Chat com IA (Gemini) para análise de trades e recomendações personalizadas.
--   **PWA & Mobile Ready:** Instalável como aplicativo no celular, com modo offline básico.
--   **Deployment Robusto:** Configurado para **Google Cloud Run** com **Gunicorn** e inicialização assíncrona.
+## 🔄 Fluxo Completo do Sistema
+
+### 1️⃣ **Coleta de Dados (Bybit API)**
+```
+Bybit API → Market Data (30M + 4H)
+```
+- Sistema busca dados de **100 pares** (top volume) a cada intervalo
+- Coleta candles de **30 minutos** (timeframe principal)
+- Coleta candles de **4 horas** (filtro de tendência)
+- Coleta métricas de derivativos: **Open Interest**, **Long/Short Ratio**, **CVD**
+
+### 2️⃣ **Geração de Sinais (Signal Generator)**
+```
+Market Data → Signal Generator → Aplica 4 Estratégias
+```
+**Estratégias:**
+- **EMA Crossover** (20/50) + MACD
+- **RSI + Bollinger Bands Reversal**
+- **Trend Pullback** (entrada em correções)
+- **Judas Swing** (stop hunts institucionais)
+
+**Filtros aplicados:**
+- ✅ Tendência 4H alinhada
+- ✅ Volume acima da média
+- ✅ Confirmação de Order Flow (CVD, OI, LSR)
+
+### 3️⃣ **Cálculo de Score (Signal Scorer)**
+```
+Sinal Gerado → Signal Scorer → Score 0-100
+```
+Cada sinal recebe um **score de 0 a 100** baseado em:
+- **Força da tendência** (30 pontos)
+- **Confluência de indicadores** (25 pontos)
+- **Order Flow positivo** (25 pontos)
+- **Relative Strength vs BTC** (20 pontos)
+
+**⚠️ Apenas sinais com score = 100 são salvos!**
+
+### 4️⃣ **Salvamento no Banco (Database Manager)**
+```
+Score >= 100 → Salva no Supabase
+```
+Sinal é salvo com todas as informações:
+```json
+{
+  "id": "BTCUSDT_1736897276988",
+  "symbol": "BTCUSDT",
+  "direction": "LONG",
+  "entry_price": 45000,
+  "stop_loss": 44550,
+  "take_profit": 45900,
+  "score": 100,
+  "status": "ACTIVE",
+  "ai_features": {
+    "rsi_value": 58.3,
+    "oi_change_pct": 2.5,
+    "lsr_value": 1.8,
+    "cvd_delta": 15000,
+    "rs_score": 0.85,
+    "master_score": 100
+  }
+}
+```
+
+### 5️⃣ **Monitoramento Ativo (Background Scanner)**
+```
+Sinal Ativo → Monitor de Preço → Verifica TP/SL/Expiração
+```
+- Sistema monitora **preço em tempo real** de todos os sinais ativos
+- Verifica se atingiu **Take Profit** (2% de lucro)
+- Verifica se atingiu **Stop Loss** (1% de perda)
+- Verifica se **expirou** (2 horas sem atingir TP/SL)
+
+### 6️⃣ **Finalização do Sinal**
+```
+TP/SL/Expirado → Atualiza Status → Salva no Histórico
+```
+Quando TP, SL ou expiração acontece:
+```python
+signal["status"] = "TP_HIT"  # ou "SL_HIT" ou "EXPIRED"
+signal["final_roi"] = 2.0  # ROI real calculado
+signal["exit_timestamp"] = 1736900000000
+```
+
+### 7️⃣ **Análise de IA (AI Analytics Service)**
+```
+Sinais Finalizados → AI Analytics → Calcula Métricas
+```
+Com sinais finalizados, o sistema calcula:
+- **Win Rate**: % de sinais que atingiram TP
+- **Performance por Estratégia**: Qual estratégia tem melhor taxa de acerto
+- **Correlação de Features**: Quais métricas (RSI, OI, LSR) mais correlacionam com ganhos
+- **Score Médio**: Comparação entre sinais vencedores vs perdedores
+
+### 8️⃣ **Treinamento ML (ML Training Bridge)**
+```
+300+ Sinais → ML Training Bridge → Gera ml_brain.json
+```
+Quando há **300+ sinais finalizados**:
+- Analisa todas as `ai_features` vs resultado (TP_HIT/SL_HIT)
+- Identifica **thresholds ótimos** (ex: RSI ideal entre 45-64)
+- Calcula **importância de features** (ex: LSR tem 35% de importância)
+- Gera arquivo **`ml_brain.json`** com insights
+
+### 9️⃣ **Otimização Contínua (Feedback Loop)**
+```
+ml_brain.json → Signal Scorer → Ajusta Thresholds
+```
+O `ml_brain.json` é usado para:
+- Ajustar **score mínimo** (ex: só aceitar score >= 85)
+- Aplicar **penalidades** (ex: RSI fora do range ideal perde 10 pontos)
+- Aplicar **bônus** (ex: RSI no range ideal ganha 5 pontos)
+
+### 🔟 **Exibição no Frontend (React PWA)**
+```
+Supabase → REST API → Frontend → Usuário
+```
+Usuário acessa 4 páginas principais:
+
+**📊 Dashboard:**
+- Sinais ativos com score 100
+- Preço atual vs Entry/TP/SL
+- Tempo restante até expiração
+
+**📜 Histórico:**
+- Sinais finalizados (últimas 24h)
+- ROI real de cada trade
+- Filtros por status (TP/SL/Expirado)
+
+**🧠 Auditoria de IA:**
+- Win Rate geral
+- Performance por estratégia
+- Insights do ML Brain
+- Progresso da coleta de dados (X/300)
+
+**💬 Mentor 10D:**
+- Chat com IA (Gemini)
+- Análise de trades
+- Recomendações personalizadas
+
+---
 
 ## 🛠️ Tecnologias
 
--   **Backend:** Python 3.10+ (Flask, Gunicorn, Pandas, Requests)
--   **Frontend:** React (Vite, CSS Vanilla, Glassmorphism)
--   **Banco de Dados:** Supabase (PostgreSQL)
--   **IA/ML:** Google Gemini API, Pandas para análise de correlações
--   **Fuso Horário:** Ajustado para São Paulo (UTC-3)
--   **API de Dados:** Bybit V5 API
+| Camada | Tecnologia |
+|--------|------------|
+| **Backend** | Python 3.10, Flask, Gunicorn |
+| **Frontend** | React, Vite, CSS Vanilla |
+| **Banco de Dados** | Supabase (PostgreSQL) |
+| **IA/ML** | Google Gemini API, Pandas |
+| **API de Dados** | Bybit V5 API |
+| **Deploy** | Google Cloud Run |
 
-## 🚀 Como Começar
+---
 
-### Pré-requisitos
--   Python 3.10+
--   Node.js 18+
--   Conta no Supabase (para persistência)
--   Chave da API Gemini (para Mentor 10D)
+## 🚀 Como Rodar Localmente
 
-### Passo 1: Configurar Variáveis de Ambiente
+### 1. Configurar Variáveis de Ambiente
+
+Crie `backend/.env`:
 ```bash
-# backend/.env
-SUPABASE_URL=sua_url_do_supabase
+SUPABASE_URL=https://abphpbylwlgozmyumiwx.supabase.co
 SUPABASE_ANON_KEY=sua_chave_anonima
 GEMINI_API_KEY=sua_chave_gemini
 ```
 
-### Passo 2: Iniciar o Backend
+### 2. Iniciar Backend
+
 ```powershell
 cd backend
-# Instalar dependências
 pip install -r requirements.txt
-# Iniciar o servidor (Porta 5001)
 python app.py
 ```
+Backend roda em: **http://localhost:5001**
 
-### Passo 3: Iniciar o Frontend
+### 3. Iniciar Frontend
+
 ```powershell
 cd frontend
-# Instalar dependências
 npm install
-# Iniciar o servidor (Porta 3001)
 npm run dev
 ```
+Frontend roda em: **http://localhost:3001**
 
-### Passo 4: Acessar o Sistema
-Abra o navegador em: **http://localhost:3001**
+---
 
-## 📊 Endpoints da API (Porta 5001)
+## 📡 Endpoints da API
 
-### Sinais e Monitoramento
--   `GET /api/signals` - Retorna sinais ativos com score
--   `GET /api/stats` - Resumo de pares monitorados e estatísticas
--   `GET /api/history` - Histórico dos sinais finalizados
--   `GET /api/pairs` - Lista dos 100 pares sendo escaneados
+### Sinais
+- `GET /api/signals` - Sinais ativos (score 100)
+- `GET /api/history` - Histórico (últimas 24h)
+- `GET /api/stats` - Estatísticas gerais
+- `POST /api/scan` - Forçar scan manual
 
-### Machine Learning e Analytics
--   `GET /api/ai/analytics` - Correlações e insights da IA
--   `GET /api/ai/progress` - Progresso da coleta de dados para treinamento
+### AI Analytics
+- `GET /api/ai/analytics` - Correlações e performance
+- `GET /api/ai/progress` - Progresso da coleta (X/300)
+- `GET /api/ai/brain` - Insights do ML Brain
 
-### Mentor IA
--   `POST /api/mentor/chat` - Chat com o Mentor 10D (Gemini)
+### Debug
+- `GET /api/version` - Versão do build
+- `GET /api/debug/supabase` - Status da conexão com DB
 
-### Plano de Trading
--   `GET/PUT /api/users/artifacts/trading-plan` - Salva e recupera o plano de trades (10M)
+---
 
-## 🧠 Arquitetura do ML
+## 📈 Arquitetura de Arquivos
 
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Signal         │────▶│   Supabase       │────▶│  ML Training    │
-│  Generator      │     │   (signals DB)   │     │  Bridge         │
-└─────────────────┘     └──────────────────┘     └────────┬────────┘
-        │                                                  │
-        │                                                  ▼
-        │                                        ┌─────────────────┐
-        │◀───────────────────────────────────────│  ml_brain.json  │
-        │         (optimal thresholds)           │  (insights)     │
-        │                                        └─────────────────┘
+10D-2.0/
+├── backend/
+│   ├── app.py                      # API Flask principal
+│   ├── config.py                   # Configurações (TP/SL, timeframes)
+│   ├── requirements.txt            # Dependências Python
+│   └── services/
+│       ├── signal_generator.py     # Gera e monitora sinais
+│       ├── signal_scorer.py        # Calcula score (0-100)
+│       ├── database_manager.py     # CRUD Supabase
+│       ├── ai_analytics_service.py # Análise de performance
+│       ├── ml_training_bridge.py   # Treinamento ML
+│       └── ai_assistant_service.py # Mentor 10D (Gemini)
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx                 # Roteamento principal
+│   │   └── components/
+│   │       ├── Dashboard.jsx       # Sinais ativos
+│   │       ├── HistoryView.jsx     # Histórico
+│   │       ├── AIAnalytics.jsx     # Auditoria de IA
+│   │       └── MentorChat.jsx      # Chat com IA
+│   └── package.json
+└── README.md
 ```
 
-### Serviços Principais
+---
 
-| Arquivo | Função |
-|---------|--------|
-| `signal_generator.py` | Gera e monitora sinais, captura ai_features |
-| `database_manager.py` | CRUD no Supabase, contagem de sinais para ML |
-| `ai_analytics_service.py` | Análise de correlações e preparação de dados |
-| `ml_training_bridge.py` | Executa ciclo de "treinamento" e gera insights |
-| `ai_assistant_service.py` | Mentor 10D (chat com Gemini) |
-
-## 📈 Métricas Atuais (Jan/2026)
+## 🎯 Métricas Atuais (Jan/2026)
 
 | Métrica | Valor |
 |---------|-------|
-| Sinais Analisados | 73 |
-| Win Rate (TP/SL) | 70.8% |
-| Features Mais Importantes | LSR%, RSI, CVD |
-| Score Mínimo Sugerido | 84.12 |
-| RSI Ideal | 45.3 - 63.9 |
-
-## 🎯 Configurações da Estratégia
-
-As definições de média móvel, RSI, TP/SL e filtragem estão localizadas em `backend/config.py`.
-
-Principais configurações:
--   `STOP_LOSS_PERCENT`: 1% (padrão)
--   `TAKE_PROFIT_PERCENT`: 2% (padrão)
--   `SIGNAL_TTL_MINUTES`: 120 (expiração em 2 horas)
--   `PAIR_LIMIT`: 100 (número de pares monitorados)
+| **Pares Monitorados** | 100 |
+| **Sinais no Banco** | 200 |
+| **Sinais Finalizados** | 76 (TP: 25, SL: 51) |
+| **Win Rate** | 33% (25/76) |
+| **Sinais com AI Features** | 200 (100%) |
+| **Pronto para ML** | ✅ 76 amostras |
 
 ---
-**Disclaimer:** Este sistema é uma ferramenta de auxílio à análise e não garante lucros. Sempre gerencie seu risco com Stop Loss.
+
+## 🔧 Configurações Principais
+
+Edite `backend/config.py`:
+
+```python
+STOP_LOSS_PERCENT = 1.0      # 1% de stop
+TAKE_PROFIT_PERCENT = 2.0    # 2% de lucro
+SIGNAL_TTL_MINUTES = 120     # 2 horas de validade
+PAIR_LIMIT = 100             # Top 100 pares
+UPDATE_INTERVAL_SECONDS = 60 # Scan a cada 1 minuto
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Problema: Auditoria de IA sem dados
+**Solução:** Verifique se `supabase==2.9.0` está instalado (versões antigas causam erro de `proxy`)
+
+### Problema: Backend não conecta ao Supabase
+**Solução:** Verifique variáveis de ambiente no Cloud Run ou `.env` local
+
+### Problema: Frontend não carrega sinais
+**Solução:** Confirme que backend está rodando em `localhost:5001`
+
+---
+
+## 📝 Changelog
+
+### v2.0 (Jan 2026)
+- ✅ Fix: Atualizado `supabase==2.9.0` para resolver TypeError
+- ✅ Feature: Endpoint `/api/debug/supabase` para diagnóstico
+- ✅ Feature: Logs aprimorados em `database_manager.py`
+- ✅ Feature: Build version tracking em produção
+
+### v1.0 (Dez 2025)
+- Lançamento inicial com 4 estratégias
+- Integração com Supabase
+- ML Training Bridge
+- Interface PWA
+
+---
+
+**⚠️ Disclaimer:** Este sistema é uma ferramenta de auxílio à análise técnica. Não garante lucros. Sempre opere com Stop Loss e gestão de risco adequada.
+
+**📧 Suporte:** Para dúvidas ou problemas, consulte os logs do Cloud Run ou teste localmente primeiro.
