@@ -474,15 +474,18 @@ class SignalGenerator:
                 if signal:
                     # Check if we already have an active signal for this pair
                     if symbol not in self.active_signals:
-                        # REGRA 1: Apenas sinais com score 100% são monitorados
-                        if signal["score"] < 100:
-                            print(f"[SKIP] {symbol} score {signal['score']:.1f}% < 100%, não será monitorado", flush=True)
-                            continue
-                        
-                        # REGRA 2: ML Probability Filter (if ML enabled)
+                        # ML-Based Filtering (if ML enabled)
                         if ML_ENABLED and self.ml_predictor and signal.get("ml_probability") is not None:
+                            # If ML probability is below threshold, block the signal
                             if signal["ml_probability"] < ML_PROBABILITY_THRESHOLD:
                                 print(f"[ML FILTER] {symbol} probability {signal['ml_probability']:.2%} < {ML_PROBABILITY_THRESHOLD:.0%}, bloqueado", flush=True)
+                                continue
+                            # If ML approves (>= threshold), allow signal even if score < 100%
+                            print(f"[ML APPROVED] {symbol} - ML: {signal['ml_probability']:.2%} >= {ML_PROBABILITY_THRESHOLD:.0%}", flush=True)
+                        else:
+                            # No ML: Apply original rule (score must be 100%)
+                            if signal["score"] < 100:
+                                print(f"[SKIP] {symbol} score {signal['score']:.1f}% < 100%, não será monitorado", flush=True)
                                 continue
                         
                         self.active_signals[symbol] = signal

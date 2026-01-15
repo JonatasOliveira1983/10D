@@ -137,10 +137,11 @@ DEBUG = False  # Disabled to prevent auto-restart and state loss
 # =============================================================================
 
 ML_ENABLED = True
-ML_PROBABILITY_THRESHOLD = 0.70  # 70% minimum probability to activate signal
+ML_PROBABILITY_THRESHOLD = 0.50  # 50% minimum probability (lowered from 70%)
 ML_MIN_SAMPLES = 100             # Minimum samples required to train model
 ML_AUTO_RETRAIN_INTERVAL = 50    # Retrain every 50 new finalized signals
 ML_MODEL_PATH = "services/ml_model.pkl"
 ML_METRICS_PATH = "services/ml_metrics.json"
-ML_HYBRID_SCORE_WEIGHT = 0.6     # 60% ML, 40% rules-based score
+ML_HYBRID_SCORE_WEIGHT = 0.4     # 40% ML weight (lowered from 60%)
+
 
