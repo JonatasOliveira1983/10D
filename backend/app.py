@@ -4,7 +4,8 @@ REST API for frontend communication and serving static files
 """
 
 # VERSION STAMP - to verify which code is running
-BUILD_VERSION = "2026-01-14-1729"
+BUILD_VERSION = "2026-01-14-2141-DEBUG"
+
 
 # EARLY DEBUG - before any complex imports
 import sys
@@ -249,12 +250,29 @@ def analyze_symbol(symbol):
 @app.route("/api/ai/analytics")
 def get_ai_analytics():
     """Get correlation and performance statistics for AI training"""
-    return jsonify(analytics_service.get_market_correlations())
+    try:
+        result = analytics_service.get_market_correlations()
+        print(f"[AI ANALYTICS] Status: {result.get('status')}, Data: {len(str(result))}", flush=True)
+        return jsonify(result)
+    except Exception as e:
+        print(f"[AI ANALYTICS ERROR] {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "ERROR", "message": str(e)}), 500
 
 @app.route("/api/ai/progress")
 def get_ai_progress():
     """Get status of data collection for ML training"""
-    return jsonify(analytics_service.get_training_progress())
+    try:
+        result = analytics_service.get_training_progress()
+        print(f"[AI PROGRESS] Samples: {result.get('current_samples')}/{result.get('target_samples')}", flush=True)
+        return jsonify(result)
+    except Exception as e:
+        print(f"[AI PROGRESS ERROR] {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "ERROR", "message": str(e)}), 500
+
 
 @app.route("/api/ai/brain")
 def get_ai_brain():
@@ -269,6 +287,70 @@ def get_ai_brain():
         return jsonify({"status": "NOT_TRAINED", "message": "ML Brain não foi treinado ainda"})
     except Exception as e:
         return jsonify({"status": "ERROR", "message": str(e)}), 500
+
+@app.route("/api/debug/supabase")
+def debug_supabase():
+    """Debug endpoint to check Supabase connection and data availability"""
+    debug_info = {
+        "timestamp": time.time(),
+        "env_vars": {
+            "SUPABASE_URL": bool(os.environ.get("SUPABASE_URL")),
+            "SUPABASE_ANON_KEY": bool(os.environ.get("SUPABASE_ANON_KEY")),
+            "SUPABASE_URL_value": os.environ.get("SUPABASE_URL", "NOT_SET")[:50] + "..." if os.environ.get("SUPABASE_URL") else "NOT_SET"
+        },
+        "database": {
+            "client_initialized": generator.db.client is not None,
+            "connection_status": "UNKNOWN"
+        },
+        "data": {
+            "total_signals": 0,
+            "active_signals": 0,
+            "history_signals": 0,
+            "signals_with_features": 0,
+            "labeled_signals": {"tp_hit": 0, "sl_hit": 0, "expired": 0, "total": 0}
+        },
+        "errors": []
+    }
+    
+    # Test database connection
+    try:
+        if generator.db.client:
+            debug_info["database"]["connection_status"] = "CONNECTED"
+            
+            # Try to count signals
+            try:
+                labeled = generator.db.count_labeled_signals()
+                debug_info["data"]["labeled_signals"] = labeled
+                debug_info["data"]["total_signals"] = labeled.get("total", 0)
+            except Exception as e:
+                debug_info["errors"].append(f"count_labeled_signals failed: {str(e)}")
+            
+            # Try to get active signals
+            try:
+                active = generator.db.get_active_signals()
+                debug_info["data"]["active_signals"] = len(active)
+            except Exception as e:
+                debug_info["errors"].append(f"get_active_signals failed: {str(e)}")
+            
+            # Try to get history
+            try:
+                history = generator.db.get_signal_history(limit=100, hours_limit=0)
+                debug_info["data"]["history_signals"] = len(history)
+                
+                # Count signals with ai_features
+                with_features = sum(1 for s in history if s.get("ai_features"))
+                debug_info["data"]["signals_with_features"] = with_features
+            except Exception as e:
+                debug_info["errors"].append(f"get_signal_history failed: {str(e)}")
+        else:
+            debug_info["database"]["connection_status"] = "NOT_INITIALIZED"
+            debug_info["errors"].append("Database client is None - check SUPABASE_URL and SUPABASE_ANON_KEY")
+    except Exception as e:
+        debug_info["database"]["connection_status"] = "ERROR"
+        debug_info["errors"].append(f"Database check failed: {str(e)}")
+    
+    return jsonify(debug_info)
+
 
 # =============================================================================
 # TradesOrganizer Persistence

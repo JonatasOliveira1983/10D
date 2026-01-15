@@ -15,15 +15,20 @@ class DatabaseManager:
         self.url = os.environ.get("SUPABASE_URL")
         self.key = os.environ.get("SUPABASE_ANON_KEY")
         
+        print(f"[DB INIT] SUPABASE_URL present: {bool(self.url)}", flush=True)
+        print(f"[DB INIT] SUPABASE_ANON_KEY present: {bool(self.key)}", flush=True)
+        
         if not self.url or not self.key:
             print("[DB ERROR] SUPABASE_URL ou SUPABASE_ANON_KEY não encontradas no .env", flush=True)
             self.client = None
         else:
             try:
                 self.client: Client = create_client(self.url, self.key)
-                print("[DB] Conexão com Supabase estabelecida", flush=True)
+                print(f"[DB] Conexão com Supabase estabelecida - URL: {self.url[:30]}...", flush=True)
             except Exception as e:
                 print(f"[DB ERROR] Falha ao conectar ao Supabase: {e}", flush=True)
+                import traceback
+                traceback.print_exc()
                 self.client = None
 
     # --- Métodos para Sinais ---
@@ -79,9 +84,12 @@ class DatabaseManager:
             limit (int): Número máximo de registros
             hours_limit (int): Se > 0, retorna apenas sinais das últimas N horas
         """
-        if not self.client: return []
+        if not self.client:
+            print("[DB] get_signal_history: client is None", flush=True)
+            return []
         
         try:
+            print(f"[DB] get_signal_history: limit={limit}, hours_limit={hours_limit}", flush=True)
             query = self.client.table("signals") \
                 .select("*") \
                 .neq("status", "ACTIVE") \
@@ -96,6 +104,7 @@ class DatabaseManager:
                 query = query.limit(limit * 2) 
             
             response = query.execute()
+            print(f"[DB] get_signal_history: fetched {len(response.data)} rows from Supabase", flush=True)
             
             # Calculate cutoff for Python-side filtering
             cutoff = 0
@@ -133,9 +142,12 @@ class DatabaseManager:
                         results.append(final_data)
                         
             # Apply final limit after filtering
+            print(f"[DB] get_signal_history: returning {len(results[:limit])} signals", flush=True)
             return results[:limit]
         except Exception as e:
             print(f"[DB ERROR] Erro ao recuperar histórico: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
             return []
 
     def count_labeled_signals(self) -> Dict:

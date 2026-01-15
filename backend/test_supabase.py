@@ -5,8 +5,11 @@ import os
 from supabase import create_client, Client
 
 # Configurações do Supabase
-SUPABASE_URL = "https://abphpbylwlgozmyumiwx.supabase.co"
-SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFicGhwYnlsd2xnb3pteXVtaXd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyMjc4NTQsImV4cCI6MjA4MzgwMzg1NH0.fHHahIbxD6qCHg2JIBLhp3Aj-5P8h3ZTA3CJNGckwsQ"
+from dotenv import load_dotenv
+load_dotenv()
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
 
 def test_supabase_connection():
     """Testa a conexão com o Supabase e lista os dados"""
