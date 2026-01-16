@@ -54,6 +54,8 @@ export default function MLPerformance() {
     };
 
     const featureLabels = {
+        'btc_regime_val': 'BTC Regime Impact',
+        'decoupling_score': 'Decoupling Score',
         'oi_change_pct': 'OI Change %',
         'lsr_change_pct': 'LSR Change %',
         'cvd_delta': 'CVD Delta',

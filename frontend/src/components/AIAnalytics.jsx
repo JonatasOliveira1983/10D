@@ -69,6 +69,20 @@ export default function AIAnalytics() {
         'JUDAS_SWING': 'Judas Swing'
     };
 
+    // Feature labels mapping
+    const featureLabels = {
+        'btc_regime_val': 'BTC Regime Impact',
+        'decoupling_score': 'Decoupling Score',
+        'oi_change_pct': 'Open Interest Δ',
+        'lsr_change_pct': 'Long/Short Δ',
+        'cvd_delta': 'CVD Delta',
+        'rs_score': 'Relative Strength',
+        'volatility_idx': 'Volatility Index',
+        'master_score': 'Rules Score',
+        'trend_aligned': 'Trend Alignment',
+        'rsi_value': 'RSI Level'
+    };
+
     if (loading) return <div className="loading-state">Carregando Auditoria de IA...</div>;
 
     const winRate = analytics?.status === 'READY' ? analytics.data.win_rate : 0;
@@ -267,7 +281,9 @@ export default function AIAnalytics() {
                                     .slice(0, 5)
                                     .map(([feature, importance]) => (
                                         <div key={feature} className="feature-bar-item">
-                                            <span className="feature-name">{feature.replace(/_/g, ' ')}</span>
+                                            <span className="feature-name">
+                                                {featureLabels[feature] || feature.replace(/_/g, ' ')}
+                                            </span>
                                             <div className="feature-bar-wrapper">
                                                 <div
                                                     className="feature-bar-fill"
