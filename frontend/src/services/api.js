@@ -82,3 +82,19 @@ export async function stopScanner() {
         return { status: 'error' };
     }
 }
+
+export async function fetchBTCRegime() {
+    try {
+        const response = await fetch(`${API_BASE}/btc/regime`);
+        if (!response.ok) throw new Error('Failed to fetch BTC regime');
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching BTC regime:', error);
+        return {
+            regime: 'TRENDING',
+            tp_pct: 2.0,
+            sl_pct: 1.0,
+            status: 'ERROR'
+        };
+    }
+}

@@ -28,15 +28,44 @@ class DatabaseManager:
             self.client = None
         else:
             try:
-                print("[DB INIT] Attempting to create Supabase client...", flush=True)
-                self.client: Client = create_client(self.url, self.key)
-                print(f"[DB] ✅ Conexão com Supabase estabelecida - URL: {self.url[:30]}...", flush=True)
+                print("[DB INIT] Attempting to create Supabase client (with timeout)...", flush=True)
+                # Create client with timeout to avoid hanging
+                import signal
+                
+                def timeout_handler(signum, frame):
+                    raise TimeoutError("Supabase connection timeout")
+                
+                # Set timeout for Windows (using threading instead of signal)
+                import threading
+                
+                result = [None]
+                error = [None]
+                
+                def create_client_thread():
+                    try:
+                        result[0] = create_client(self.url, self.key)
+                    except Exception as e:
+                        error[0] = e
+                
+                thread = threading.Thread(target=create_client_thread, daemon=True)
+                thread.start()
+                thread.join(timeout=5.0)  # 5 second timeout
+                
+                if thread.is_alive():
+                    print("[DB WARN] Supabase connection timeout (5s) - continuing without DB", flush=True)
+                    self.client = None
+                elif error[0]:
+                    raise error[0]
+                else:
+                    self.client: Client = result[0]
+                    print(f"[DB] ✅ Conexao com Supabase estabelecida - URL: {self.url[:30]}...", flush=True)
+                    
             except Exception as e:
-                print(f"[DB ERROR] ❌ Falha ao conectar ao Supabase: {type(e).__name__}: {e}", flush=True)
+                print(f"[DB ERROR] Falha ao conectar ao Supabase: {type(e).__name__}: {e}", flush=True)
                 import traceback
                 traceback.print_exc()
                 self.client = None
-                print("[DB ERROR] Client set to None due to initialization failure", flush=True)
+                print("[DB WARN] Sistema continuará sem persistência em banco de dados", flush=True)
 
     # --- Métodos para Sinais ---
 

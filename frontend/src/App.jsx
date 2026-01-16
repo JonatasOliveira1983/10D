@@ -7,7 +7,7 @@ import TradesOrganizerPage from './components/TradesOrganizer/TradesOrganizerPag
 import HistoryView from './components/HistoryView';
 import AIAnalytics from './components/AIAnalytics';
 import MLPerformance from './components/MLPerformance';
-import { fetchSignals, fetchStats, fetchHistory } from './services/api';
+import { fetchSignals, fetchStats, fetchHistory, fetchBTCRegime } from './services/api';
 
 const POLL_INTERVAL = 5000; // 5 seconds
 
@@ -27,6 +27,7 @@ export default function App() {
     const [theme, setTheme] = useState('dark');
     const [currentPage, setCurrentPage] = useState('dashboard');
     const [pinnedSymbol, setPinnedSymbol] = useState(null);
+    const [btcRegime, setBtcRegime] = useState(null);
 
     // Toggle theme
     const toggleTheme = () => {
@@ -38,15 +39,17 @@ export default function App() {
     // Fetch data
     const fetchData = useCallback(async () => {
         try {
-            const [signalsData, statsData, historyData] = await Promise.all([
+            const [signalsData, statsData, historyData, regimeData] = await Promise.all([
                 fetchSignals(),
                 fetchStats(),
-                fetchHistory(20)
+                fetchHistory(20),
+                fetchBTCRegime()
             ]);
 
             setSignals(signalsData.signals || []);
             setStats(statsData);
             setHistory(historyData.history || []);
+            setBtcRegime(regimeData);
             setLoading(false);
             setIsConnected(true);
         } catch (error) {
@@ -103,6 +106,7 @@ export default function App() {
                         <Header
                             stats={stats}
                             isConnected={isConnected}
+                            btcRegime={btcRegime}
                         />
 
                         <main className="main-content">

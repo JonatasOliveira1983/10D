@@ -276,6 +276,26 @@ def analyze_symbol(symbol):
     })
 
 
+@app.route("/api/btc/regime")
+def get_btc_regime():
+    """Get current BTC market regime and dynamic TP/SL targets"""
+    try:
+        regime_info = generator.btc_tracker.get_regime_info()
+        return jsonify({
+            "status": "OK",
+            **regime_info,
+            "regime_details": generator.current_regime_details
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "ERROR",
+            "regime": "TRENDING",
+            "tp_pct": 2.0,
+            "sl_pct": 1.0,
+            "message": str(e)
+        })
+
+
 # =============================================================================
 # AI Analytics Routes
 # =============================================================================

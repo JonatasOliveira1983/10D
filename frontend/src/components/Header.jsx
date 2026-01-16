@@ -1,6 +1,15 @@
 import React from 'react';
 
-export default function Header({ stats, isConnected }) {
+export default function Header({ stats, isConnected, btcRegime }) {
+    // Get regime badge class
+    const getRegimeClass = () => {
+        switch (btcRegime?.regime) {
+            case 'RANGING': return 'regime-ranging';
+            case 'BREAKOUT': return 'regime-breakout';
+            default: return 'regime-trending';
+        }
+    };
+
     return (
         <header className="header">
             <div className="header-content">
@@ -8,6 +17,18 @@ export default function Header({ stats, isConnected }) {
                     <img src="/logo10D.png" alt="10D" className="header-logo" />
                     <div className={`status-dot ${isConnected ? 'connected' : ''}`} title={isConnected ? 'Conectado' : 'Desconectado'}></div>
                 </div>
+
+                {/* BTC Regime Indicator */}
+                {btcRegime && (
+                    <div className={`btc-regime-indicator ${getRegimeClass()}`}>
+                        <span className="regime-label">BTC</span>
+                        <span className="regime-value">{btcRegime.regime}</span>
+                        <div className="regime-targets">
+                            <span className="target-item tp">TP {btcRegime.tp_pct}%</span>
+                            <span className="target-item sl">SL {btcRegime.sl_pct}%</span>
+                        </div>
+                    </div>
+                )}
 
                 <div className="header-stats">
                     <div className="stat-item">

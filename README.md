@@ -1,6 +1,6 @@
-# 🚀 10D - Sistema de Sinais de Trading com IA
+# 🚀 10D - Sistema de Sinais de Trading com IA (v3.0)
 
-Sistema avançado de análise e geração de sinais para criptomoedas que monitora os **top 100 pares da Bybit** em tempo real, utilizando estratégias técnicas filtradas por tendência e **Machine Learning** para otimização contínua.
+Sistema avançado de análise e geração de sinais para criptomoedas que monitora os **top 100 pares da Bybit** em tempo real, utilizando estratégias técnicas filtradas por tendência e **Machine Learning Autônomo** para otimização contínua.
 
 ---
 
@@ -104,24 +104,23 @@ Com sinais finalizados, o sistema calcula:
 - **Correlação de Features**: Quais métricas (RSI, OI, LSR) mais correlacionam com ganhos
 - **Score Médio**: Comparação entre sinais vencedores vs perdedores
 
-### 8️⃣ **Treinamento ML (ML Training Bridge)**
+### 8️⃣ **Treinamento ML Autônomo (Continuous Training)**
 ```
-300+ Sinais → ML Training Bridge → Gera ml_brain.json
+Sinais Finalizados → ML Predictor → Auto-Training
 ```
-Quando há **300+ sinais finalizados**:
-- Analisa todas as `ai_features` vs resultado (TP_HIT/SL_HIT)
-- Identifica **thresholds ótimos** (ex: RSI ideal entre 45-64)
-- Calcula **importância de features** (ex: LSR tem 35% de importância)
-- Gera arquivo **`ml_brain.json`** com insights
+- **Treinamento no Startup**: O sistema treina o modelo obrigatoriamente ao iniciar o backend.
+- **Auto-Retrain**: Retreina automaticamente a cada **30 novas amostras** finalizadas.
+- **Threshold de Accuracy**: Se a acurácia cair abaixo de **55%**, um retreino emergencial é disparado.
+- **Feedback Real-time**: O progresso é visível no frontend com barras de progresso dinâmicas.
 
-### 9️⃣ **Otimização Contínua (Feedback Loop)**
+### 9️⃣ **Filtragem por Probabilidade (Acurácia de IA)**
 ```
-ml_brain.json → Signal Scorer → Ajusta Thresholds
+Sinal Gerado → Predict Probability → Threshold 40%
 ```
-O `ml_brain.json` é usado para:
-- Ajustar **score mínimo** (ex: só aceitar score >= 85)
-- Aplicar **penalidades** (ex: RSI fora do range ideal perde 10 pontos)
-- Aplicar **bônus** (ex: RSI no range ideal ganha 5 pontos)
+O modelo ML analisa 15+ features para cada sinal e só aprova se:
+- ✅ Probabilidade de sucesso >= **40%** (Configurável)
+- ✅ Acurácia do modelo validada no último treino
+- ✅ Alinhamento com os melhores thresholds de RSI/OI/LSR históricos
 
 ### 🔟 **Exibição no Frontend (React PWA)**
 ```
@@ -140,10 +139,10 @@ Usuário acessa 4 páginas principais:
 - Filtros por status (TP/SL/Expirado)
 
 **🧠 Auditoria de IA:**
-- Win Rate geral
-- Performance por estratégia
-- Insights do ML Brain
-- Progresso da coleta de dados (X/300)
+- Win Rate geral e métricas do modelo (Precision, Recall, F1)
+- ✨ **Auto-Training Status**: Barra de progresso para o próximo retreino
+- Insights de importância de features (quais indicadores mais pesam)
+- Histórico de acurácia das últimas versões do modelo
 
 **💬 Mentor 10D:**
 - Chat com IA (Gemini)
@@ -264,9 +263,12 @@ Edite `backend/config.py`:
 ```python
 STOP_LOSS_PERCENT = 1.0      # 1% de stop
 TAKE_PROFIT_PERCENT = 2.0    # 2% de lucro
-SIGNAL_TTL_MINUTES = 120     # 2 horas de validade
-PAIR_LIMIT = 100             # Top 100 pares
-UPDATE_INTERVAL_SECONDS = 60 # Scan a cada 1 minuto
+SIGNAL_TTL_MINUTES = 120     # 2 horas de validade (expiração)
+PAIR_LIMIT = 100             # Monitora os top 100 pares
+ML_ENABLED = True            # Ativa/Desativa o motor de ML
+ML_PROBABILITY_THRESHOLD = 0.40 # 40% de confiança mínima da IA
+ML_MIN_SAMPLES = 100         # Sinais necessários para 1º treino
+ML_AUTO_RETRAIN_INTERVAL = 30 # Retreina a cada 30 novas amostras
 ```
 
 ---
@@ -285,6 +287,19 @@ UPDATE_INTERVAL_SECONDS = 60 # Scan a cada 1 minuto
 ---
 
 ## 📝 Changelog
+
+### v3.1 (Jan 2026 - Turbo Logic Update)
+- ✅ **BTC Regime Tracker**: Sistema detecta Ranging/Trending/Breakout automaticamente.
+- ✅ **Decoupling Score**: Identifica moedas agindo independentes do BTC.
+- ✅ **Turbo Strategy**: Aplica alvos de Breakout (TP ~3%) para moedas desacopladas, ignorando regime lateral.
+- ✅ **Enhanced Vision**: Badges visuais no Frontend para Regime e Decoupling status.
+
+### v3.0 (Jan 2026 - ML Evolution)
+- ✅ **Auto-Training**: Sistema retreina sozinho a cada 30 amostras.
+- ✅ **Startup Training**: Backend treina ML obrigatoriamente ao iniciar.
+- ✅ **UI Sync**: Nova barra de progresso e status de treino em tempo real.
+- ✅ **Optimized Threshold**: ML Threshold baixado para 40% para maior volume.
+- ✅ **Robustness**: Implementado modo Fallback (sistema não trava sem modelo).
 
 ### v2.0 (Jan 2026)
 - ✅ Fix: Atualizado `supabase==2.9.0` para resolver TypeError

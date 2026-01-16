@@ -144,4 +144,26 @@ ML_MODEL_PATH = "services/ml_model.pkl"
 ML_METRICS_PATH = "services/ml_metrics.json"
 ML_HYBRID_SCORE_WEIGHT = 0.4     # 40% ML weight (lowered from 60%)
 
+# =============================================================================
+# BTC REGIME SETTINGS
+# =============================================================================
+
+# Regime Detection Thresholds
+BTC_BB_WIDTH_RANGING = 0.02         # BB width < 2% = ranging
+BTC_ATR_PCT_RANGING = 0.005         # ATR/Price < 0.5% = low volatility
+BTC_TREND_EMA_DIST = 0.005          # EMA distance > 0.5% = trending
+BTC_BREAKOUT_VOLUME = 2.0           # Volume > 2x average = potential breakout
+BTC_BREAKOUT_ATR_EXPANSION = 1.5    # ATR expanding 50% = volatility spike
+
+# Dynamic TP/SL by Regime
+TP_RANGING = 0.01                   # 1% TP for ranging market
+SL_RANGING = 0.005                  # 0.5% SL for ranging market
+TP_TRENDING = 0.02                  # 2% TP for trending market (default)
+SL_TRENDING = 0.01                  # 1% SL for trending market (default)
+TP_BREAKOUT = 0.03                  # 3% TP for breakout
+SL_BREAKOUT = 0.015                 # 1.5% SL for breakout
+
+# Decoupling Score Bonus (added to signal score when alt is decoupled in ranging)
+DECOUPLING_SCORE_BONUS = 15         # +15 points for decoupled alts in ranging regime
+
 

@@ -33,7 +33,9 @@ class MLPredictor:
             "volatility_idx",
             "master_score",
             "trend_aligned",
-            "rsi_value"
+            "rsi_value",
+            "btc_regime_val",
+            "decoupling_score"
         ]
         self.model_path = config.get("ML_MODEL_PATH", "services/ml_model.pkl")
         self.metrics_path = config.get("ML_METRICS_PATH", "services/ml_metrics.json")
@@ -74,13 +76,14 @@ class MLPredictor:
             if not features or not status:
                 continue
             
-            # Create label: 1 for TP_HIT (success), 0 for SL_HIT or EXPIRED (failure)
+            # Create label: 1 for TP_HIT (success), 0 for SL_HIT (failure)
+            # EXPIRED signals are excluded - they are inconclusive data
             if status == "TP_HIT":
                 label = 1
-            elif status in ["SL_HIT", "EXPIRED"]:
+            elif status == "SL_HIT":
                 label = 0
             else:
-                continue  # Skip ACTIVE signals
+                continue  # Skip ACTIVE and EXPIRED signals
             
             # Extract features in correct order
             try:
@@ -92,7 +95,9 @@ class MLPredictor:
                     features.get("volatility_idx", 0),
                     features.get("master_score", 0),
                     features.get("trend_aligned", 0),
-                    features.get("rsi_value", 50)
+                    features.get("rsi_value", 50),
+                    features.get("btc_regime_val", 2),  # Default 2=TRENDING
+                    features.get("decoupling_score", 0.0)
                 ]
                 
                 X_list.append(feature_vector)
@@ -106,7 +111,7 @@ class MLPredictor:
         X = np.array(X_list)
         y = np.array(y_list)
         
-        print(f"[ML] Prepared {len(X)} samples (Wins: {sum(y)}, Losses: {len(y) - sum(y)})", flush=True)
+        print(f"[ML] Prepared {len(X)} samples (Wins: {sum(y)}, Losses: {len(y) - sum(y)}) - EXPIRED excluded", flush=True)
         
         return X, y, valid_signals
     
@@ -224,7 +229,9 @@ class MLPredictor:
                 features.get("volatility_idx", 0),
                 features.get("master_score", 0),
                 features.get("trend_aligned", 0),
-                features.get("rsi_value", 50)
+                features.get("rsi_value", 50),
+                features.get("btc_regime_val", 2),  # Default 2=TRENDING
+                features.get("decoupling_score", 0.0)
             ]
             
             X = np.array([feature_vector])

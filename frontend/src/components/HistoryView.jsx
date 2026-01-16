@@ -19,17 +19,19 @@ export default function HistoryView({ history, loading }) {
         });
     }, [history]);
 
-    // Calculate stats
+    // Calculate stats - EXPIRED separated from LOSSES
     const stats = useMemo(() => {
         const gains = sortedHistory.filter(s => s.status === 'TP_HIT' || s.status === 'VOL_CLIMAX');
-        const losses = sortedHistory.filter(s => s.status === 'SL_HIT' || s.status === 'EXPIRED');
+        const losses = sortedHistory.filter(s => s.status === 'SL_HIT');
+        const expired = sortedHistory.filter(s => s.status === 'EXPIRED');
 
-        const total = sortedHistory.length;
-        const winRate = total > 0 ? ((gains.length / total) * 100).toFixed(1) : 0;
+        // For win rate, only count decisive signals (exclude expired)
+        const decisiveTotal = gains.length + losses.length;
+        const winRate = decisiveTotal > 0 ? ((gains.length / decisiveTotal) * 100).toFixed(1) : 0;
 
         // Calculate total ROI
         const totalROI = sortedHistory.reduce((acc, s) => acc + (s.final_roi || 0), 0);
-        const avgROI = total > 0 ? (totalROI / total).toFixed(2) : 0;
+        const avgROI = sortedHistory.length > 0 ? (totalROI / sortedHistory.length).toFixed(2) : 0;
 
         // Calculate avg gain and avg loss
         const avgGain = gains.length > 0
@@ -40,9 +42,10 @@ export default function HistoryView({ history, loading }) {
             : 0;
 
         return {
-            total,
+            total: sortedHistory.length,
             gains: gains.length,
             losses: losses.length,
+            expired: expired.length,
             winRate,
             totalROI: totalROI.toFixed(2),
             avgROI,
@@ -57,7 +60,9 @@ export default function HistoryView({ history, loading }) {
             case 'GAINS':
                 return sortedHistory.filter(s => s.status === 'TP_HIT' || s.status === 'VOL_CLIMAX');
             case 'LOSSES':
-                return sortedHistory.filter(s => s.status === 'SL_HIT' || s.status === 'EXPIRED');
+                return sortedHistory.filter(s => s.status === 'SL_HIT');
+            case 'EXPIRED':
+                return sortedHistory.filter(s => s.status === 'EXPIRED');
             default:
                 return sortedHistory;
         }
@@ -132,6 +137,11 @@ export default function HistoryView({ history, loading }) {
                         <span className="h-stat-value">{stats.losses}</span>
                         <span className="h-stat-detail">{stats.avgLoss}% avg</span>
                     </div>
+                    <div className="h-stat-card expired">
+                        <span className="h-stat-label">Expirados</span>
+                        <span className="h-stat-value">{stats.expired}</span>
+                        <span className="h-stat-detail">Não contabilizados</span>
+                    </div>
                     <div className="h-stat-card rate">
                         <span className="h-stat-label">Win Rate</span>
                         <span className="h-stat-value">{stats.winRate}%</span>
@@ -162,6 +172,12 @@ export default function HistoryView({ history, loading }) {
                     onClick={() => setActiveFilter('LOSSES')}
                 >
                     Losses
+                </button>
+                <button
+                    className={`h-tab expired ${activeFilter === 'EXPIRED' ? 'active' : ''}`}
+                    onClick={() => setActiveFilter('EXPIRED')}
+                >
+                    Expirados
                 </button>
             </div>
 

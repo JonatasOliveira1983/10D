@@ -21,17 +21,39 @@ from config import (
     ENTRY_ZONE_IDEAL, ENTRY_ZONE_LATE, ENTRY_MISSED_PERCENT,
     ML_ENABLED, ML_PROBABILITY_THRESHOLD, ML_MIN_SAMPLES,
     ML_AUTO_RETRAIN_INTERVAL, ML_MODEL_PATH, ML_METRICS_PATH,
-    ML_HYBRID_SCORE_WEIGHT
+    ML_HYBRID_SCORE_WEIGHT, DECOUPLING_SCORE_BONUS
 )
 
 import json
 
+print("[SG] Importing bybit_client...", flush=True)
 from services.bybit_client import BybitClient
+print("[SG] bybit_client imported OK", flush=True)
+
+print("[SG] Importing indicator_calculator...", flush=True)
 from services.indicator_calculator import analyze_candles
+print("[SG] indicator_calculator imported OK", flush=True)
+
+print("[SG] Importing sr_detector...", flush=True)
 from services.sr_detector import get_all_sr_levels, check_sr_proximity, get_sr_alignment
+print("[SG] sr_detector imported OK", flush=True)
+
+print("[SG] Importing signal_scorer...", flush=True)
 from services.signal_scorer import calculate_signal_score, get_score_rating, get_score_emoji
+print("[SG] signal_scorer imported OK", flush=True)
+
+print("[SG] Importing database_manager...", flush=True)
 from services.database_manager import DatabaseManager
+print("[SG] database_manager imported OK", flush=True)
+
+print("[SG] Importing ml_predictor...", flush=True)
 from services.ml_predictor import MLPredictor
+print("[SG] ml_predictor imported OK", flush=True)
+
+print("[SG] Importing btc_regime_tracker...", flush=True)
+from services.btc_regime_tracker import BTCRegimeTracker
+print("[SG] btc_regime_tracker imported OK", flush=True)
+
 
 
 class SignalGenerator:
@@ -66,6 +88,12 @@ class SignalGenerator:
                 print("="*80 + "\n", flush=True)
             else:
                 print("[ML] ✅ Modelo ML carregado com sucesso!", flush=True)
+        
+        # Initialize BTC Regime Tracker
+        self.btc_tracker = BTCRegimeTracker()
+        self.current_btc_regime = "TRENDING"
+        self.current_regime_details = {}
+        print("[BTC REGIME] ✅ Tracker inicializado", flush=True)
         
         self.load_state()
     
@@ -315,13 +343,32 @@ class SignalGenerator:
         # Select the BEST signal (highest score)
         best_signal = max(scored_signals, key=lambda x: x["score"])
         
-        # Calculate SL and TP
+        # Calculate SL and TP DYNAMICALLY based on BTC regime
+        tp_pct, sl_pct = self.btc_tracker.get_dynamic_targets(self.current_btc_regime)
+        
+        # Calculate decoupling score (Always, for ML and Turbo logic)
+        decoupling_score = 0.0
+        if self.current_btc_candles:
+            decoupling_score = self.btc_tracker.calculate_decoupling_score(
+                candles_30m, self.current_btc_candles
+            )
+
+        # [TURBO STRATEGY] If Alt is Decoupled (>0.6), force BREAKOUT targets regardless of regime
+        if decoupling_score > 0.6:
+            tp_pct, sl_pct = self.btc_tracker.get_dynamic_targets("BREAKOUT")
+            print(f"[TURBO DECOUPLED] {symbol} (Score: {decoupling_score:.2f}) -> Forcing BREAKOUT targets (TP {tp_pct*100:.1f}%)", flush=True)
+
+        # Add bonus to score for highly decoupled alts (especially valuable in RANGING)
+        if decoupling_score > 0.5 and self.current_btc_regime == "RANGING":
+            best_signal["score"] += DECOUPLING_SCORE_BONUS
+            print(f"[DECOUPLING BONUS] {symbol} score +{DECOUPLING_SCORE_BONUS} (decoupling: {decoupling_score:.2f})", flush=True)
+        
         if best_signal["direction"] == "LONG":
-            stop_loss = current_price * (1 - STOP_LOSS_PERCENT)
-            take_profit = current_price * (1 + TAKE_PROFIT_PERCENT)
+            stop_loss = current_price * (1 - sl_pct)
+            take_profit = current_price * (1 + tp_pct)
         else:  # SHORT
-            stop_loss = current_price * (1 + STOP_LOSS_PERCENT)
-            take_profit = current_price * (1 - TAKE_PROFIT_PERCENT)
+            stop_loss = current_price * (1 + sl_pct)
+            take_profit = current_price * (1 - tp_pct)
         
         # Get tickSize for this symbol
         inst_info = self.instruments_info.get(symbol, {})
@@ -381,7 +428,14 @@ class SignalGenerator:
                 "liquidity_aligned": score_result.get("confirmations", {}).get("liquidity_aligned", False),
                 "liquidity_details": analysis["institutional"]["liquidity_hunt"]["details"]
             },
-            "ai_features": self._capture_ai_features(symbol, analysis, best_signal)
+            "ai_features": self._capture_ai_features(symbol, analysis, best_signal, decoupling_score),
+            # BTC Regime Tracking
+            "btc_regime": self.current_btc_regime,
+            "dynamic_targets": {
+                "tp_pct": round(tp_pct * 100, 2),
+                "sl_pct": round(sl_pct * 100, 2)
+            },
+            "decoupling_score": round(decoupling_score, 3) if decoupling_score > 0 else None
         }
         
         # === ML PREDICTION INTEGRATION ===
@@ -418,7 +472,7 @@ class SignalGenerator:
         
         return signal
     
-    def _capture_ai_features(self, symbol: str, analysis: Dict, best_signal: Dict) -> Dict:
+    def _capture_ai_features(self, symbol: str, analysis: Dict, best_signal: Dict, decoupling_score: float = 0.0) -> Dict:
         """
         Captura um instantâneo (snapshot) de métricas de mercado para treinamento de IA.
         Calcula as variações percentuais em vez de valores absolutos.
@@ -448,6 +502,11 @@ class SignalGenerator:
             atr = analysis["pivot_trend"]["details"].get("atr", 0)
             volatility = (atr / current_price) if current_price > 0 else 0
             
+            # Encode BTC Regime for ML
+            # 1 = RANGING, 2 = TRENDING, 3 = BREAKOUT
+            regime_map = {"RANGING": 1, "TRENDING": 2, "BREAKOUT": 3}
+            regime_val = regime_map.get(self.current_btc_regime, 2)  # Default to TRENDING
+
             return {
                 "oi_change_pct": round(oi_change * 100, 4),
                 "lsr_change_pct": round(lsr_change * 100, 4),
@@ -456,7 +515,9 @@ class SignalGenerator:
                 "volatility_idx": round(volatility * 100, 4),
                 "master_score": best_signal.get("score", 0),
                 "trend_aligned": 1 if best_signal.get("trend_4h_aligned") else 0,
-                "rsi_value": analysis["rsi_bb"].get("current_value", 50)
+                "rsi_value": analysis["rsi_bb"].get("current_value", 50),
+                "btc_regime_val": regime_val,
+                "decoupling_score": decoupling_score
             }
         except Exception as e:
             print(f"[AI LOGGER ERROR] {symbol}: {e}", flush=True)
@@ -474,6 +535,18 @@ class SignalGenerator:
             self.current_btc_candles = self.client.get_klines("BTCUSDT", "30", 100)
         except:
             self.current_btc_candles = None
+        
+        # Detect BTC market regime
+        try:
+            btc_4h = self.client.get_klines("BTCUSDT", "240", 50)
+            self.current_btc_regime, self.current_regime_details = self.btc_tracker.detect_regime(
+                self.current_btc_candles, btc_4h
+            )
+            regime_info = self.btc_tracker.get_regime_info()
+            print(f"[BTC REGIME] 📊 {self.current_btc_regime} | TP: {regime_info['tp_pct']:.1f}% | SL: {regime_info['sl_pct']:.1f}%", flush=True)
+        except Exception as e:
+            print(f"[BTC REGIME] Error detecting regime: {e}", flush=True)
+            self.current_btc_regime = "TRENDING"
             
         for i, symbol in enumerate(self.monitored_pairs):
             try:

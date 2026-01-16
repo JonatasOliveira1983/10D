@@ -344,6 +344,98 @@ body {
   letter-spacing: 0.5px;
 }
 
+/* BTC Regime Indicator */
+.btc-regime-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
+}
+
+.btc-regime-indicator .regime-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btc-regime-indicator .regime-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btc-regime-indicator .regime-targets {
+  display: flex;
+  gap: var(--space-sm);
+  margin-left: var(--space-sm);
+  padding-left: var(--space-sm);
+  border-left: 1px solid var(--border-color);
+}
+
+.btc-regime-indicator .target-item {
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.btc-regime-indicator .target-item.tp {
+  color: var(--long-color);
+}
+
+.btc-regime-indicator .target-item.sl {
+  color: var(--short-color);
+}
+
+/* Regime Colors */
+.btc-regime-indicator.regime-ranging {
+  border-color: #ff9f43;
+}
+
+.btc-regime-indicator.regime-ranging .regime-value {
+  background: rgba(255, 159, 67, 0.2);
+  color: #ff9f43;
+}
+
+.btc-regime-indicator.regime-trending {
+  border-color: var(--accent-primary);
+}
+
+.btc-regime-indicator.regime-trending .regime-value {
+  background: rgba(0, 212, 170, 0.2);
+  color: var(--accent-primary);
+}
+
+.btc-regime-indicator.regime-breakout {
+  border-color: #7c3aed;
+}
+
+.btc-regime-indicator.regime-breakout .regime-value {
+  background: rgba(124, 58, 237, 0.2);
+  color: #7c3aed;
+  animation: pulse-breakout 1.5s infinite;
+}
+
+@keyframes pulse-breakout {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0);
+  }
+}
+
 /* =============================================================================
    Main Content
    ============================================================================= */
@@ -669,6 +761,48 @@ body {
 .status-badge.sl-hit {
   background: var(--short-color);
   color: white;
+}
+
+/* Regime Badge */
+.regime-badge {
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.regime-badge.ranging {
+  background: rgba(255, 159, 67, 0.15);
+  color: #ff9f43;
+  border-color: rgba(255, 159, 67, 0.3);
+}
+
+.regime-badge.trending {
+  background: rgba(0, 212, 170, 0.15);
+  color: var(--accent-primary);
+  border-color: rgba(0, 212, 170, 0.3);
+}
+
+.regime-badge.breakout {
+  background: rgba(124, 58, 237, 0.15);
+  color: #7c3aed;
+  border-color: rgba(124, 58, 237, 0.3);
+  animation: pulse-breakout 2s infinite;
+}
+
+.regime-badge.decoupled {
+  background: rgba(0, 255, 255, 0.15);
+  color: #00ffff;
+  border-color: rgba(0, 255, 255, 0.3);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+  animation: pulse-breakout 2s infinite;
 }
 
 /* Score */
@@ -1583,7 +1717,7 @@ body {
   }
 
   .mobile-submenu.tenm-submenu {
-    left: 20%;
+    left: 30%;
     transform: translateX(-50%);
   }
 

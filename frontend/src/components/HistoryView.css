@@ -316,6 +316,19 @@
     color: var(--short-color);
 }
 
+.h-tab.expired.active {
+    color: var(--warning-color, #f59e0b);
+}
+
+/* Expired Card Styles */
+.h-stat-card.expired {
+    border-left: 3px solid var(--warning-color, #f59e0b);
+}
+
+.h-stat-card.expired .h-stat-value {
+    color: var(--warning-color, #f59e0b);
+}
+
 /* Empty State */
 .history-empty {
     display: flex;

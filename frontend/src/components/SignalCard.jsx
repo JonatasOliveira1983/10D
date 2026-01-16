@@ -69,6 +69,18 @@ export default function SignalCard({ signal, isPinned, onPin }) {
                                     status === 'EXPIRED' ? 'EXPIRADO' :
                                         status === 'VOL_CLIMAX' ? 'EXAUSTÃO VOL' : 'STOP LOSS'}
                         </span>
+                        {/* BTC Regime Badge */}
+                        {signal.decoupling_score && signal.decoupling_score > 0.5 ? (
+                            <span className="regime-badge decoupled" title={`Score de Desacoplamento: ${signal.decoupling_score}`}>
+                                🚀 DECOUPLED
+                            </span>
+                        ) : signal.btc_regime && (
+                            <span className={`regime-badge ${signal.btc_regime.toLowerCase()}`}>
+                                {signal.btc_regime === 'RANGING' ? 'BTC RANGING' :
+                                    signal.btc_regime === 'TRENDING' ? 'BTC TRENDING' :
+                                        'BTC BREAKOUT'}
+                            </span>
+                        )}
                     </div>
                 </div>
 
