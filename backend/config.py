@@ -71,6 +71,12 @@ TAKE_PROFIT_PERCENT = 0.02  # 2%
 MIN_LEVERAGE = 50           # Minimum 50x leverage required
 HISTORY_RETENTION_HOURS = 72 # 3 days
 
+# Smart Exit Settings
+PARTIAL_TP_PERCENT = 0.02    # 2% (Target 1 - Close 50% and move SL to Entry)
+TRAILING_STOP_TRIGGER = 0.03 # 3% (Activate Trailing Stop)
+TRAILING_STOP_DISTANCE = 0.01 # 1% (SL follows price at 1% distance)
+TARGET_SNIPER_6 = 0.06       # 6% Super Target
+
 # Signal Freshness Settings
 SIGNAL_TTL_MINUTES = 120     # 120 minutes for cleanup (2 hours)
 ENTRY_ZONE_IDEAL = 0.002    # 0.2%

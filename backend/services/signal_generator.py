@@ -21,7 +21,8 @@ from config import (
     ENTRY_ZONE_IDEAL, ENTRY_ZONE_LATE, ENTRY_MISSED_PERCENT,
     ML_ENABLED, ML_PROBABILITY_THRESHOLD, ML_MIN_SAMPLES,
     ML_AUTO_RETRAIN_INTERVAL, ML_MODEL_PATH, ML_METRICS_PATH,
-    ML_HYBRID_SCORE_WEIGHT, DECOUPLING_SCORE_BONUS
+    ML_HYBRID_SCORE_WEIGHT, DECOUPLING_SCORE_BONUS,
+    PARTIAL_TP_PERCENT, TRAILING_STOP_TRIGGER, TRAILING_STOP_DISTANCE, TARGET_SNIPER_6
 )
 
 import json
@@ -435,7 +436,10 @@ class SignalGenerator:
                 "tp_pct": round(tp_pct * 100, 2),
                 "sl_pct": round(sl_pct * 100, 2)
             },
-            "decoupling_score": round(decoupling_score, 3) if decoupling_score > 0 else None
+            "decoupling_score": round(decoupling_score, 3) if decoupling_score > 0 else None,
+            "highest_roi": 0.0,
+            "partial_tp_hit": False,
+            "trailing_stop_active": False
         }
         
         # === ML PREDICTION INTEGRATION ===
@@ -776,22 +780,52 @@ class SignalGenerator:
             sl = signal["stop_loss"]
             direction = signal["direction"]
             
-            hit = False
-            status = "ACTIVE"
+            # 1. Smart Exit Checks (Partial TP & Trailing Stop)
+            roi = self._calculate_roi(direction, entry_price, current_price)
             
-            # 1. Standard TP/SL Check (Real-time trigger)
+            # Track highest ROI reached
+            if roi > signal.get("highest_roi", 0):
+                signal["highest_roi"] = round(roi, 2)
+            
+            # --- PARTIAL TAKE PROFIT ---
+            # If hits 2% (default), move SL to entry and mark as partially hit
+            if not signal.get("partial_tp_hit", False):
+                if roi >= PARTIAL_TP_PERCENT * 100:
+                    signal["partial_tp_hit"] = True
+                    signal["stop_loss"] = entry_price # Move SL to Breakeven
+                    print(f"[SMART EXIT] {symbol} Partial TP hit ({roi:.2f}%)! SL moved to entry ${entry_price}", flush=True)
+                    self.save_signal_to_db(signal) # Update DB state
+            
+            # --- TRAILING STOP ---
+            # If hits 3%, start trailing
+            if roi >= TRAILING_STOP_TRIGGER * 100:
+                signal["trailing_stop_active"] = True
+                new_sl = 0
+                if direction == "LONG":
+                    new_sl = current_price * (1 - TRAILING_STOP_DISTANCE)
+                    # Only move SL up, never down
+                    if new_sl > signal["stop_loss"]:
+                        signal["stop_loss"] = round_step(new_sl, ticker.get("tickSize", 0.000001))
+                else: # SHORT
+                    new_sl = current_price * (1 + TRAILING_STOP_DISTANCE)
+                    # Only move SL down, never up
+                    if new_sl < signal["stop_loss"]:
+                        signal["stop_loss"] = round_step(new_sl, ticker.get("tickSize", 0.000001))
+            
+            # 2. Standard TP/SL Check (Real-time trigger)
+            # TP is now either the original OR the dynamic one from Trailing Stop
             if direction == "LONG":
                 if current_price >= tp:
                     hit, status = self._verify_with_klines(symbol, direction, entry_price, tp, sl)
-                elif current_price <= sl:
-                    hit, status = self._verify_with_klines(symbol, direction, entry_price, tp, sl)
+                elif current_price <= signal["stop_loss"]: # Check against possibly moved SL
+                    hit, status = True, "SL_HIT" # SL was hit
             else: # SHORT
                 if current_price <= tp:
                     hit, status = self._verify_with_klines(symbol, direction, entry_price, tp, sl)
-                elif current_price >= sl:
-                    hit, status = self._verify_with_klines(symbol, direction, entry_price, tp, sl)
+                elif current_price >= signal["stop_loss"]:
+                    hit, status = True, "SL_HIT"
             
-            # 2. Expiration Checks (TTL and Price Distance)
+            # 3. Expiration Checks (TTL and Price Distance)
             if not hit:
                 # TTL Expiration (Default 2 hours)
                 minutes_active = (current_time - signal["timestamp"]) / (1000 * 60)

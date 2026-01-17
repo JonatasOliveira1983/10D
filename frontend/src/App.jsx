@@ -7,6 +7,7 @@ import TradesOrganizerPage from './components/TradesOrganizer/TradesOrganizerPag
 import HistoryView from './components/HistoryView';
 import AIAnalytics from './components/AIAnalytics';
 import MLPerformance from './components/MLPerformance';
+import LiveMonitor from './components/LiveMonitor';
 import { fetchSignals, fetchStats, fetchHistory, fetchBTCRegime } from './services/api';
 
 const POLL_INTERVAL = 5000; // 5 seconds
@@ -132,6 +133,12 @@ export default function App() {
                             )}
                             {currentPage === 'ml' && (
                                 <MLPerformance />
+                            )}
+                            {currentPage === 'live-monitor' && (
+                                <LiveMonitor
+                                    signals={signals}
+                                    loading={loading}
+                                />
                             )}
                             {currentPage === 'settings' && (
                                 <div className="page-placeholder">

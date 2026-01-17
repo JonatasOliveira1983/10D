@@ -11,6 +11,7 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
 
     const menuItems = [
         { id: 'dashboard', icon: <IconDashboard />, label: 'Invest', mobileLabel: 'Invest' },
+        { id: 'live-monitor', icon: <IconBrain />, label: 'Live Sniper', mobileLabel: 'Live' },
         { id: 'organizer', icon: <IconOrganizer />, label: 'Organizador', mobileLabel: '10M' },
         { id: 'history', icon: <IconHistory />, label: 'Histórico', mobileLabel: 'Histórico' },
     ];
@@ -21,6 +22,7 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
     ];
 
     const tenMMenuItems = [
+        { id: 'live-monitor', icon: <IconBrain />, label: 'Live Sniper' },
         { id: 'organizer', icon: <IconOrganizer />, label: 'Organizador de Tarefas' },
         { id: 'history', icon: <IconHistory />, label: 'Histórico' },
     ];
@@ -171,7 +173,7 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
 
                 {/* 10M - Com Submenu */}
                 <button
-                    className={`mobile-nav-item ${(currentPage === 'organizer' || currentPage === 'history' || show10MMenu) ? 'active' : ''}`}
+                    className={`mobile-nav-item ${(currentPage === 'live-monitor' || currentPage === 'organizer' || currentPage === 'history' || show10MMenu) ? 'active' : ''}`}
                     onClick={handle10MClick}
                     title="10M"
                 >
@@ -237,20 +239,16 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
             {/* 10M Submenu */}
             {show10MMenu && (
                 <div className="mobile-submenu tenm-submenu" ref={tenMMenuRef}>
-                    <button
-                        className={`submenu-item ${currentPage === 'organizer' ? 'active' : ''}`}
-                        onClick={() => handle10MItemClick('organizer')}
-                    >
-                        <IconOrganizer />
-                        <span>Organizador de Tarefas</span>
-                    </button>
-                    <button
-                        className={`submenu-item ${currentPage === 'history' ? 'active' : ''}`}
-                        onClick={() => handle10MItemClick('history')}
-                    >
-                        <IconHistory />
-                        <span>Histórico</span>
-                    </button>
+                    {tenMMenuItems.map(item => (
+                        <button
+                            key={item.id}
+                            className={`submenu-item ${currentPage === item.id ? 'active' : ''}`}
+                            onClick={() => handle10MItemClick(item.id)}
+                        >
+                            {item.icon}
+                            <span>{item.label}</span>
+                        </button>
+                    ))}
                 </div>
             )}
 

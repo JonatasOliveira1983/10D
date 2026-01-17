@@ -72,16 +72,16 @@ Sinal é salvo com todas as informações:
     "master_score": 100
   }
 }
-```
 
-### 5️⃣ **Monitoramento Ativo (Background Scanner)**
+### 5️⃣ **Monitoramento Ativo (Background Scanner & Smart Exits)**
 ```
-Sinal Ativo → Monitor de Preço → Verifica TP/SL/Expiração
+Sinal Ativo → Monitor de Preço → Aplica Saídas Inteligentes → TP/SL
 ```
-- Sistema monitora **preço em tempo real** de todos os sinais ativos
-- Verifica se atingiu **Take Profit** (2% de lucro)
-- Verifica se atingiu **Stop Loss** (1% de perda)
-- Verifica se **expirou** (2 horas sem atingir TP/SL)
+- **Monitoramento em Tempo Real**: Verifica preço a cada 5 segundos.
+- ✅ **Partial Take Profit**: Ao atingir **2% de lucro**, o sistema move o Stop Loss para o **Preço de Entrada (Breakeven)**. Lucro protegido!
+- ✅ **Trailing Stop**: Ao atingir **3% de lucro**, o Trailing Stop é ativado. O SL segue o preço a uma distância de 1%.
+- ✅ **Sniper Target**: Foco em capturar correções ou explosões de até **6%**, surfando a tendência com o lucro travado.
+- **Expiração**: 2 horas de validade caso o preço não atinja os alvos.
 
 ### 6️⃣ **Finalização do Sinal**
 ```
@@ -137,6 +137,12 @@ Usuário acessa 4 páginas principais:
 - Sinais finalizados (últimas 24h)
 - ROI real de cada trade
 - Filtros por status (TP/SL/Expirado)
+
+**🎯 Live Sniper Monitor (NOVO):**
+- Monitoramento visual de todos os sinais ativos em tempo real.
+- Barra de progresso dinâmica de 0% a 6%+.
+- Badges indicadores: "TP Parcial ✅" e "Trailing Stop 🔥".
+- Monitoramento de **Highest ROI** atingido durante o trade.
 
 **🧠 Auditoria de IA:**
 - Win Rate geral e métricas do modelo (Precision, Recall, F1)
@@ -287,6 +293,12 @@ ML_AUTO_RETRAIN_INTERVAL = 30 # Retreina a cada 30 novas amostras
 ---
 
 ## 📝 Changelog
+
+### v3.2 (Jan 2026 - Smart Exits & Live Sniper)
+- ✅ **Partial Take Profit**: Proteção automática no 0x0 ao atingir 2% de lucro.
+- ✅ **Trailing Stop**: Lucro móvel ativado nos 3% para buscar alvos de 6%+.
+- ✅ **Live Sniper Interface**: Nova página de monitoramento real-time com barras de progresso.
+- ✅ **Database Persistence**: Novo suporte para rastreamento de ROI máximo atingido.
 
 ### v3.1 (Jan 2026 - Turbo Logic Update)
 - ✅ **BTC Regime Tracker**: Sistema detecta Ranging/Trending/Breakout automaticamente.

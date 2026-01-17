@@ -88,6 +88,9 @@ class DatabaseManager:
                 "final_roi": int(signal.get("final_roi", 0)) if signal.get("final_roi") is not None else None,
                 "timestamp": signal.get("timestamp"),
                 "exit_timestamp": signal.get("exit_timestamp"),
+                "highest_roi": signal.get("highest_roi", 0.0),
+                "partial_tp_hit": signal.get("partial_tp_hit", False),
+                "trailing_stop_active": signal.get("trailing_stop_active", False),
                 "payload": signal # Objeto completo
             }
             

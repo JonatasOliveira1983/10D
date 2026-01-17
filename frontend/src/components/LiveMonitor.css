@@ -1,0 +1,200 @@
+.live-monitor {
+    padding: 20px;
+    color: var(--text-main);
+}
+
+.live-monitor-header {
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.live-monitor-header h1 {
+    font-size: 2rem;
+    background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+}
+
+.monitor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+}
+
+.monitor-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+    transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.monitor-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(79, 172, 254, 0.5);
+}
+
+.monitor-card.target-reached {
+    border: 2px solid #00c853;
+    box-shadow: 0 0 20px rgba(0, 200, 83, 0.2);
+}
+
+.card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.symbol-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.symbol {
+    font-size: 1.4rem;
+    font-weight: bold;
+}
+
+.direction {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.direction.LONG {
+    background: rgba(0, 200, 83, 0.2);
+    color: #00c853;
+}
+
+.direction.SHORT {
+    background: rgba(255, 82, 82, 0.2);
+    color: #ff5252;
+}
+
+.roi-display {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.roi-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #4facfe;
+}
+
+.roi-label {
+    font-size: 0.9rem;
+    opacity: 0.6;
+}
+
+.progress-container {
+    margin-bottom: 20px;
+}
+
+.progress-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    margin-bottom: 8px;
+    opacity: 0.7;
+}
+
+.progress-bar-bg {
+    height: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.marker {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.status-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.badge.partial {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+}
+
+.badge.trailing {
+    background: rgba(255, 87, 34, 0.2);
+    color: #ff5722;
+    animation: pulse 2s infinite;
+}
+
+.badge.sniper {
+    background: rgba(0, 200, 83, 0.2);
+    color: #00c853;
+}
+
+.price-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.detail {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+}
+
+.sl-value {
+    color: #ff5252;
+    font-weight: bold;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.6;
+    }
+}
+
+.no-trades {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 100px 20px;
+    font-size: 1.2rem;
+    opacity: 0.5;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 16px;
+}
