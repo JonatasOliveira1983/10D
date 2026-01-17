@@ -41,6 +41,62 @@
     box-shadow: 0 0 20px rgba(0, 200, 83, 0.2);
 }
 
+.monitor-card.pinned {
+    border: 2px solid #ffc107;
+    box-shadow: 0 0 15px rgba(255, 193, 7, 0.3);
+    position: relative;
+}
+
+.monitor-card.pinned::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #ffc107, #ffeb3b);
+    border-radius: 16px 16px 0 0;
+}
+
+.card-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pin-button {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    opacity: 0.6;
+}
+
+.pin-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.pin-button.pinned {
+    opacity: 1;
+    background: rgba(255, 193, 7, 0.3);
+}
+
+.pinned-count {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 4px 10px;
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
 .card-top {
     display: flex;
     justify-content: space-between;
@@ -77,19 +133,47 @@
 }
 
 .roi-display {
-    text-align: center;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
     margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+}
+
+.roi-current,
+.roi-highest {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
 }
 
 .roi-value {
-    font-size: 2.5rem;
+    font-size: 1.8rem;
     font-weight: 800;
     color: #4facfe;
 }
 
+.roi-value.positive {
+    color: #00c853;
+}
+
+.roi-value.negative {
+    color: #ff5252;
+}
+
+.roi-value.highest {
+    color: #ffc107;
+    font-size: 1.4rem;
+}
+
 .roi-label {
-    font-size: 0.9rem;
+    font-size: 0.75rem;
     opacity: 0.6;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .progress-container {
@@ -197,4 +281,180 @@
     opacity: 0.5;
     background: rgba(255, 255, 255, 0.02);
     border-radius: 16px;
+}
+
+.tp-value {
+    color: #00c853;
+    font-weight: bold;
+}
+
+.sl-value.trailing-active {
+    color: #ff9800;
+    animation: pulse 1.5s infinite;
+}
+
+.live-monitor-loading {
+    text-align: center;
+    padding: 50px;
+    font-size: 1.2rem;
+    opacity: 0.7;
+}
+
+/* ===========================================
+   RESPONSIVE DESIGN
+   =========================================== */
+
+/* Tablets and small laptops */
+@media (max-width: 768px) {
+    .live-monitor {
+        padding: 15px;
+    }
+
+    .live-monitor-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .live-monitor-header p {
+        font-size: 0.9rem;
+    }
+
+    .monitor-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .monitor-card {
+        padding: 16px;
+    }
+
+    .symbol {
+        font-size: 1.2rem;
+    }
+
+    .roi-display {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .roi-value {
+        font-size: 1.5rem;
+    }
+
+    .roi-value.highest {
+        font-size: 1.2rem;
+    }
+
+    .progress-labels {
+        font-size: 0.6rem;
+    }
+
+    .badge {
+        padding: 5px 10px;
+        font-size: 0.7rem;
+    }
+
+    .detail {
+        font-size: 0.85rem;
+    }
+
+    .no-trades {
+        padding: 60px 15px;
+        font-size: 1rem;
+    }
+}
+
+/* Mobile phones */
+@media (max-width: 480px) {
+    .live-monitor {
+        padding: 10px;
+    }
+
+    .live-monitor-header {
+        margin-bottom: 20px;
+    }
+
+    .live-monitor-header h1 {
+        font-size: 1.3rem;
+    }
+
+    .live-monitor-header p {
+        font-size: 0.8rem;
+    }
+
+    .card-top {
+        margin-bottom: 15px;
+    }
+
+    .symbol {
+        font-size: 1.1rem;
+    }
+
+    .direction {
+        padding: 3px 6px;
+        font-size: 0.7rem;
+    }
+
+    .score-badge {
+        font-size: 0.85rem;
+    }
+
+    .roi-display {
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 10px;
+    }
+
+    .roi-value {
+        font-size: 1.3rem;
+    }
+
+    .roi-value.highest {
+        font-size: 1.1rem;
+    }
+
+    .roi-label {
+        font-size: 0.65rem;
+    }
+
+    .progress-container {
+        margin-bottom: 15px;
+    }
+
+    .progress-labels {
+        font-size: 0.55rem;
+    }
+
+    .progress-labels span:nth-child(2),
+    .progress-labels span:nth-child(3) {
+        display: none;
+        /* Hide middle labels on very small screens */
+    }
+
+    .progress-bar-bg {
+        height: 10px;
+    }
+
+    .status-badges {
+        gap: 6px;
+        margin-bottom: 15px;
+    }
+
+    .badge {
+        padding: 4px 8px;
+        font-size: 0.65rem;
+    }
+
+    .price-details {
+        gap: 6px;
+        padding-top: 12px;
+    }
+
+    .detail {
+        font-size: 0.8rem;
+    }
+
+    .no-trades {
+        padding: 40px 10px;
+        font-size: 0.9rem;
+    }
 }

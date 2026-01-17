@@ -294,6 +294,15 @@ ML_AUTO_RETRAIN_INTERVAL = 30 # Retreina a cada 30 novas amostras
 
 ## 📝 Changelog
 
+### v3.3 (Jan 2026 - Live Sniper Refined)
+- ✅ **Current ROI Tracking**: ROI atual exibido em tempo real em cada card.
+- ✅ **Real-time Trailing Stop Persistence**: Atualizações do trailing stop são salvas imediatamente no banco.
+- ✅ **Pin to Top**: Novo botão para fixar sinais no topo (persiste no localStorage).
+- ✅ **Responsive Design**: Layout adaptativo para mobile e tablets.
+- ✅ **UI Improvements**: Dual ROI display (Atual + Máximo), labels corrigidos na barra de progresso.
+- 🐛 **Bug Fix**: Variável `hit` não inicializada corrigida.
+- 🐛 **Bug Fix**: Função `round_step` movida para nível de módulo.
+
 ### v3.2 (Jan 2026 - Smart Exits & Live Sniper)
 - ✅ **Partial Take Profit**: Proteção automática no 0x0 ao atingir 2% de lucro.
 - ✅ **Trailing Stop**: Lucro móvel ativado nos 3% para buscar alvos de 6%+.

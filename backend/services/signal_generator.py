@@ -56,6 +56,17 @@ from services.btc_regime_tracker import BTCRegimeTracker
 print("[SG] btc_regime_tracker imported OK", flush=True)
 
 
+# ============================================================================
+# UTILITY FUNCTIONS (Module Level)
+# ============================================================================
+
+def round_step(price: float, step: float) -> float:
+    """Round price to the nearest step size (tick size)"""
+    if step <= 0:
+        step = 0.000001
+    return round(round(price / step) * step, 8)
+
+
 
 class SignalGenerator:
     """Main signal generation engine with multiple signal types"""
@@ -374,8 +385,7 @@ class SignalGenerator:
         # Get tickSize for this symbol
         inst_info = self.instruments_info.get(symbol, {})
         tick_size = float(inst_info.get("tickSize", "0.000001"))
-        def round_step(price, step):
-            return round(round(price / step) * step, 8)
+        # Note: Using module-level round_step() function
 
         # Build signal object
         signal = {
@@ -780,8 +790,15 @@ class SignalGenerator:
             sl = signal["stop_loss"]
             direction = signal["direction"]
             
+            # Initialize hit flag for this iteration
+            hit = False
+            status = None
+            
             # 1. Smart Exit Checks (Partial TP & Trailing Stop)
             roi = self._calculate_roi(direction, entry_price, current_price)
+            
+            # Track current ROI for real-time display
+            signal["current_roi"] = round(roi, 2)
             
             # Track highest ROI reached
             if roi > signal.get("highest_roi", 0):
@@ -799,18 +816,30 @@ class SignalGenerator:
             # --- TRAILING STOP ---
             # If hits 3%, start trailing
             if roi >= TRAILING_STOP_TRIGGER * 100:
+                was_trailing = signal.get("trailing_stop_active", False)
                 signal["trailing_stop_active"] = True
                 new_sl = 0
+                sl_updated = False
+                tick_size = float(ticker.get("tickSize", 0.000001))
+                
                 if direction == "LONG":
                     new_sl = current_price * (1 - TRAILING_STOP_DISTANCE)
                     # Only move SL up, never down
                     if new_sl > signal["stop_loss"]:
-                        signal["stop_loss"] = round_step(new_sl, ticker.get("tickSize", 0.000001))
+                        signal["stop_loss"] = round_step(new_sl, tick_size)
+                        sl_updated = True
                 else: # SHORT
                     new_sl = current_price * (1 + TRAILING_STOP_DISTANCE)
                     # Only move SL down, never up
                     if new_sl < signal["stop_loss"]:
-                        signal["stop_loss"] = round_step(new_sl, ticker.get("tickSize", 0.000001))
+                        signal["stop_loss"] = round_step(new_sl, tick_size)
+                        sl_updated = True
+                
+                # Persist trailing stop updates to DB for real-time sync
+                if sl_updated or not was_trailing:
+                    self.save_signal_to_db(signal)
+                    if not was_trailing:
+                        print(f"[TRAILING] {symbol} activated at {roi:.2f}% - SL: ${signal['stop_loss']}", flush=True)
             
             # 2. Standard TP/SL Check (Real-time trigger)
             # TP is now either the original OR the dynamic one from Trailing Stop

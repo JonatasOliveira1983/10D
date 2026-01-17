@@ -1,13 +1,54 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import './LiveMonitor.css';
 
+// Key for localStorage persistence
+const PINNED_SIGNALS_KEY = 'liveMonitor_pinnedSignals';
+
 export default function LiveMonitor({ signals, loading }) {
-    const activeSignals = useMemo(() => {
-        return signals.filter(s => s.status === 'ACTIVE' || !s.status);
-    }, [signals]);
+    // Load pinned signals from localStorage
+    const [pinnedSignals, setPinnedSignals] = useState(() => {
+        try {
+            const saved = localStorage.getItem(PINNED_SIGNALS_KEY);
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
+
+    // Save to localStorage when pinned signals change
+    useEffect(() => {
+        localStorage.setItem(PINNED_SIGNALS_KEY, JSON.stringify(pinnedSignals));
+    }, [pinnedSignals]);
+
+    // Toggle pin status for a signal
+    const togglePin = (signalId) => {
+        setPinnedSignals(prev => {
+            if (prev.includes(signalId)) {
+                return prev.filter(id => id !== signalId);
+            } else {
+                return [...prev, signalId];
+            }
+        });
+    };
+
+    // Filter active signals and sort with pinned first
+    const sortedSignals = useMemo(() => {
+        const activeSignals = signals.filter(s => s.status === 'ACTIVE' || !s.status);
+
+        return activeSignals.sort((a, b) => {
+            const aIsPinned = pinnedSignals.includes(a.id);
+            const bIsPinned = pinnedSignals.includes(b.id);
+
+            // Pinned signals come first
+            if (aIsPinned && !bIsPinned) return -1;
+            if (!aIsPinned && bIsPinned) return 1;
+
+            // Then sort by highest ROI
+            return (b.highest_roi || 0) - (a.highest_roi || 0);
+        });
+    }, [signals, pinnedSignals]);
 
     const calculateProgress = (roi) => {
-        // We map 0% to 6% as the main progress bar
         const progress = Math.min(100, Math.max(0, (roi / 6) * 100));
         return progress;
     };
@@ -19,39 +60,61 @@ export default function LiveMonitor({ signals, loading }) {
     return (
         <div className="live-monitor">
             <div className="live-monitor-header">
-                <h1>🎯 Live Sniper Monitor</h1>
+                <h1>Live Sniper Monitor</h1>
                 <p>Acompanhando oportunidades de 6% em tempo real</p>
+                {pinnedSignals.length > 0 && (
+                    <span className="pinned-count">{pinnedSignals.length} fixado(s)</span>
+                )}
             </div>
 
             <div className="monitor-grid">
-                {activeSignals.length === 0 ? (
+                {sortedSignals.length === 0 ? (
                     <div className="no-trades">Nenhum sinal ativo no momento. Aguardando próximas oportunidades...</div>
                 ) : (
-                    activeSignals.map(signal => {
-                        const roi = signal.highest_roi || 0;
-                        const currentRoi = signal.current_roi || 0; // Assuming we might pass current ROI too
-                        const progress = calculateProgress(roi);
+                    sortedSignals.map(signal => {
+                        const highestRoi = signal.highest_roi || 0;
+                        const currentRoi = signal.current_roi || 0;
+                        const progress = calculateProgress(highestRoi);
+                        const isPinned = pinnedSignals.includes(signal.id);
 
                         return (
-                            <div key={signal.id} className={`monitor-card ${roi >= 6 ? 'target-reached' : ''}`}>
+                            <div key={signal.id} className={`monitor-card ${highestRoi >= 6 ? 'target-reached' : ''} ${isPinned ? 'pinned' : ''}`}>
                                 <div className="card-top">
                                     <div className="symbol-info">
                                         <span className="symbol">{signal.symbol}</span>
                                         <span className={`direction ${signal.direction}`}>{signal.direction}</span>
                                     </div>
-                                    <div className="score-badge">
-                                        {signal.emoji} {signal.score}%
+                                    <div className="card-actions">
+                                        <button
+                                            className={`pin-button ${isPinned ? 'pinned' : ''}`}
+                                            onClick={() => togglePin(signal.id)}
+                                            title={isPinned ? 'Desafixar' : 'Fixar no topo'}
+                                        >
+                                            {isPinned ? '📌' : '📍'}
+                                        </button>
+                                        <div className="score-badge">
+                                            {signal.emoji} {signal.score}%
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div className="roi-display">
-                                    <div className="roi-value">{roi.toFixed(2)}%</div>
-                                    <div className="roi-label">Máximo Atingido</div>
+                                    <div className="roi-current">
+                                        <span className={`roi-value ${currentRoi >= 0 ? 'positive' : 'negative'}`}>
+                                            {currentRoi >= 0 ? '+' : ''}{currentRoi.toFixed(2)}%
+                                        </span>
+                                        <span className="roi-label">ROI Atual</span>
+                                    </div>
+                                    <div className="roi-highest">
+                                        <span className="roi-value highest">{highestRoi.toFixed(2)}%</span>
+                                        <span className="roi-label">Máximo</span>
+                                    </div>
                                 </div>
 
                                 <div className="progress-container">
                                     <div className="progress-labels">
                                         <span>0%</span>
+                                        <span>2% (Parcial)</span>
                                         <span>3% (Trailing)</span>
                                         <span>6% (Sniper)</span>
                                     </div>
@@ -60,9 +123,9 @@ export default function LiveMonitor({ signals, loading }) {
                                             className="progress-bar-fill"
                                             style={{ width: `${progress}%` }}
                                         ></div>
-                                        <div className="marker partial" style={{ left: '33.3%' }}></div>
-                                        <div className="marker trailing" style={{ left: '50%' }}></div>
-                                        <div className="marker sniper" style={{ left: '100%' }}></div>
+                                        <div className="marker partial" style={{ left: '33.3%' }} title="2% - TP Parcial"></div>
+                                        <div className="marker trailing" style={{ left: '50%' }} title="3% - Trailing Stop"></div>
+                                        <div className="marker sniper" style={{ left: '100%' }} title="6% - Target"></div>
                                     </div>
                                 </div>
 
@@ -73,7 +136,7 @@ export default function LiveMonitor({ signals, loading }) {
                                     {signal.trailing_stop_active && (
                                         <span className="badge trailing">Trailing Stop 🔥</span>
                                     )}
-                                    {roi >= 6 && (
+                                    {highestRoi >= 6 && (
                                         <span className="badge sniper">TARGET 6% 🎯</span>
                                     )}
                                 </div>
@@ -85,7 +148,13 @@ export default function LiveMonitor({ signals, loading }) {
                                     </div>
                                     <div className="detail">
                                         <span>Stop Atual:</span>
-                                        <span className="sl-value">${signal.stop_loss}</span>
+                                        <span className={`sl-value ${signal.trailing_stop_active ? 'trailing-active' : ''}`}>
+                                            ${signal.stop_loss}
+                                        </span>
+                                    </div>
+                                    <div className="detail">
+                                        <span>Take Profit:</span>
+                                        <span className="tp-value">${signal.take_profit}</span>
                                     </div>
                                 </div>
                             </div>
