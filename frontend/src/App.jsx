@@ -8,6 +8,8 @@ import HistoryView from './components/HistoryView';
 import AIAnalytics from './components/AIAnalytics';
 import MLPerformance from './components/MLPerformance';
 import LiveMonitor from './components/LiveMonitor';
+import SignalJourney from './components/SignalJourney';
+import SettingsPage from './components/SettingsPage';
 import { fetchSignals, fetchStats, fetchHistory, fetchBTCRegime } from './services/api';
 
 const POLL_INTERVAL = 5000; // 5 seconds
@@ -140,11 +142,18 @@ export default function App() {
                                     loading={loading}
                                 />
                             )}
+                            {currentPage === 'signal-journey' && (
+                                <SignalJourney
+                                    signals={signals}
+                                    history={history}
+                                    loading={loading}
+                                />
+                            )}
                             {currentPage === 'settings' && (
-                                <div className="page-placeholder">
-                                    <h2>⚙️ Configurações</h2>
-                                    <p>Em breve...</p>
-                                </div>
+                                <SettingsPage
+                                    theme={theme}
+                                    onToggleTheme={toggleTheme}
+                                />
                             )}
                         </main>
                     </div>

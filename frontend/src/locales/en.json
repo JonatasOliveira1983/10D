@@ -1,0 +1,73 @@
+{
+    "nav": {
+        "invest": "Invest",
+        "signalJourney": "Signal Journey",
+        "organizer": "Organizer",
+        "settings": "Settings"
+    },
+    "header": {
+        "connected": "Connected",
+        "disconnected": "Disconnected",
+        "monitoredPairs": "Monitored Pairs",
+        "activeSignals": "Active Signals",
+        "longSignals": "Long Signals",
+        "shortSignals": "Short Signals"
+    },
+    "signalJourney": {
+        "title": "LLM Trading Intelligence",
+        "winRate": "Win Rate",
+        "roiAccum": "Accum. ROI",
+        "llmConf": "LLM Conf.",
+        "bestCatch": "Best Catch",
+        "active": "Active",
+        "activeSignals": "Active Signals",
+        "noSignals": "No active signals at the moment",
+        "history": "History",
+        "last10Days": "Last 10 days",
+        "trades": "trades",
+        "noHistory": "No trades in the last 10 days",
+        "date": "Date",
+        "symbol": "Symbol",
+        "direction": "Dir",
+        "roi": "ROI",
+        "capture": "Capture",
+        "status": "Status",
+        "setup": "Setup",
+        "type": "Type",
+        "entry": "Entry",
+        "intelligence": "Intelligence",
+        "mlProb": "ML Prob",
+        "llmConfidence": "LLM Conf",
+        "btcRegime": "BTC Regime",
+        "decoupling": "Decoupling",
+        "tpLlm": "TP LLM",
+        "adjusted": "Adjusted",
+        "result": "Result",
+        "finalRoi": "Final ROI",
+        "high": "High",
+        "llmInsight": "LLM Insight",
+        "trailing": "Trailing",
+        "partial": "Partial",
+        "max": "Max"
+    },
+    "settings": {
+        "title": "Settings",
+        "language": "Language",
+        "theme": "Theme",
+        "dark": "Dark",
+        "light": "Light",
+        "portuguese": "Português (BR)",
+        "english": "English",
+        "spanish": "Español",
+        "saved": "Settings saved!"
+    },
+    "common": {
+        "long": "LONG",
+        "short": "SHORT",
+        "tpHit": "TP Hit",
+        "slHit": "SL Hit",
+        "expired": "Expired",
+        "loading": "Loading...",
+        "error": "Error"
+    }
+}

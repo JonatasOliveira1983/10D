@@ -172,4 +172,14 @@ SL_BREAKOUT = 0.015                 # 1.5% SL for breakout
 # Decoupling Score Bonus (added to signal score when alt is decoupled in ranging)
 DECOUPLING_SCORE_BONUS = 15         # +15 points for decoupled alts in ranging regime
 
+# =============================================================================
+# LLM INTELLIGENCE SETTINGS (Gemini)
+# =============================================================================
 
+LLM_ENABLED = True                       # Master switch for LLM features
+LLM_MODEL = "gemini-2.0-flash"           # Free tier model (updated name)
+LLM_VALIDATE_SIGNALS = True              # Validate signals before emitting
+LLM_OPTIMIZE_TP = True                   # Suggest optimized TPs
+LLM_MONITOR_EXITS = True                 # Analyze exit opportunities
+LLM_CACHE_TTL_SECONDS = 300              # Cache TTL: 5 minutes
+LLM_MIN_CONFIDENCE = 0.6                 # Minimum confidence to approve signal

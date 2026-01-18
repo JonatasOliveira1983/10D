@@ -343,6 +343,130 @@ def get_ai_brain():
 
 
 # =============================================================================
+# LLM Intelligence Routes
+# =============================================================================
+
+@app.route("/api/llm/status")
+def get_llm_status():
+    """Get LLM Trading Brain status and statistics"""
+    try:
+        if not hasattr(generator, 'llm_brain') or not generator.llm_brain:
+            return jsonify({
+                "status": "DISABLED",
+                "llm_enabled": False,
+                "message": "LLM Trading Brain is not enabled"
+            })
+        
+        status = generator.llm_brain.get_status()
+        return jsonify({
+            "status": "OK",
+            "llm_enabled": True,
+            **status
+        })
+    except Exception as e:
+        print(f"[LLM STATUS ERROR] {e}", flush=True)
+        return jsonify({"status": "ERROR", "message": str(e)}), 500
+
+
+@app.route("/api/llm/test")
+def test_llm_connection():
+    """Test LLM connection to Gemini"""
+    try:
+        if not hasattr(generator, 'llm_brain') or not generator.llm_brain:
+            return jsonify({
+                "status": "DISABLED",
+                "message": "LLM Trading Brain is not enabled"
+            })
+        
+        result = generator.llm_brain.test_connection()
+        return jsonify(result)
+    except Exception as e:
+        print(f"[LLM TEST ERROR] {e}", flush=True)
+        return jsonify({"status": "ERROR", "message": str(e)}), 500
+
+
+@app.route("/api/llm/summary")
+def get_llm_summary():
+    """Get aggregated LLM metrics for Signal Journey header"""
+    try:
+        # Get history for calculations
+        history = generator.db.get_signal_history(limit=200, hours_limit=240)  # Last 10 days
+        
+        # Calculate win rate
+        completed = [s for s in history if s.get("status") in ["TP_HIT", "SL_HIT"]]
+        wins = len([s for s in completed if s.get("status") == "TP_HIT"])
+        total = len(completed)
+        win_rate = (wins / total * 100) if total > 0 else 0
+        
+        # Calculate win rate history (last 7 days, daily)
+        win_rate_history = []
+        for days_ago in range(7, 0, -1):
+            day_start = time.time() * 1000 - (days_ago * 24 * 60 * 60 * 1000)
+            day_end = day_start + (24 * 60 * 60 * 1000)
+            day_completed = [s for s in completed if day_start <= s.get("timestamp", 0) < day_end]
+            day_wins = len([s for s in day_completed if s.get("status") == "TP_HIT"])
+            day_total = len(day_completed)
+            win_rate_history.append((day_wins / day_total * 100) if day_total > 0 else 50)
+        
+        # Calculate ROI accumulated
+        roi_values = [s.get("final_roi") or s.get("current_roi") or 0 for s in completed]
+        roi_accumulated = sum(roi_values)
+        
+        # ROI history (last 7 days, cumulative)
+        roi_history = []
+        cumulative_roi = 0
+        for days_ago in range(7, 0, -1):
+            day_start = time.time() * 1000 - (days_ago * 24 * 60 * 60 * 1000)
+            day_end = day_start + (24 * 60 * 60 * 1000)
+            day_completed = [s for s in completed if day_start <= s.get("timestamp", 0) < day_end]
+            day_roi = sum(s.get("final_roi") or s.get("current_roi") or 0 for s in day_completed)
+            cumulative_roi += day_roi
+            roi_history.append(round(cumulative_roi, 2))
+        
+        # LLM confidence average
+        llm_confs = []
+        for s in history:
+            if s.get("llm_validation") and s["llm_validation"].get("confidence"):
+                llm_confs.append(s["llm_validation"]["confidence"] * 100)
+        llm_confidence_avg = sum(llm_confs) / len(llm_confs) if llm_confs else 70
+        
+        # Best catch
+        best = max(completed, key=lambda s: s.get("final_roi") or s.get("current_roi") or 0, default=None)
+        best_catch = None
+        if best:
+            best_roi = best.get("final_roi") or best.get("current_roi") or 0
+            if best_roi > 0:
+                best_catch = {"symbol": best.get("symbol"), "roi": best_roi}
+        
+        # Average capture rate
+        capture_rates = []
+        for s in completed:
+            final_roi = s.get("final_roi") or s.get("current_roi") or 0
+            highest_roi = s.get("highest_roi") or 0
+            if highest_roi > 0 and final_roi > 0:
+                capture_rates.append(min(100, (final_roi / highest_roi) * 100))
+        capture_rate_avg = sum(capture_rates) / len(capture_rates) if capture_rates else 0
+        
+        return jsonify({
+            "status": "OK",
+            "win_rate": round(win_rate, 1),
+            "win_rate_history": win_rate_history,
+            "roi_accumulated": round(roi_accumulated, 2),
+            "roi_history": roi_history,
+            "llm_confidence_avg": round(llm_confidence_avg, 0),
+            "active_signals": len(generator.active_signals),
+            "best_catch": best_catch,
+            "capture_rate_avg": round(capture_rate_avg, 0),
+            "total_trades": total
+        })
+    except Exception as e:
+        print(f"[LLM SUMMARY ERROR] {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "ERROR", "message": str(e)}), 500
+
+
+# =============================================================================
 # ML Predictor Routes
 # =============================================================================
 

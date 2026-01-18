@@ -1,0 +1,73 @@
+{
+    "nav": {
+        "invest": "Invertir",
+        "signalJourney": "Signal Journey",
+        "organizer": "Organizador",
+        "settings": "Configuración"
+    },
+    "header": {
+        "connected": "Conectado",
+        "disconnected": "Desconectado",
+        "monitoredPairs": "Pares Monitoreados",
+        "activeSignals": "Señales Activas",
+        "longSignals": "Señales Long",
+        "shortSignals": "Señales Short"
+    },
+    "signalJourney": {
+        "title": "LLM Trading Intelligence",
+        "winRate": "Tasa de Éxito",
+        "roiAccum": "ROI Acum.",
+        "llmConf": "Conf. LLM",
+        "bestCatch": "Mejor Ganancia",
+        "active": "Activos",
+        "activeSignals": "Señales Activas",
+        "noSignals": "No hay señales activas en este momento",
+        "history": "Historial",
+        "last10Days": "Últimos 10 días",
+        "trades": "trades",
+        "noHistory": "Sin trades en los últimos 10 días",
+        "date": "Fecha",
+        "symbol": "Símbolo",
+        "direction": "Dir",
+        "roi": "ROI",
+        "capture": "Captura",
+        "status": "Estado",
+        "setup": "Setup",
+        "type": "Tipo",
+        "entry": "Entrada",
+        "intelligence": "Inteligencia",
+        "mlProb": "Prob ML",
+        "llmConfidence": "Conf LLM",
+        "btcRegime": "Régimen BTC",
+        "decoupling": "Desacople",
+        "tpLlm": "TP LLM",
+        "adjusted": "Ajustado",
+        "result": "Resultado",
+        "finalRoi": "ROI Final",
+        "high": "Máximo",
+        "llmInsight": "Insight LLM",
+        "trailing": "Trailing",
+        "partial": "Parcial",
+        "max": "Máx"
+    },
+    "settings": {
+        "title": "Configuración",
+        "language": "Idioma",
+        "theme": "Tema",
+        "dark": "Oscuro",
+        "light": "Claro",
+        "portuguese": "Português (BR)",
+        "english": "English",
+        "spanish": "Español",
+        "saved": "¡Configuración guardada!"
+    },
+    "common": {
+        "long": "LONG",
+        "short": "SHORT",
+        "tpHit": "TP Alcanzado",
+        "slHit": "SL Alcanzado",
+        "expired": "Expirado",
+        "loading": "Cargando...",
+        "error": "Error"
+    }
+}

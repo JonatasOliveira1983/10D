@@ -1,30 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react'; // Force deploy update
+import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { IconDashboard, IconOrganizer, IconHistory, IconSettings, IconSun, IconMoon, IconLogout, IconAI, IconBrain } from './Icons';
 
 export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme, onLogout }) {
+    const { t } = useTranslation();
     const [showAIMenu, setShowAIMenu] = useState(false);
-    const [showConfigMenu, setShowConfigMenu] = useState(false);
     const [show10MMenu, setShow10MMenu] = useState(false);
     const aiMenuRef = useRef(null);
-    const configMenuRef = useRef(null);
     const tenMMenuRef = useRef(null);
 
     const menuItems = [
-        { id: 'dashboard', icon: <IconDashboard />, label: 'Invest', mobileLabel: 'Invest' },
-        { id: 'live-monitor', icon: <IconBrain />, label: 'Live Sniper', mobileLabel: 'Live' },
-        { id: 'organizer', icon: <IconOrganizer />, label: 'Organizador', mobileLabel: '10M' },
-        { id: 'history', icon: <IconHistory />, label: 'Histórico', mobileLabel: 'Histórico' },
+        { id: 'dashboard', icon: <IconDashboard />, label: t('nav.invest'), mobileLabel: t('nav.invest') },
+        { id: 'signal-journey', icon: <IconBrain />, label: t('nav.signalJourney'), mobileLabel: 'Journey' },
+        { id: 'organizer', icon: <IconOrganizer />, label: t('nav.organizer'), mobileLabel: '10M' },
     ];
 
-    const aiMenuItems = [
-        { id: 'ai', icon: <IconAI />, label: 'Auditoria IA' },
-        { id: 'ml', icon: <IconBrain />, label: 'ML Performance' },
-    ];
+    // Legacy AI menu items - kept for backwards compatibility but not shown
+    const aiMenuItems = [];
 
     const tenMMenuItems = [
-        { id: 'live-monitor', icon: <IconBrain />, label: 'Live Sniper' },
-        { id: 'organizer', icon: <IconOrganizer />, label: 'Organizador de Tarefas' },
-        { id: 'history', icon: <IconHistory />, label: 'Histórico' },
+        { id: 'signal-journey', icon: <IconBrain />, label: t('nav.signalJourney') },
+        { id: 'organizer', icon: <IconOrganizer />, label: t('nav.organizer') },
     ];
 
     // Close menus when clicking outside
@@ -33,36 +29,25 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
             if (aiMenuRef.current && !aiMenuRef.current.contains(event.target)) {
                 setShowAIMenu(false);
             }
-            if (configMenuRef.current && !configMenuRef.current.contains(event.target)) {
-                setShowConfigMenu(false);
-            }
             if (tenMMenuRef.current && !tenMMenuRef.current.contains(event.target)) {
                 setShow10MMenu(false);
             }
         };
 
-        if (showAIMenu || showConfigMenu || show10MMenu) {
+        if (showAIMenu || show10MMenu) {
             document.addEventListener('mousedown', handleClickOutside);
             return () => document.removeEventListener('mousedown', handleClickOutside);
         }
-    }, [showAIMenu, showConfigMenu, show10MMenu]);
+    }, [showAIMenu, show10MMenu]);
 
     const handleAIClick = () => {
         setShowAIMenu(!showAIMenu);
-        setShowConfigMenu(false);
-        setShow10MMenu(false);
-    };
-
-    const handleConfigClick = () => {
-        setShowConfigMenu(!showConfigMenu);
-        setShowAIMenu(false);
         setShow10MMenu(false);
     };
 
     const handle10MClick = () => {
         setShow10MMenu(!show10MMenu);
         setShowAIMenu(false);
-        setShowConfigMenu(false);
     };
 
     const handleAIItemClick = (id) => {
@@ -113,8 +98,8 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
                     ))}
 
                     <button
-                        className="nav-item"
-                        onClick={handleConfigClick}
+                        className={`nav-item ${currentPage === 'settings' ? 'active' : ''}`}
+                        onClick={() => onNavigate('settings')}
                         title="Configurações"
                     >
                         <div className="nav-icon-wrapper">
@@ -147,12 +132,11 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
             </aside>
 
             {/* Backdrop for submenus */}
-            {(showAIMenu || showConfigMenu || show10MMenu) && (
+            {(showAIMenu || show10MMenu) && (
                 <div
                     className="mobile-submenu-backdrop"
                     onClick={() => {
                         setShowAIMenu(false);
-                        setShowConfigMenu(false);
                         setShow10MMenu(false);
                     }}
                 />
@@ -182,11 +166,11 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
                     </div>
                 </button>
 
-                {/* AI - Central Destacado */}
+                {/* AI - Central Destacado - Navega direto para Signal Journey */}
                 <button
-                    className={`mobile-nav-item ai-central ${(currentPage === 'ai' || currentPage === 'ml' || showAIMenu) ? 'active' : ''}`}
-                    onClick={handleAIClick}
-                    title="AI"
+                    className={`mobile-nav-item ai-central ${currentPage === 'signal-journey' ? 'active' : ''}`}
+                    onClick={() => onNavigate('signal-journey')}
+                    title="Signal Journey"
                 >
                     <div className="nav-icon-wrapper-large">
                         <span className="ai-logo-text">AI</span>
@@ -195,8 +179,8 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
 
                 {/* Config */}
                 <button
-                    className={`mobile-nav-item ${showConfigMenu ? 'active' : ''}`}
-                    onClick={handleConfigClick}
+                    className={`mobile-nav-item ${currentPage === 'settings' ? 'active' : ''}`}
+                    onClick={() => onNavigate('settings')}
                     title="Configurações"
                 >
                     <div className="nav-icon-wrapper">
@@ -249,23 +233,6 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
                             <span>{item.label}</span>
                         </button>
                     ))}
-                </div>
-            )}
-
-            {/* Config Submenu */}
-            {showConfigMenu && (
-                <div className="mobile-submenu config-submenu" ref={configMenuRef}>
-                    <button
-                        className="submenu-item"
-                        onClick={() => {
-                            onToggleTheme();
-                            setShowConfigMenu(false);
-                        }}
-                    >
-                        {theme === 'dark' ? <IconSun /> : <IconMoon />}
-                        <span>{theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}</span>
-                    </button>
-                    {/* Adicionar mais opções de config aqui no futuro */}
                 </div>
             )}
         </>

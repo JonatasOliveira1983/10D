@@ -1,0 +1,773 @@
+/* =============================================================================
+   Signal Journey Dashboard - Professional Design
+   ============================================================================= */
+
+.signal-journey {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* =============================================================================
+   Header Panel
+   ============================================================================= */
+
+.sj-header-panel {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+}
+
+.sj-header-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--accent-gradient);
+}
+
+.sj-header-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.sj-title-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.sj-title-main {
+    font-size: 1.25rem;
+    font-weight: 700;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.sj-title-sub {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Metrics Grid */
+.sj-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+}
+
+.sj-metric-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: all var(--transition-fast);
+}
+
+.sj-metric-card:hover {
+    border-color: var(--border-highlight);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.metric-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: currentColor;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+}
+
+.metric-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.metric-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.metric-label {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 2px;
+}
+
+.metric-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.metric-visual {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.metric-progress-bar {
+    width: 60px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.metric-progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+.metric-subtext {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+}
+
+.metric-dots {
+    display: flex;
+    gap: 4px;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    opacity: 0.3;
+}
+
+.dot.active {
+    opacity: 1;
+    box-shadow: 0 0 8px currentColor;
+}
+
+/* Sparkline */
+.sparkline {
+    display: block;
+}
+
+/* =============================================================================
+   Active Signals Section
+   ============================================================================= */
+
+.sj-active-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+}
+
+.sj-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.section-title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-primary);
+}
+
+.section-title-group svg {
+    width: 20px;
+    height: 20px;
+    color: var(--accent-primary);
+}
+
+.section-title-group h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.section-badge {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    background: var(--bg-tertiary);
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+}
+
+.signals-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 3rem;
+    color: var(--text-secondary);
+}
+
+.empty-state svg {
+    width: 48px;
+    height: 48px;
+    opacity: 0.3;
+}
+
+.empty-state p {
+    margin: 0;
+    font-style: italic;
+}
+
+/* =============================================================================
+   Signal Progress Card
+   ============================================================================= */
+
+.sj-signal-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    transition: all var(--transition-fast);
+}
+
+.sj-signal-card:hover {
+    border-color: var(--border-highlight);
+}
+
+.sj-signal-card.long {
+    border-left: 3px solid var(--long-color);
+}
+
+.sj-signal-card.short {
+    border-left: 3px solid var(--short-color);
+}
+
+.signal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.signal-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.direction-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.direction-indicator.long {
+    background: var(--long-color);
+    box-shadow: 0 0 8px var(--long-color);
+}
+
+.direction-indicator.short {
+    background: var(--short-color);
+    box-shadow: 0 0 8px var(--short-color);
+}
+
+.signal-symbol {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.direction-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.direction-tag.long {
+    background: var(--long-bg);
+    color: var(--long-color);
+}
+
+.direction-tag.short {
+    background: var(--short-bg);
+    color: var(--short-color);
+}
+
+.signal-metrics {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.ai-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    background: rgba(124, 58, 237, 0.15);
+    color: #7c3aed;
+    border-radius: 4px;
+}
+
+.ai-badge svg {
+    width: 14px;
+    height: 14px;
+}
+
+.roi-display {
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.roi-display.positive {
+    color: var(--long-color);
+}
+
+.roi-display.negative {
+    color: var(--short-color);
+}
+
+/* Progress Section */
+.progress-section {
+    margin-bottom: 0.75rem;
+}
+
+.progress-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.label-sl {
+    color: var(--short-color);
+}
+
+.label-tp {
+    color: var(--long-color);
+}
+
+.progress-track-container {
+    position: relative;
+    height: 24px;
+    display: flex;
+    align-items: center;
+}
+
+.progress-track {
+    position: relative;
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+}
+
+.entry-line {
+    position: absolute;
+    top: -4px;
+    width: 2px;
+    height: 16px;
+    background: var(--text-secondary);
+    border-radius: 1px;
+}
+
+.progress-fill {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.progress-fill.positive {
+    background: linear-gradient(90deg, rgba(0, 212, 170, 0.3) 0%, var(--long-color) 100%);
+}
+
+.progress-fill.negative {
+    background: linear-gradient(90deg, var(--short-color) 0%, rgba(255, 71, 87, 0.3) 100%);
+}
+
+.position-marker {
+    position: absolute;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    background: var(--text-primary);
+    border: 2px solid var(--accent-primary);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 10px rgba(0, 212, 170, 0.5);
+    z-index: 2;
+}
+
+.progress-prices {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 4px;
+}
+
+/* Signal Tags */
+.signal-tags {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.tag {
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.tag.trailing {
+    background: rgba(255, 159, 67, 0.1);
+    color: #ff9f43;
+    border-color: rgba(255, 159, 67, 0.2);
+}
+
+.tag.partial {
+    background: var(--long-bg);
+    color: var(--long-color);
+    border-color: var(--long-border);
+}
+
+.tag.highest {
+    background: rgba(0, 212, 255, 0.1);
+    color: #00d4ff;
+    border-color: rgba(0, 212, 255, 0.2);
+}
+
+/* =============================================================================
+   History Table
+   ============================================================================= */
+
+.sj-history-container {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+}
+
+.sj-table {
+    display: flex;
+    flex-direction: column;
+}
+
+.table-header-row {
+    display: grid;
+    grid-template-columns: 60px 100px 60px 80px 70px 60px;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.table-data-row {
+    display: grid;
+    grid-template-columns: 60px 100px 60px 80px 70px 60px;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.table-data-row:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.table-data-row.expanded {
+    background: rgba(124, 58, 237, 0.05);
+    border-bottom-color: transparent;
+}
+
+.table-empty {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.cell {
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+}
+
+.cell.symbol {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.cell.direction.long {
+    color: var(--long-color);
+}
+
+.cell.direction.short {
+    color: var(--short-color);
+}
+
+.cell.roi.positive {
+    color: var(--long-color);
+    font-weight: 600;
+}
+
+.cell.roi.negative {
+    color: var(--short-color);
+    font-weight: 600;
+}
+
+.status-icon {
+    font-size: 10px;
+}
+
+.status-icon.success {
+    color: var(--long-color);
+}
+
+.status-icon.error {
+    color: var(--short-color);
+}
+
+.status-icon.warning {
+    color: #ff9f43;
+}
+
+.status-icon.pending {
+    color: var(--text-muted);
+}
+
+/* Expanded Content */
+.expanded-content {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.detail-columns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.detail-column h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.detail-item span:first-child {
+    color: var(--text-secondary);
+}
+
+.detail-item span:last-child {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.detail-item span.positive {
+    color: var(--long-color) !important;
+}
+
+.detail-item span.negative {
+    color: var(--short-color) !important;
+}
+
+.capture-visual {
+    margin-top: 0.5rem;
+}
+
+.capture-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.capture-fill {
+    height: 100%;
+    background: var(--accent-gradient);
+    border-radius: 3px;
+}
+
+.insight-box {
+    background: rgba(124, 58, 237, 0.08);
+    border: 1px solid rgba(124, 58, 237, 0.15);
+    border-radius: var(--radius-md);
+    padding: 0.75rem;
+}
+
+.insight-box h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #7c3aed;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.insight-box p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+/* =============================================================================
+   Responsive Design
+   ============================================================================= */
+
+@media (max-width: 1200px) {
+    .sj-metrics-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 1024px) {
+
+    .table-header-row,
+    .table-data-row {
+        grid-template-columns: 50px 90px 50px 70px 60px 50px;
+        font-size: 0.7rem;
+    }
+
+    .detail-columns {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .signal-journey {
+        padding: 1rem;
+        gap: 1rem;
+    }
+
+    .sj-header-panel {
+        padding: 1rem;
+    }
+
+    .sj-metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .sj-metric-card {
+        padding: 0.75rem;
+    }
+
+    .metric-value {
+        font-size: 1rem;
+    }
+
+    .table-header-row {
+        display: none;
+    }
+
+    .table-data-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.25rem;
+        padding: 0.75rem;
+    }
+
+    .table-data-row .cell:nth-child(n+3) {
+        grid-column: span 1;
+        font-size: 0.7rem;
+    }
+
+    .detail-columns {
+        grid-template-columns: 1fr;
+    }
+
+    .signal-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .signal-metrics {
+        align-self: flex-end;
+    }
+}
+
+@media (max-width: 480px) {
+    .sj-metrics-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .sj-metric-card:nth-child(5) {
+        grid-column: span 2;
+    }
+
+    .sj-header-title {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .progress-prices {
+        font-size: 0.6rem;
+    }
+
+    .signal-tags {
+        gap: 0.25rem;
+    }
+
+    .tag {
+        font-size: 0.6rem;
+        padding: 2px 6px;
+    }
+}

@@ -22,7 +22,9 @@ from config import (
     ML_ENABLED, ML_PROBABILITY_THRESHOLD, ML_MIN_SAMPLES,
     ML_AUTO_RETRAIN_INTERVAL, ML_MODEL_PATH, ML_METRICS_PATH,
     ML_HYBRID_SCORE_WEIGHT, DECOUPLING_SCORE_BONUS,
-    PARTIAL_TP_PERCENT, TRAILING_STOP_TRIGGER, TRAILING_STOP_DISTANCE, TARGET_SNIPER_6
+    PARTIAL_TP_PERCENT, TRAILING_STOP_TRIGGER, TRAILING_STOP_DISTANCE, TARGET_SNIPER_6,
+    LLM_ENABLED, LLM_MODEL, LLM_VALIDATE_SIGNALS, LLM_OPTIMIZE_TP,
+    LLM_MONITOR_EXITS, LLM_CACHE_TTL_SECONDS, LLM_MIN_CONFIDENCE
 )
 
 import json
@@ -54,6 +56,10 @@ print("[SG] ml_predictor imported OK", flush=True)
 print("[SG] Importing btc_regime_tracker...", flush=True)
 from services.btc_regime_tracker import BTCRegimeTracker
 print("[SG] btc_regime_tracker imported OK", flush=True)
+
+print("[SG] Importing llm_trading_brain...", flush=True)
+from services.llm_trading_brain import LLMTradingBrain
+print("[SG] llm_trading_brain imported OK", flush=True)
 
 
 # ============================================================================
@@ -106,6 +112,23 @@ class SignalGenerator:
         self.current_btc_regime = "TRENDING"
         self.current_regime_details = {}
         print("[BTC REGIME] ✅ Tracker inicializado", flush=True)
+        
+        # Initialize LLM Trading Brain (Gemini)
+        if LLM_ENABLED:
+            llm_config = {
+                "LLM_MODEL": LLM_MODEL,
+                "LLM_CACHE_TTL_SECONDS": LLM_CACHE_TTL_SECONDS,
+                "LLM_MIN_CONFIDENCE": LLM_MIN_CONFIDENCE
+            }
+            self.llm_brain = LLMTradingBrain(llm_config)
+            if self.llm_brain.is_enabled():
+                self.llm_brain.set_database_manager(self.db) # Added line
+                print("[LLM] ✅ LLM Trading Brain inicializado com Gemini", flush=True)
+            else:
+                print("[LLM] ⚠️ LLM habilitado mas Gemini não disponível - usando fallback", flush=True)
+        else:
+            self.llm_brain = None
+            print("[LLM] ℹ️ LLM Trading Brain desabilitado", flush=True)
         
         self.load_state()
     
@@ -484,6 +507,54 @@ class SignalGenerator:
         else:
             signal["ml_probability"] = None
         
+        # === LLM INTELLIGENCE LAYER ===
+        if self.llm_brain and LLM_ENABLED:
+            market_context = {
+                "btc_regime": self.current_btc_regime,
+                "decoupling_score": decoupling_score,
+                "regime_details": self.current_regime_details
+            }
+            
+            # 1. Validate signal context with LLM
+            if LLM_VALIDATE_SIGNALS:
+                try:
+                    llm_validation = self.llm_brain.validate_signal_context(signal, market_context)
+                    signal["llm_validation"] = llm_validation
+                    
+                    if llm_validation.get("approved"):
+                        print(f"[LLM] ✅ {symbol} aprovado (conf: {llm_validation.get('confidence', 0):.0%})", flush=True)
+                    else:
+                        print(f"[LLM] ⚠️ {symbol} {llm_validation.get('suggested_action', 'SKIP')}: {llm_validation.get('reasoning', '')[:50]}", flush=True)
+                except Exception as e:
+                    print(f"[LLM ERROR] Validation failed for {symbol}: {e}", flush=True)
+                    signal["llm_validation"] = None
+            
+            # 2. Suggest optimal TP with LLM
+            if LLM_OPTIMIZE_TP:
+                try:
+                    tp_suggestion = self.llm_brain.suggest_optimal_tp(signal, market_context)
+                    signal["llm_tp_suggestion"] = tp_suggestion
+                    
+                    if tp_suggestion.get("should_adjust") and tp_suggestion.get("suggested_tp_pct"):
+                        original_tp = signal.get("dynamic_targets", {}).get("tp_pct", 2.0)
+                        suggested_tp = tp_suggestion["suggested_tp_pct"]
+                        
+                        # Only adjust if suggestion is significantly different (>0.5%)
+                        if abs(suggested_tp - original_tp) >= 0.5:
+                            # Recalculate TP based on suggestion
+                            new_tp_pct = suggested_tp / 100  # Convert to decimal
+                            if signal["direction"] == "LONG":
+                                signal["take_profit"] = round_step(current_price * (1 + new_tp_pct), tick_size)
+                            else:
+                                signal["take_profit"] = round_step(current_price * (1 - new_tp_pct), tick_size)
+                            
+                            signal["dynamic_targets"]["tp_pct"] = suggested_tp
+                            signal["dynamic_targets"]["tp_adjusted_by_llm"] = True
+                            print(f"[LLM] 🎯 {symbol} TP ajustado: {original_tp:.1f}% → {suggested_tp:.1f}%", flush=True)
+                except Exception as e:
+                    print(f"[LLM ERROR] TP optimization failed for {symbol}: {e}", flush=True)
+                    signal["llm_tp_suggestion"] = None
+        
         return signal
     
     def _capture_ai_features(self, symbol: str, analysis: Dict, best_signal: Dict, decoupling_score: float = 0.0) -> Dict:
@@ -587,11 +658,21 @@ class SignalGenerator:
                                 print(f"[SKIP] {symbol} score {signal['score']:.1f}% < 100%, não será monitorado", flush=True)
                                 continue
                         
+                        # LLM Intelligence Layer - additional validation (soft filter - logs warning but doesn't block)
+                        llm_info = ""
+                        if LLM_ENABLED and signal.get("llm_validation"):
+                            llm_val = signal["llm_validation"]
+                            llm_conf = llm_val.get("confidence", 0)
+                            llm_info = f" | LLM: {llm_conf:.0%}"
+                            if not llm_val.get("approved") and llm_conf >= LLM_MIN_CONFIDENCE:
+                                # LLM disapproved but with good confidence - this is a warning
+                                print(f"[LLM WARNING] {symbol} - LLM não aprovou mas seguindo com sinal (conf: {llm_conf:.0%})", flush=True)
+                        
                         self.active_signals[symbol] = signal
                         new_signals.append(signal)
                         sig_type = signal['signal_type'].replace('_', ' ')
                         ml_info = f" | ML: {signal['ml_probability']:.2%}" if signal.get('ml_probability') else ""
-                        print(f"[NEW SIGNAL] {symbol} {signal['direction']} ({sig_type}) Score: {signal['score']:.1f}%{ml_info}", flush=True)
+                        print(f"[NEW SIGNAL] {symbol} {signal['direction']} ({sig_type}) Score: {signal['score']:.1f}%{ml_info}{llm_info}", flush=True)
                         self.save_signal_to_db(signal) # Save on new signal
                 
                 # Periodic cleanup of history (every scan)
@@ -840,6 +921,29 @@ class SignalGenerator:
                     self.save_signal_to_db(signal)
                     if not was_trailing:
                         print(f"[TRAILING] {symbol} activated at {roi:.2f}% - SL: ${signal['stop_loss']}", flush=True)
+            
+            # --- LLM EXIT ANALYSIS ---
+            # Only check every few iterations to save rate limit (when ROI is significant)
+            if LLM_MONITOR_EXITS and self.llm_brain and roi >= 1.5:
+                # Only analyze if we haven't checked recently (every ~5 minutes per signal)
+                last_llm_check = signal.get("last_llm_exit_check", 0)
+                if current_time - last_llm_check > 300000:  # 5 minutes
+                    try:
+                        market_momentum = {
+                            "trend": "BULLISH" if roi > 0 else "BEARISH",
+                            "volume_status": "NORMAL"
+                        }
+                        exit_analysis = self.llm_brain.analyze_exit_opportunity(signal, roi, market_momentum)
+                        signal["llm_exit_analysis"] = exit_analysis
+                        signal["last_llm_exit_check"] = current_time
+                        
+                        action = exit_analysis.get("action", "HOLD")
+                        if action == "EXIT" and exit_analysis.get("confidence", 0) >= LLM_MIN_CONFIDENCE:
+                            print(f"[LLM EXIT] 🚪 {symbol} recomenda saída em {roi:.2f}%: {exit_analysis.get('reasoning', '')[:40]}", flush=True)
+                        elif action == "PARTIAL":
+                            print(f"[LLM PARTIAL] {symbol} recomenda fechamento parcial em {roi:.2f}%", flush=True)
+                    except Exception as e:
+                        print(f"[LLM ERROR] Exit analysis failed for {symbol}: {e}", flush=True)
             
             # 2. Standard TP/SL Check (Real-time trigger)
             # TP is now either the original OR the dynamic one from Trailing Stop

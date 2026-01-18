@@ -294,6 +294,13 @@ ML_AUTO_RETRAIN_INTERVAL = 30 # Retreina a cada 30 novas amostras
 
 ## 📝 Changelog
 
+### v3.4 (Jan 2026 - Signal Journey & Self-Learning)
+- ✅ **Signal Journey Dashboard**: Visualização unificada de Sinais + Histórico + Analytics em uma única tela.
+- ✅ **Internationalization (i18n)**: Suporte completo a PT-BR, English e Español.
+- ✅ **LLM Self-Learning**: O sistema agora aprende com o histórico do Supabase (1.104+ sinais) para tomar decisões melhores.
+- ✅ **Settings Page**: Página de configurações para troca de idioma e tema.
+- ✅ **PWA Cache Fix**: Build otimizado para expiração de cache.
+
 ### v3.3 (Jan 2026 - Live Sniper Refined)
 - ✅ **Current ROI Tracking**: ROI atual exibido em tempo real em cada card.
 - ✅ **Real-time Trailing Stop Persistence**: Atualizações do trailing stop são salvas imediatamente no banco.
