@@ -294,6 +294,12 @@ ML_AUTO_RETRAIN_INTERVAL = 30 # Retreina a cada 30 novas amostras
 
 ## 📝 Changelog
 
+### v3.5 (Jan 2026 - Sentiment Intelligence)
+- ✅ **Sentiment Analysis**: Novo motor que analisa o "humor do mercado" em tempo real.
+- ✅ **News Integration**: Coleta automática de manchetes (CoinTelegraph/CoinDesk).
+- ✅ **LLM Upgrade**: A IA agora considera o sentimento (Fear/Greed) para validar sinais.
+- ✅ **Frontend Widget**: Novo painel de Sentimento no Signal Journey.
+
 ### v3.4 (Jan 2026 - Signal Journey & Self-Learning)
 - ✅ **Signal Journey Dashboard**: Visualização unificada de Sinais + Histórico + Analytics em uma única tela.
 - ✅ **Internationalization (i18n)**: Suporte completo a PT-BR, English e Español.

@@ -771,3 +771,91 @@
         padding: 2px 6px;
     }
 }
+
+/* --- Sentiment Widget --- */
+.sentiment-widget {
+    background: #1e1e24;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sentiment-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sentiment-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sentiment-icon {
+    font-size: 24px;
+}
+
+.sentiment-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.sentiment-label {
+    font-weight: 700;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sentiment-score {
+    color: #9ca3af;
+    font-size: 0.85rem;
+}
+
+.sentiment-right {
+    flex: 1;
+    text-align: right;
+    max-width: 60%;
+}
+
+.sentiment-summary {
+    color: #d1d5db;
+    font-size: 0.95rem;
+    font-style: italic;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.sentiment-progress-bg {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.sentiment-progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 1s ease;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .sentiment-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .sentiment-right {
+        text-align: left;
+        max-width: 100%;
+    }
+}

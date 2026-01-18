@@ -61,6 +61,10 @@ print("[SG] Importing llm_trading_brain...", flush=True)
 from services.llm_trading_brain import LLMTradingBrain
 print("[SG] llm_trading_brain imported OK", flush=True)
 
+print("[SG] Importing news_service...", flush=True)
+from services.news_service import news_service
+print("[SG] news_service imported OK", flush=True)
+
 
 # ============================================================================
 # UTILITY FUNCTIONS (Module Level)
@@ -113,6 +117,12 @@ class SignalGenerator:
         self.current_regime_details = {}
         print("[BTC REGIME] ✅ Tracker inicializado", flush=True)
         
+        # Sentiment Cache (News)
+        self.market_sentiment = {"score": 50, "sentiment": "NEUTRAL", "summary": "Initializing..."}
+        self.last_sentiment_update = 0
+        self.sentiment_update_interval = 900  # 15 minutes
+        
+        
         # Initialize LLM Trading Brain (Gemini)
         if LLM_ENABLED:
             llm_config = {
@@ -131,6 +141,23 @@ class SignalGenerator:
             print("[LLM] ℹ️ LLM Trading Brain desabilitado", flush=True)
         
         self.load_state()
+
+    def _update_market_sentiment(self):
+        """Update market sentiment from news if interval passed"""
+        if not self.llm_brain or not self.llm_brain.is_enabled():
+            return
+
+        try:
+            if time.time() - self.last_sentiment_update > self.sentiment_update_interval:
+                print(f"[SENTIMENT] 🕒 Updating market sentiment...", flush=True)
+                headlines = news_service.get_latest_headlines(limit=15)
+                analysis = self.llm_brain.analyze_market_sentiment(headlines)
+                
+                self.market_sentiment = analysis
+                self.last_sentiment_update = time.time()
+                print(f"[SENTIMENT] ✅ Updated: {analysis.get('sentiment')} ({analysis.get('score')})", flush=True)
+        except Exception as e:
+            print(f"[SENTIMENT] ⚠️ Failed to update: {e}", flush=True)
     
     def initialize(self, pair_limit: int = 100):
         """Initialize the generator with top pairs"""
@@ -512,7 +539,9 @@ class SignalGenerator:
             market_context = {
                 "btc_regime": self.current_btc_regime,
                 "decoupling_score": decoupling_score,
-                "regime_details": self.current_regime_details
+                "regime_details": self.current_regime_details,
+                "sentiment_score": self.market_sentiment.get("score", 50),
+                "sentiment_summary": self.market_sentiment.get("summary", "Neutral")
             }
             
             # 1. Validate signal context with LLM
@@ -616,6 +645,9 @@ class SignalGenerator:
         print(f"[SCAN] Starting scan of {total_pairs} pairs...", flush=True)
         
         # Fetch BTC candles once for RS calculation
+        # Update market sentiment if needed
+        self._update_market_sentiment()
+        
         try:
             self.current_btc_candles = self.client.get_klines("BTCUSDT", "30", 100)
         except:

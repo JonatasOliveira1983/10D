@@ -31,7 +31,9 @@ print(f"[DEBUG] Config imported OK - PAIR_LIMIT={PAIR_LIMIT}", flush=True)
 
 print("[DEBUG] About to import SignalGenerator...", flush=True)
 from services.signal_generator import SignalGenerator
+from services.signal_generator import SignalGenerator
 from services.ai_analytics_service import AIAnalyticsService
+from services.news_service import news_service
 print("[DEBUG] SignalGenerator imported OK", flush=True)
 
 # Initialize Flask app
@@ -383,6 +385,29 @@ def test_llm_connection():
     except Exception as e:
         print(f"[LLM TEST ERROR] {e}", flush=True)
         return jsonify({"status": "ERROR", "message": str(e)}), 500
+
+
+@app.route('/api/sentiment', methods=['GET'])
+def get_sentiment():
+    """Get market sentiment analysis based on new headlines"""
+    try:
+        # Get headlines
+        headlines = news_service.get_latest_headlines(limit=15)
+        
+        # Analyze with LLM
+        if hasattr(generator, 'llm_brain') and generator.llm_brain and generator.llm_brain.is_enabled():
+            analysis = generator.llm_brain.analyze_market_sentiment(headlines)
+        else:
+            analysis = {"score": 50, "sentiment": "NEUTRAL", "summary": "LLM disabled"}
+            
+        return jsonify({
+            "status": "success",
+            "headlines": headlines,
+            "analysis": analysis
+        })
+    except Exception as e:
+        print(f"[API ERROR] Sentiment analysis failed: {e}", flush=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route("/api/llm/summary")

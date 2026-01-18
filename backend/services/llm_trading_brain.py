@@ -549,6 +549,71 @@ RESPOND IN JSON FORMAT ONLY:
             "reasoning": "LLM response parsing failed - holding position"
         }
     
+    def analyze_market_sentiment(self, headlines: List[Dict]) -> Dict:
+        """
+        Analyze news headlines to determine market sentiment.
+        headlines: List[{"title": str, "source": str, ...}]
+        Returns: {"score": 0-100, "sentiment": "BEARISH"|"NEUTRAL"|"BULLISH", "summary": str}
+        """
+        if not headlines:
+            return {"score": 50, "sentiment": "NEUTRAL", "summary": "No news available"}
+        
+        # Check cache (hash of latest headline title as key)
+        latest_title = headlines[0].get("title", "") if headlines else ""
+        cache_data = {"latest_head": latest_title, "count": len(headlines)}
+        cache_key = self._get_cache_key("sentiment", cache_data)
+        cached = self._get_from_cache(cache_key)
+        if cached:
+            return cached
+
+        if not self.model:
+            return {
+                "score": 50, 
+                "sentiment": "NEUTRAL", 
+                "summary": "LLM unavailable for sentiment analysis"
+            }
+
+        # Prepare headlines for prompt
+        headlines_text = "\n".join([f"- {h.get('title')}" for h in headlines[:15]])
+        
+        prompt = f"""You are a crypto market sentiment analyst. Analyze these headlines and determine the Fear & Greed score.
+
+HEADLINES:
+{headlines_text}
+
+INSTRUCTIONS:
+1. Score from 0 (Extreme Fear) to 100 (Extreme Greed).
+   - 0-25: Extreme Fear (Bearish)
+   - 26-45: Fear (Bearish)
+   - 46-54: Neutral
+   - 55-75: Greed (Bullish)
+   - 76-100: Extreme Greed (Bullish)
+2. Summarize the main narrative in ONE sentence.
+
+RESPOND IN JSON FORMAT ONLY:
+{{
+  "score": 0-100,
+  "sentiment": "BEARISH" or "NEUTRAL" or "BULLISH",
+  "summary": "One sentence summary"
+}}"""
+
+        response = self._call_gemini(prompt, max_tokens=150)
+        result = self._parse_json_response(response)
+        
+        if result:
+            result.setdefault("score", 50)
+            result.setdefault("sentiment", "NEUTRAL")
+            result.setdefault("summary", "Analysis complete")
+            
+            self._save_to_cache(cache_key, result)
+            return result
+            
+        return {
+            "score": 50,
+            "sentiment": "NEUTRAL", 
+            "summary": "Sentiment analysis failed"
+        }
+
     def get_status(self) -> Dict:
         """Get LLM Brain status and statistics"""
         return {

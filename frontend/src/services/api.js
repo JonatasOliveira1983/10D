@@ -98,3 +98,18 @@ export async function fetchBTCRegime() {
         };
     }
 }
+
+export async function fetchSentiment() {
+    try {
+        const response = await fetch(`${API_BASE}/sentiment`);
+        if (!response.ok) throw new Error('Failed to fetch sentiment');
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching sentiment:', error);
+        return {
+            status: "error",
+            headlines: [],
+            analysis: { score: 50, sentiment: "NEUTRAL", summary: "Failed to load" }
+        };
+    }
+}

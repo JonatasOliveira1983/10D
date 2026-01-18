@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { fetchSentiment } from '../services/api';
 import './SignalJourney.css';
 
 // SVG Logo for Signal Journey
@@ -57,6 +58,41 @@ const IconSignal = () => (
         <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" fill="none" opacity="0.3" />
     </svg>
 );
+
+    </svg >
+);
+
+const SentimentWidget = ({ sentiment, t }) => {
+    if (!sentiment) return null;
+
+    // sentiment: { score, sentiment, summary }
+    const { score, sentiment: label, summary } = sentiment;
+
+    let color = '#9ca3af'; // Neutral (Gray)
+    let icon = '😐';
+    if (score >= 55) { color = '#00d4aa'; icon = '🐮'; } // Bullish (Green)
+    if (score <= 45) { color = '#ef4444'; icon = '🐻'; } // Bearish (Red)
+
+    return (
+        <div className="sentiment-widget">
+            <div className="sentiment-content">
+                <div className="sentiment-left">
+                    <span className="sentiment-icon">{icon}</span>
+                    <div className="sentiment-info">
+                        <span className="sentiment-label" style={{ color }}>{label}</span>
+                        <span className="sentiment-score">Fear & Greed: {score}</span>
+                    </div>
+                </div>
+                <div className="sentiment-right">
+                    <p className="sentiment-summary">"{summary}"</p>
+                </div>
+            </div>
+            <div className="sentiment-progress-bg">
+                <div className="sentiment-progress-fill" style={{ width: `${score}%`, background: color }} />
+            </div>
+        </div>
+    );
+};
 
 // Sparkline component for mini charts
 const Sparkline = ({ data, color = '#00d4aa', width = 60, height = 24 }) => {
@@ -444,23 +480,26 @@ const HistoryTable = ({ history, loading, t }) => {
 export default function SignalJourney({ signals, history, loading }) {
     const { t } = useTranslation();
     const [llmSummary, setLlmSummary] = useState(null);
+    const [sentiment, setSentiment] = useState(null);
 
-    // Fetch LLM summary
+    // Fetch LLM summary and Sentiment
     useEffect(() => {
-        const fetchLLMSummary = async () => {
+        const fetchData = async () => {
             try {
-                const response = await fetch('/api/llm/summary');
-                if (response.ok) {
-                    const data = await response.json();
-                    setLlmSummary(data);
-                }
+                // Fetch LLM Summary
+                const sumRes = await fetch('/api/llm/summary');
+                if (sumRes.ok) setLlmSummary(await sumRes.json());
+
+                // Fetch Sentiment
+                const sentRes = await fetchSentiment();
+                if (sentRes && sentRes.analysis) setSentiment(sentRes.analysis);
             } catch (error) {
-                console.error('Error fetching LLM summary:', error);
+                console.error('Error fetching dashboard data:', error);
             }
         };
 
-        fetchLLMSummary();
-        const interval = setInterval(fetchLLMSummary, 30000);
+        fetchData();
+        const interval = setInterval(fetchData, 30000);
 
         return () => clearInterval(interval);
     }, []);
@@ -486,6 +525,8 @@ export default function SignalJourney({ signals, history, loading }) {
     return (
         <div className="signal-journey">
             <LLMHeaderPanel summary={computedSummary} loading={loading} t={t} />
+
+            {sentiment && <SentimentWidget sentiment={sentiment} t={t} />}
 
             <div className="sj-active-section">
                 <div className="sj-section-header">
