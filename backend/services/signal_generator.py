@@ -65,6 +65,10 @@ print("[SG] Importing news_service...", flush=True)
 from services.news_service import news_service
 print("[SG] news_service imported OK", flush=True)
 
+print("[SG] Importing rag_memory...", flush=True)
+from services.rag_memory import RAGMemory
+print("[SG] rag_memory imported OK", flush=True)
+
 
 # ============================================================================
 # UTILITY FUNCTIONS (Module Level)
@@ -103,19 +107,19 @@ class SignalGenerator:
         if ML_ENABLED:
             if not self.ml_predictor or not self.ml_predictor.model:
                 print("\n" + "="*80, flush=True)
-                print("⚠️ AVISO: ML está habilitado mas o modelo ainda não foi treinado.", flush=True)
+                print("[!] AVISO: ML esta habilitado mas o modelo ainda nao foi treinado.", flush=True)
                 print("="*80, flush=True)
                 print("\nO sistema vai funcionar em MODO FALLBACK (apenas regras, sem ML).", flush=True)
                 print("Quando houver 100+ amostras finalizadas, o modelo será treinado automaticamente.", flush=True)
                 print("="*80 + "\n", flush=True)
             else:
-                print("[ML] ✅ Modelo ML carregado com sucesso!", flush=True)
+                print("[ML] [OK] Modelo ML carregado com sucesso!", flush=True)
         
         # Initialize BTC Regime Tracker
         self.btc_tracker = BTCRegimeTracker()
         self.current_btc_regime = "TRENDING"
         self.current_regime_details = {}
-        print("[BTC REGIME] ✅ Tracker inicializado", flush=True)
+        print("[BTC REGIME] [OK] Tracker inicializado", flush=True)
         
         # Sentiment Cache (News)
         self.market_sentiment = {"score": 50, "sentiment": "NEUTRAL", "summary": "Initializing..."}
@@ -123,6 +127,10 @@ class SignalGenerator:
         self.sentiment_update_interval = 900  # 15 minutes
         
         
+        # Initialize RAG Memory (Visual Memory Engine)
+        self.rag_memory = RAGMemory(storage_path="data/memory_index.json")
+        print("[RAG] [OK] RAG Memory Engine inicializado", flush=True)
+
         # Initialize LLM Trading Brain (Gemini)
         if LLM_ENABLED:
             llm_config = {
@@ -130,15 +138,18 @@ class SignalGenerator:
                 "LLM_CACHE_TTL_SECONDS": LLM_CACHE_TTL_SECONDS,
                 "LLM_MIN_CONFIDENCE": LLM_MIN_CONFIDENCE
             }
-            self.llm_brain = LLMTradingBrain(llm_config)
+            # Inject RAG Memory into LLM Brain (Shared Instance)
+            self.llm_brain = LLMTradingBrain(llm_config, rag_memory=self.rag_memory)
             if self.llm_brain.is_enabled():
-                self.llm_brain.set_database_manager(self.db) # Added line
-                print("[LLM] ✅ LLM Trading Brain inicializado com Gemini", flush=True)
+                self.llm_brain.set_database_manager(self.db) 
+                print("[LLM] [OK] LLM Trading Brain inicializado com Gemini", flush=True)
             else:
-                print("[LLM] ⚠️ LLM habilitado mas Gemini não disponível - usando fallback", flush=True)
+                print("[LLM] [WARN] LLM habilitado mas Gemini nao disponivel - usando fallback", flush=True)
         else:
             self.llm_brain = None
-            print("[LLM] ℹ️ LLM Trading Brain desabilitado", flush=True)
+            print("[LLM] [INFO] LLM Trading Brain desabilitado", flush=True)
+        
+        self.system_ready = False # Flag for Async Initialization
         
         self.load_state()
 
@@ -149,15 +160,20 @@ class SignalGenerator:
 
         try:
             if time.time() - self.last_sentiment_update > self.sentiment_update_interval:
-                print(f"[SENTIMENT] 🕒 Updating market sentiment...", flush=True)
+                print(f"[SENTIMENT] Updating market sentiment...", flush=True)
                 headlines = news_service.get_latest_headlines(limit=15)
                 analysis = self.llm_brain.analyze_market_sentiment(headlines)
                 
                 self.market_sentiment = analysis
                 self.last_sentiment_update = time.time()
-                print(f"[SENTIMENT] ✅ Updated: {analysis.get('sentiment')} ({analysis.get('score')})", flush=True)
+                print(f"[SENTIMENT] [OK] Updated: {analysis.get('sentiment')} ({analysis.get('score')})", flush=True)
         except Exception as e:
-            print(f"[SENTIMENT] ⚠️ Failed to update: {e}", flush=True)
+            print(f"[SENTIMENT] [WARN] Failed to update: {e}", flush=True)
+
+    def set_system_ready(self, status: bool):
+        """Set system readiness status (called after ML training)"""
+        self.system_ready = status
+        print(f"[SYSTEM] System Ready Status set to: {status}", flush=True)
     
     def initialize(self, pair_limit: int = 100):
         """Initialize the generator with top pairs"""
@@ -551,9 +567,9 @@ class SignalGenerator:
                     signal["llm_validation"] = llm_validation
                     
                     if llm_validation.get("approved"):
-                        print(f"[LLM] ✅ {symbol} aprovado (conf: {llm_validation.get('confidence', 0):.0%})", flush=True)
+                        print(f"[LLM] [OK] {symbol} aprovado (conf: {llm_validation.get('confidence', 0):.0%})", flush=True)
                     else:
-                        print(f"[LLM] ⚠️ {symbol} {llm_validation.get('suggested_action', 'SKIP')}: {llm_validation.get('reasoning', '')[:50]}", flush=True)
+                        print(f"[LLM] [WARN] {symbol} {llm_validation.get('suggested_action', 'SKIP')}: {llm_validation.get('reasoning', '')[:50]}", flush=True)
                 except Exception as e:
                     print(f"[LLM ERROR] Validation failed for {symbol}: {e}", flush=True)
                     signal["llm_validation"] = None
@@ -579,7 +595,7 @@ class SignalGenerator:
                             
                             signal["dynamic_targets"]["tp_pct"] = suggested_tp
                             signal["dynamic_targets"]["tp_adjusted_by_llm"] = True
-                            print(f"[LLM] 🎯 {symbol} TP ajustado: {original_tp:.1f}% → {suggested_tp:.1f}%", flush=True)
+                            print(f"[LLM] [TP] {symbol} TP ajustado: {original_tp:.1f}% -> {suggested_tp:.1f}%", flush=True)
                 except Exception as e:
                     print(f"[LLM ERROR] TP optimization failed for {symbol}: {e}", flush=True)
                     signal["llm_tp_suggestion"] = None
@@ -660,7 +676,7 @@ class SignalGenerator:
                 self.current_btc_candles, btc_4h
             )
             regime_info = self.btc_tracker.get_regime_info()
-            print(f"[BTC REGIME] 📊 {self.current_btc_regime} | TP: {regime_info['tp_pct']:.1f}% | SL: {regime_info['sl_pct']:.1f}%", flush=True)
+            print(f"[BTC REGIME] {self.current_btc_regime} | TP: {regime_info['tp_pct']:.1f}% | SL: {regime_info['sl_pct']:.1f}%", flush=True)
         except Exception as e:
             print(f"[BTC REGIME] Error detecting regime: {e}", flush=True)
             self.current_btc_regime = "TRENDING"
@@ -727,7 +743,7 @@ class SignalGenerator:
             try:
                 metrics = self.ml_predictor.train_model(min_samples=ML_MIN_SAMPLES)
                 if metrics.get("status") == "SUCCESS":
-                    print(f"[ML] ✅ Auto-retrain complete - Accuracy: {metrics['metrics']['accuracy']:.2%}", flush=True)
+                    print(f"[ML] [OK] Auto-retrain complete - Accuracy: {metrics['metrics']['accuracy']:.2%}", flush=True)
             except Exception as e:
                 print(f"[ML ERROR] Auto-retrain failed: {e}", flush=True)
         
@@ -971,7 +987,7 @@ class SignalGenerator:
                         
                         action = exit_analysis.get("action", "HOLD")
                         if action == "EXIT" and exit_analysis.get("confidence", 0) >= LLM_MIN_CONFIDENCE:
-                            print(f"[LLM EXIT] 🚪 {symbol} recomenda saída em {roi:.2f}%: {exit_analysis.get('reasoning', '')[:40]}", flush=True)
+                            print(f"[LLM EXIT] [EXIT] {symbol} recomenda saída em {roi:.2f}%: {exit_analysis.get('reasoning', '')[:40]}", flush=True)
                         elif action == "PARTIAL":
                             print(f"[LLM PARTIAL] {symbol} recomenda fechamento parcial em {roi:.2f}%", flush=True)
                     except Exception as e:
@@ -1076,6 +1092,15 @@ class SignalGenerator:
                 # REGRA: Todos os sinais finalizados vão para o histórico local e DB (incluindo EXPIRED)
                 self.signal_history.append(signal)
                 finalized.append(signal)
+                
+                # RAG Memory Auto-Feed: Aprende com trades finalizados (TP/SL)
+                if status in ["TP_HIT", "SL_HIT"]:
+                    try:
+                        outcome = {"status": status, "roi": signal.get("final_roi", 0)}
+                        self.rag_memory.add_memory(signal, outcome)
+                        print(f"[RAG] [MEMORY] Trade adicionado à memória: {symbol} {status} ({roi:.2f}%)", flush=True)
+                    except Exception as e:
+                        print(f"[RAG] [WARN] Erro ao salvar na memória: {e}", flush=True)
                 
                 self.save_signal_to_db(signal) # Salva SEMPRE no Supabase
                 print(f"[FINALIZED] {symbol} {status} at ${current_price} (ROI: {roi:.2f}%) - Persistido no DB", flush=True)

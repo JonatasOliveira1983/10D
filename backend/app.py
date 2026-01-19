@@ -55,8 +55,16 @@ scan_thread = None
 def background_scanner():
     """Background thread for continuous scanning and monitoring"""
     global scanning
+    print("[SCANNER] Scanner thread started (Warm-up mode)", flush=True)
+    
     while scanning:
         try:
+            # Check if system is ready (ML trained)
+            if not generator.system_ready:
+                print("[SCANNER] Waiting for ML training to complete... (System Warm-up)", flush=True)
+                time.sleep(5)
+                continue
+
             # 1. Monitor active signals for TP/SL hits
             generator.monitor_active_signals()
             
@@ -79,48 +87,51 @@ def delayed_init():
     time.sleep(2)
     
     try:
-        # === STEP 1: Train ML model BEFORE monitoring ===
-        if ML_ENABLED and generator.ml_predictor:
-            print("=" * 60, flush=True)
-            print("[ML STARTUP] Verificando modelo ML antes de iniciar...", flush=True)
-            print("=" * 60, flush=True)
-            
-            # Always try to train/retrain at startup to ensure model is fresh
-            if not generator.ml_predictor.model:
-                print("[ML STARTUP] Nenhum modelo carregado. Iniciando treinamento...", flush=True)
-            else:
-                print("[ML STARTUP] Modelo existente encontrado. Retreinando para garantir atualização...", flush=True)
-            
-            # Train the model
-            train_result = generator.ml_predictor.train_model(min_samples=ML_MIN_SAMPLES)
-            
-            if train_result.get("status") == "SUCCESS":
-                accuracy = train_result.get("metrics", {}).get("accuracy", 0)
-                samples = train_result.get("samples", {}).get("total", 0)
-                print(f"[ML STARTUP] ✅ Modelo treinado com sucesso!", flush=True)
-                print(f"[ML STARTUP]    Accuracy: {accuracy:.2%}", flush=True)
-                print(f"[ML STARTUP]    Amostras: {samples}", flush=True)
-            elif train_result.get("status") == "INSUFFICIENT_DATA":
-                current = train_result.get("current_samples", 0)
-                required = train_result.get("required_samples", ML_MIN_SAMPLES)
-                print(f"[ML STARTUP] ⚠️ Dados insuficientes para treinar: {current}/{required} amostras", flush=True)
-                print(f"[ML STARTUP] Sistema funcionará em modo FALLBACK (apenas regras)", flush=True)
-            else:
-                print(f"[ML STARTUP] ❌ Erro no treinamento: {train_result}", flush=True)
-            
-            print("=" * 60, flush=True)
-        
-        # === STEP 2: Initialize pairs ===
+        # === STEP 1: Initialize pairs (FAST) ===
         print(f"[INIT] Calling generator.initialize({PAIR_LIMIT})...", flush=True)
         pairs = generator.initialize(pair_limit=PAIR_LIMIT)
         print(f"[INIT] SUCCESS - Loaded {len(pairs)} pairs", flush=True)
-        
-        # === STEP 3: Start background scanner ===
+
+        # === STEP 2: Start background scanner (WARM-UP) ===
         print("[SCANNER] Starting background thread...", flush=True)
         scanning = True
         scan_thread = threading.Thread(target=background_scanner, daemon=True)
         scan_thread.start()
         print(f"[SCANNER] Started (interval: {UPDATE_INTERVAL_SECONDS}s)", flush=True)
+
+        # === STEP 3: Train ML model (SLOW/HEAVY) ===
+        if ML_ENABLED and generator.ml_predictor:
+            print("=" * 60, flush=True)
+            print("[ML STARTUP] Verificando modelo ML (Training in background)...", flush=True)
+            print("=" * 60, flush=True)
+            
+            # Always try to train/retrain at startup
+            try:
+                if not generator.ml_predictor.model:
+                    print("[ML STARTUP] Nenhum modelo carregado. Iniciando treinamento...", flush=True)
+                else:
+                    print("[ML STARTUP] Modelo existente encontrado. Retreinando...", flush=True)
+                
+                # Train the model
+                train_result = generator.ml_predictor.train_model(min_samples=ML_MIN_SAMPLES)
+                
+                if train_result.get("status") == "SUCCESS":
+                    accuracy = train_result.get("metrics", {}).get("accuracy", 0)
+                    print(f"[ML STARTUP] [OK] Modelo treinado com sucesso! Acc: {accuracy:.2%}", flush=True)
+                elif train_result.get("status") == "INSUFFICIENT_DATA":
+                    print(f"[ML STARTUP] [WARN] Dados insuficientes. Sistema em modo FALLBACK.", flush=True)
+                else:
+                    print(f"[ML STARTUP] [ERROR] Erro no treinamento: {train_result}", flush=True)
+            except Exception as e:
+                print(f"[ML STARTUP] [CRITICAL] Falha no treinamento: {e}", flush=True)
+                # Even if ML fails, we might want to let system pass if we allow fallback? 
+                # Currently generator checks for ML before using it, so it's safe to proceed.
+
+        # === STEP 4: System Ready ===
+        generator.set_system_ready(True)
+        print("=" * 60, flush=True)
+        print("[INIT] SYSTEM FULLY OPERATIONAL - Scanning Active", flush=True)
+        print("=" * 60, flush=True)
         
     except Exception as e:
         print(f"[INIT] ERROR during initialization: {e}", flush=True)
@@ -683,7 +694,7 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", API_PORT))
     
     # Start the server
-    print(f"\n🌐 Starting server on http://{API_HOST}:{port}", flush=True)
+    print(f"\n[SERVER] Starting server on http://{API_HOST}:{port}", flush=True)
     print("=" * 60, flush=True)
     
     app.run(host=API_HOST, port=port, debug=False, threaded=True, use_reloader=False)

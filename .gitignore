@@ -45,3 +45,12 @@ Thumbs.db
 !.dockerignore
 !cloudbuild.yaml
 !Dockerfile
+
+# Models and Logs
+*.pkl
+*.log
+*log.txt
+backend/*.txt
+backend/data/
+data/
+scripts/

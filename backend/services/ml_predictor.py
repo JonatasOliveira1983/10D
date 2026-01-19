@@ -202,7 +202,7 @@ class MLPredictor:
             
             self.last_train_count = len(X)
             
-            print(f"[ML] ✅ Model trained successfully - Accuracy: {accuracy:.2%}", flush=True)
+            print(f"[ML] [OK] Model trained successfully - Accuracy: {accuracy:.2%}", flush=True)
             print(f"[ML] Top features: {list(feature_importance_sorted.keys())[:3]}", flush=True)
             
             return metrics
@@ -270,7 +270,7 @@ class MLPredictor:
         try:
             if os.path.exists(self.model_path):
                 self.model = joblib.load(self.model_path)
-                print(f"[ML] ✅ Model loaded from {self.model_path}", flush=True)
+                print(f"[ML] [OK] Model loaded from {self.model_path}", flush=True)
                 return True
             else:
                 print(f"[ML] No saved model found at {self.model_path}", flush=True)

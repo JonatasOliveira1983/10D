@@ -9,6 +9,7 @@ import json
 from typing import Dict, Optional, List
 from datetime import datetime
 import hashlib
+from services.llm_agents.council_manager import CouncilManager
 
 # Google Generative AI
 try:
@@ -16,19 +17,21 @@ try:
     GENAI_AVAILABLE = True
 except ImportError:
     GENAI_AVAILABLE = False
-    print("[LLM] ⚠️ google-generativeai not installed. LLM features disabled.", flush=True)
+    print("[LLM] [WARN] google-generativeai not installed. LLM features disabled.", flush=True)
 
 
 class LLMTradingBrain:
     """Gemini-powered trading intelligence layer"""
     
-    def __init__(self, config: Dict = None):
+    def __init__(self, config: Dict = None, rag_memory = None):
         self.config = config or {}
         self.model = None
         self.db_manager = None  # Reference to DatabaseManager for learning
         self.cache: Dict[str, Dict] = {}  # Simple in-memory cache
         self.cache_ttl = self.config.get("LLM_CACHE_TTL_SECONDS", 300)
         self.min_confidence = self.config.get("LLM_MIN_CONFIDENCE", 0.6)
+        self.rag_memory = rag_memory
+        self.council = CouncilManager(rag_memory=self.rag_memory) # Initialize The Council with RAG
         
         # Learning context cache (refreshed every 5 minutes)
         self.learning_context = None
@@ -57,7 +60,14 @@ class LLMTradingBrain:
     def set_database_manager(self, db_manager):
         """Set database manager for historical data access"""
         self.db_manager = db_manager
-        print("[LLM] 🧠 Database manager connected - Learning mode enabled", flush=True)
+        print("[LLM] [BRAIN] Database manager connected - Learning mode enabled", flush=True)
+
+    def set_rag_memory(self, rag_memory):
+        """Set RAG Memory engine"""
+        self.rag_memory = rag_memory
+        # Re-initialize council with new memory if needed, or set it directly
+        self.council = CouncilManager(rag_memory=self.rag_memory)
+        print("[LLM] [BRAIN] RAG Memory connected to Council", flush=True)
     
     def _get_pair_history(self, symbol: str, days: int = 30) -> Dict:
         """Get historical performance for a specific trading pair"""
@@ -88,7 +98,7 @@ class LLMTradingBrain:
                 "last_result": pair_trades[0].get("status") if pair_trades else None
             }
         except Exception as e:
-            print(f"[LLM] ⚠️ Error getting pair history: {e}", flush=True)
+            print(f"[LLM] [WARN] Error getting pair history: {e}", flush=True)
             return {}
     
     def _get_system_stats(self) -> Dict:
@@ -135,7 +145,7 @@ class LLMTradingBrain:
                 "best_type_win_rate": round(best_win_rate, 1)
             }
         except Exception as e:
-            print(f"[LLM] ⚠️ Error getting system stats: {e}", flush=True)
+            print(f"[LLM] [WARN] Error getting system stats: {e}", flush=True)
             return {}
     
     def _build_learning_context(self, symbol: str = None) -> str:
@@ -148,7 +158,7 @@ class LLMTradingBrain:
             self.learning_context = system_stats
             self.learning_context_timestamp = time.time()
             self.stats["learning_context_refreshes"] += 1
-            print(f"[LLM] 🔄 Learning context refreshed - {system_stats.get('total_trades', 0)} trades analyzed", flush=True)
+            print(f"[LLM] [REFRESH] Learning context refreshed - {system_stats.get('total_trades', 0)} trades analyzed", flush=True)
         
         # Build context string
         ctx = self.learning_context or {}
@@ -184,21 +194,21 @@ class LLMTradingBrain:
     def _initialize_model(self):
         """Initialize Gemini model with API key"""
         if not GENAI_AVAILABLE:
-            print("[LLM] ❌ Cannot initialize - google-generativeai not available", flush=True)
+            print("[LLM] [ERROR] Cannot initialize - google-generativeai not available", flush=True)
             return
             
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
-            print("[LLM] ❌ GEMINI_API_KEY not found in environment", flush=True)
+            print("[LLM] [ERROR] GEMINI_API_KEY not found in environment", flush=True)
             return
         
         try:
             genai.configure(api_key=api_key)
             model_name = self.config.get("LLM_MODEL", "gemini-1.5-flash")
             self.model = genai.GenerativeModel(model_name)
-            print(f"[LLM] ✅ Gemini model '{model_name}' initialized successfully", flush=True)
+            print(f"[LLM] [OK] Gemini model '{model_name}' initialized successfully", flush=True)
         except Exception as e:
-            print(f"[LLM] ❌ Failed to initialize Gemini: {e}", flush=True)
+            print(f"[LLM] [ERROR] Failed to initialize Gemini: {e}", flush=True)
             self.model = None
     
     def _check_rate_limit(self) -> bool:
@@ -250,7 +260,7 @@ class LLMTradingBrain:
             return None
         
         if not self._check_rate_limit():
-            print("[LLM] ⚠️ Rate limit reached, skipping call", flush=True)
+            print("[LLM] [WARN] Rate limit reached, skipping call", flush=True)
             return None
         
         try:
@@ -265,7 +275,7 @@ class LLMTradingBrain:
             return response.text
         except Exception as e:
             self.stats["errors"] += 1
-            print(f"[LLM] ❌ Gemini API error: {e}", flush=True)
+            print(f"[LLM] [ERROR] Gemini API error: {e}", flush=True)
             return None
     
     def _parse_json_response(self, response: str) -> Optional[Dict]:
@@ -302,8 +312,7 @@ class LLMTradingBrain:
     
     def validate_signal_context(self, signal: Dict, market_context: Dict) -> Dict:
         """
-        Validate if a signal makes sense in the current market context.
-        Returns: {"approved": bool, "confidence": float, "reasoning": str, "suggested_action": str}
+        Validate signal using The Council (Multi-Agent Debate).
         """
         # Check cache first
         cache_data = {"signal": signal.get("symbol"), "dir": signal.get("direction"), "ctx": market_context}
@@ -321,67 +330,33 @@ class LLMTradingBrain:
                 "suggested_action": "PROCEED"
             }
         
-        # Get learning context
-        learning_context = self._build_learning_context(signal.get('symbol'))
-        
-        prompt = f"""You are a professional crypto trading analyst. Analyze this trading signal and determine if it's a good opportunity.
+        # Define the LLM callback
+        def llm_callback(prompt: str) -> str:
+            return self._call_gemini(prompt, max_tokens=600)
 
-{learning_context}
-
-SIGNAL:
-- Symbol: {signal.get('symbol')}
-- Direction: {signal.get('direction')}
-- Entry Price: {signal.get('entry_price')}
-- Take Profit: {signal.get('take_profit')} ({signal.get('dynamic_targets', {}).get('tp_pct', 2)}%)
-- Stop Loss: {signal.get('stop_loss')} ({signal.get('dynamic_targets', {}).get('sl_pct', 1)}%)
-- Signal Type: {signal.get('signal_type')}
-- Score: {signal.get('score')}%
-- ML Probability: {signal.get('ml_probability', 'N/A')}
-- RSI: {signal.get('rsi', 'N/A')}
-- Trend 4H: {signal.get('trend', 'N/A')}
-
-MARKET CONTEXT:
-- BTC Regime: {market_context.get('btc_regime', 'UNKNOWN')}
-- Decoupling Score: {market_context.get('decoupling_score', 0)}
-- Volume Ratio: {signal.get('volume_ratio', 1)}
-
-INSTRUCTIONS:
-1. Use the "SYSTEM LEARNING CONTEXT" to inform your decision.
-2. If this pair has a poor history (negative ROI/low win rate), be more strict.
-3. If the signal type matches the "Best performing signal type", give it more weight.
-4. Compare current market context with historical patterns.
-
-RESPOND IN JSON FORMAT ONLY:
-{{
-  "approved": true/false,
-  "confidence": 0.0-1.0,
-  "reasoning": "Brief explanation citing history if relevant (max 50 words)",
-  "suggested_action": "PROCEED" or "SKIP" or "CAUTION"
-}}"""
-
-        response = self._call_gemini(prompt, max_tokens=300)
-        result = self._parse_json_response(response)
+        # Run The Council
+        print(f"[COUNCIL] Convening The Council for {signal.get('symbol')}...", flush=True)
+        result = self.council.conduct_debate(signal, market_context, llm_callback)
         
         if result:
-            # Ensure required fields
-            result.setdefault("approved", True)
-            result.setdefault("confidence", 0.5)
-            result.setdefault("reasoning", "Analysis complete")
+            result.setdefault("approved", False)
             result.setdefault("suggested_action", "PROCEED" if result["approved"] else "SKIP")
             
             if result["approved"]:
                 self.stats["validations_approved"] += 1
+                print(f"[COUNCIL] [OK] APPROVED: {result.get('reasoning')}", flush=True)
             else:
                 self.stats["validations_rejected"] += 1
+                print(f"[COUNCIL] [X] REJECTED: {result.get('reasoning')}", flush=True)
             
             self._save_to_cache(cache_key, result)
             return result
         
-        # Fallback response
+        # Fallback
         return {
             "approved": True,
             "confidence": 0.5,
-            "reasoning": "LLM response parsing failed - using default",
+            "reasoning": "Council deadlock - defaulting to approval",
             "suggested_action": "PROCEED"
         }
     

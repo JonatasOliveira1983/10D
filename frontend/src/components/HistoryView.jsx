@@ -1,10 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import SignalCard from './SignalCard';
 import { IconHistory } from './Icons';
 import './HistoryView.css';
 
+const ITEMS_PER_PAGE = 10;
+
 export default function HistoryView({ history, loading }) {
     const [activeFilter, setActiveFilter] = useState('ALL');
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Sort history: newest first, then by score
     const sortedHistory = useMemo(() => {
@@ -68,6 +71,26 @@ export default function HistoryView({ history, loading }) {
         }
     }, [sortedHistory, activeFilter]);
 
+    // Reset page when filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeFilter]);
+
+    // Pagination calculations
+    const totalPages = Math.ceil(filteredHistory.length / ITEMS_PER_PAGE);
+
+    const paginatedHistory = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        return filteredHistory.slice(start, start + ITEMS_PER_PAGE);
+    }, [filteredHistory, currentPage]);
+
+    // Reset page if out of bounds
+    useEffect(() => {
+        if (currentPage > totalPages && totalPages > 0) {
+            setCurrentPage(1);
+        }
+    }, [filteredHistory.length, totalPages, currentPage]);
+
     if (loading) {
         return (
             <div className="loading">
@@ -89,7 +112,7 @@ export default function HistoryView({ history, loading }) {
                         </div>
                         <div>
                             <h2 className="history-title">Histórico de Sinais</h2>
-                            <p className="history-subtitle">Registro das últimas 24 horas</p>
+                            <p className="history-subtitle">Registro dos últimos 10 dias</p>
                         </div>
                     </div>
                     <div className="history-badge">
@@ -181,7 +204,7 @@ export default function HistoryView({ history, loading }) {
                 </button>
             </div>
 
-            {filteredHistory.length === 0 ? (
+            {paginatedHistory.length === 0 ? (
                 <div className="history-empty">
                     <div className="empty-icon-circle">
                         <IconHistory size={32} />
@@ -194,11 +217,36 @@ export default function HistoryView({ history, loading }) {
                     </p>
                 </div>
             ) : (
-                <div className="signals-grid">
-                    {filteredHistory.map((signal) => (
-                        <SignalCard key={signal.id} signal={signal} />
-                    ))}
-                </div>
+                <>
+                    <div className="signals-grid">
+                        {paginatedHistory.map((signal) => (
+                            <SignalCard key={signal.id} signal={signal} />
+                        ))}
+                    </div>
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="pagination-controls">
+                            <button
+                                className="pagination-btn"
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                            >
+                                ← Anterior
+                            </button>
+                            <span className="pagination-info">
+                                Página {currentPage} de {totalPages} ({filteredHistory.length} sinais)
+                            </span>
+                            <button
+                                className="pagination-btn"
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                            >
+                                Próximo →
+                            </button>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );

@@ -59,9 +59,6 @@ const IconSignal = () => (
     </svg>
 );
 
-    </svg >
-);
-
 const SentimentWidget = ({ sentiment, t }) => {
     if (!sentiment) return null;
 

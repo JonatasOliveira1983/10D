@@ -1,36 +1,36 @@
 {
   "status": "SUCCESS",
-  "timestamp": 1768624301105,
-  "timestamp_readable": "2026-01-17 01:31:41",
+  "timestamp": 1768794072777,
+  "timestamp_readable": "2026-01-19 00:41:12",
   "samples": {
-    "total": 405,
-    "train": 324,
+    "total": 401,
+    "train": 320,
     "test": 81,
-    "wins": 128,
-    "losses": 277
+    "wins": 129,
+    "losses": 272
   },
   "metrics": {
-    "accuracy": 0.7901,
-    "precision": 0.25,
-    "recall": 0.0667,
-    "f1_score": 0.1053
+    "accuracy": 0.7654,
+    "precision": 0.3333,
+    "recall": 0.0556,
+    "f1_score": 0.0952
   },
   "confusion_matrix": {
-    "true_negative": 63,
-    "false_positive": 3,
-    "false_negative": 14,
+    "true_negative": 61,
+    "false_positive": 2,
+    "false_negative": 17,
     "true_positive": 1
   },
   "feature_importance": {
-    "rsi_value": 0.1961,
-    "volatility_idx": 0.1944,
-    "lsr_change_pct": 0.1362,
-    "oi_change_pct": 0.132,
-    "rs_score": 0.1283,
-    "cvd_delta": 0.1272,
-    "master_score": 0.0452,
-    "decoupling_score": 0.0266,
-    "btc_regime_val": 0.0122,
-    "trend_aligned": 0.0018
+    "volatility_idx": 0.1962,
+    "rsi_value": 0.1905,
+    "rs_score": 0.1398,
+    "lsr_change_pct": 0.1376,
+    "cvd_delta": 0.1274,
+    "oi_change_pct": 0.1228,
+    "master_score": 0.0498,
+    "decoupling_score": 0.0268,
+    "btc_regime_val": 0.0074,
+    "trend_aligned": 0.0017
   }
 }

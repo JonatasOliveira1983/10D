@@ -58,7 +58,7 @@ class DatabaseManager:
                     raise error[0]
                 else:
                     self.client: Client = result[0]
-                    print(f"[DB] ✅ Conexao com Supabase estabelecida - URL: {self.url[:30]}...", flush=True)
+                    print(f"[DB] [OK] Conexao com Supabase estabelecida - URL: {self.url[:30]}...", flush=True)
                     
             except Exception as e:
                 print(f"[DB ERROR] Falha ao conectar ao Supabase: {type(e).__name__}: {e}", flush=True)

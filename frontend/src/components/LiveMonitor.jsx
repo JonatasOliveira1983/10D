@@ -3,8 +3,12 @@ import './LiveMonitor.css';
 
 // Key for localStorage persistence
 const PINNED_SIGNALS_KEY = 'liveMonitor_pinnedSignals';
+const ITEMS_PER_PAGE = 6;
 
 export default function LiveMonitor({ signals, loading }) {
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+
     // Load pinned signals from localStorage
     const [pinnedSignals, setPinnedSignals] = useState(() => {
         try {
@@ -48,6 +52,21 @@ export default function LiveMonitor({ signals, loading }) {
         });
     }, [signals, pinnedSignals]);
 
+    // Pagination calculations
+    const totalPages = Math.ceil(sortedSignals.length / ITEMS_PER_PAGE);
+
+    const paginatedSignals = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        return sortedSignals.slice(start, start + ITEMS_PER_PAGE);
+    }, [sortedSignals, currentPage]);
+
+    // Reset page if signals change and page is out of bounds
+    useEffect(() => {
+        if (currentPage > totalPages && totalPages > 0) {
+            setCurrentPage(1);
+        }
+    }, [sortedSignals.length, totalPages, currentPage]);
+
     const calculateProgress = (roi) => {
         const progress = Math.min(100, Math.max(0, (roi / 6) * 100));
         return progress;
@@ -62,16 +81,21 @@ export default function LiveMonitor({ signals, loading }) {
             <div className="live-monitor-header">
                 <h1>Live Sniper Monitor</h1>
                 <p>Acompanhando oportunidades de 6% em tempo real</p>
-                {pinnedSignals.length > 0 && (
-                    <span className="pinned-count">{pinnedSignals.length} fixado(s)</span>
-                )}
+                <div className="header-badges">
+                    {pinnedSignals.length > 0 && (
+                        <span className="pinned-count">{pinnedSignals.length} fixado(s)</span>
+                    )}
+                    {sortedSignals.length > 0 && (
+                        <span className="total-count">{sortedSignals.length} sinal(is) ativo(s)</span>
+                    )}
+                </div>
             </div>
 
             <div className="monitor-grid">
-                {sortedSignals.length === 0 ? (
+                {paginatedSignals.length === 0 ? (
                     <div className="no-trades">Nenhum sinal ativo no momento. Aguardando próximas oportunidades...</div>
                 ) : (
-                    sortedSignals.map(signal => {
+                    paginatedSignals.map(signal => {
                         const highestRoi = signal.highest_roi || 0;
                         const currentRoi = signal.current_roi || 0;
                         const progress = calculateProgress(highestRoi);
@@ -162,6 +186,29 @@ export default function LiveMonitor({ signals, loading }) {
                     })
                 )}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="pagination-controls">
+                    <button
+                        className="pagination-btn"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                    >
+                        ← Anterior
+                    </button>
+                    <span className="pagination-info">
+                        Página {currentPage} de {totalPages}
+                    </span>
+                    <button
+                        className="pagination-btn"
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                    >
+                        Próximo →
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
