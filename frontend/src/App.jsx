@@ -46,7 +46,7 @@ export default function App() {
             const [signalsData, statsData, historyData, regimeData] = await Promise.all([
                 fetchSignals(),
                 fetchStats(),
-                fetchHistory(20),
+                fetchHistory(1000, 240),
                 fetchBTCRegime()
             ]);
 

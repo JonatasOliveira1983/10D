@@ -168,13 +168,13 @@ class DatabaseManager:
             print(f"[DB ERROR] Erro ao recuperar sinais ativos: {e}", flush=True)
             return {}
 
-    def get_signal_history(self, limit: int = 50, hours_limit: int = 0) -> List[Dict]:
+    def get_signal_history(self, limit: int = 500, hours_limit: int = 240) -> List[Dict]:
         """
         Recupera histórico de sinais finalizados
         
         Args:
             limit (int): Número máximo de registros
-            hours_limit (int): Se > 0, retorna apenas sinais das últimas N horas
+            hours_limit (int): Se > 0, retorna apenas sinais das últimas N horas (padrão 10 dias)
         """
         if not self._ensure_client():
             print("[DB] get_signal_history: client is None", flush=True)

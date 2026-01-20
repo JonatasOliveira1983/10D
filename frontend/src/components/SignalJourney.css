@@ -388,15 +388,18 @@
     height: 8px;
     background: rgba(255, 255, 255, 0.08);
     border-radius: 4px;
+    overflow: hidden;
+    /* THE FIX: Garantir que a barra de progresso não vaze */
 }
 
 .entry-line {
     position: absolute;
-    top: -4px;
+    top: 0;
     width: 2px;
-    height: 16px;
+    height: 100%;
     background: var(--text-secondary);
     border-radius: 1px;
+    z-index: 5;
 }
 
 .progress-fill {
@@ -415,6 +418,23 @@
     background: linear-gradient(90deg, var(--short-color) 0%, rgba(255, 71, 87, 0.3) 100%);
 }
 
+.progress-fill.glowing {
+    background: linear-gradient(90deg, #00d4aa 0%, #00ffd5 50%, #7c3aed 100%);
+    box-shadow: 0 0 15px rgba(0, 212, 170, 0.6);
+    background-size: 200% 200%;
+    animation: gradientShift 2s linear infinite;
+}
+
+@keyframes gradientShift {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    100% {
+        background-position: 200% 50%;
+    }
+}
+
 .position-marker {
     position: absolute;
     top: 50%;
@@ -425,7 +445,7 @@
     border-radius: 50%;
     transform: translate(-50%, -50%);
     box-shadow: 0 0 10px rgba(0, 212, 170, 0.5);
-    z-index: 2;
+    z-index: 10;
 }
 
 .progress-prices {
@@ -435,6 +455,80 @@
     color: var(--text-muted);
     font-family: 'JetBrains Mono', monospace;
     margin-top: 4px;
+}
+
+/* Finalized and Super Profit States */
+.sj-signal-card.finalized {
+    position: relative;
+    border-style: double;
+    border-width: 2px;
+}
+
+.sj-signal-card.finalized.tp_hit {
+    border-color: var(--long-color);
+    background: linear-gradient(135deg, var(--bg-tertiary) 0%, rgba(0, 212, 170, 0.05) 100%);
+    animation: cardGlowSuccess 3s ease-in-out infinite;
+}
+
+.sj-signal-card.finalized.sl_hit {
+    border-color: var(--short-color);
+    opacity: 0.8;
+}
+
+.sj-signal-card.super-profit {
+    border-color: #ff9f43;
+    background: linear-gradient(135deg, var(--bg-tertiary) 0%, rgba(255, 159, 67, 0.1) 100%);
+}
+
+.status-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.2);
+    margin-right: 8px;
+    letter-spacing: 0.5px;
+}
+
+.tp_hit .status-label {
+    color: var(--long-color);
+    box-shadow: 0 0 10px rgba(0, 212, 170, 0.3);
+}
+
+.sl_hit .status-label {
+    color: var(--short-color);
+}
+
+.roi-display.bounce {
+    animation: bounce 1s ease infinite;
+}
+
+@keyframes cardGlowSuccess {
+    0% {
+        box-shadow: 0 0 5px rgba(0, 212, 170, 0.1);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(0, 212, 170, 0.3);
+    }
+
+    100% {
+        box-shadow: 0 0 5px rgba(0, 212, 170, 0.1);
+    }
+}
+
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+        color: #fff;
+        text-shadow: 0 0 10px var(--long-color);
+    }
 }
 
 /* Signal Tags */
@@ -849,5 +943,66 @@
 @media (max-width: 480px) {
     .info-roi {
         font-size: 1rem;
+    }
+}
+
+/* Institutional Hunger Index (IHI) - LED Dots Style */
+.hunger-index-mini {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    padding-left: 8px;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hunger-stars {
+    display: flex;
+    gap: 2px;
+}
+
+.hunger-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+}
+
+.hunger-dot.active {
+    background: #ff9f43;
+    box-shadow: 0 0 4px rgba(255, 159, 67, 0.4);
+}
+
+.hunger-dot.extreme.active {
+    background: #ff4757;
+    box-shadow: 0 0 6px rgba(255, 71, 87, 0.6);
+    animation: ledPulse 0.8s infinite alternate;
+}
+
+.hunger-stars-mini {
+    display: flex;
+    gap: 2px;
+    margin-left: 10px;
+    align-items: center;
+}
+
+.hunger-stars-mini .star {
+    font-size: 0.6rem;
+    color: rgba(255, 255, 255, 0.05);
+}
+
+.hunger-stars-mini .star.filled {
+    color: #ff9f43;
+}
+
+@keyframes ledPulse {
+    from {
+        opacity: 0.6;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1.1);
     }
 }

@@ -1,4 +1,4 @@
-# 🚀 10D - Sistema de Sinais de Trading com IA (v3.7)
+# 🚀 10D - Sistema de Sinais de Trading com IA (v3.9)
 
 Sistema avançado de análise e geração de sinais para criptomoedas que monitora os **top 100 pares da Bybit** em tempo real, utilizando estratégias técnicas filtradas por tendência e **Machine Learning Autônomo** para otimização contínua.
 
@@ -84,16 +84,18 @@ Sinal Ativo → Monitor de Preço → Aplica Saídas Inteligentes → TP/SL
 - ✅ **Sniper Target 6%**: Todos os sinais Sniper agora buscam um alvo inicial unificado de **6%**, com proteção de capital garantida.
 - **Expiração**: 2 horas de validade caso o preço não atinja os alvos.
 
-### 6️⃣ **Finalização do Sinal**
+### 6️⃣ **Finalização do Sinal & Relatórios**
 ```
-TP/SL/Expirado → Atualiza Status → Salva no Histórico
+TP/SL/Expirado → Gera Relatório de Decisão → Salva no Histórico
 ```
 Quando TP, SL ou expiração acontece:
-```python
-signal["status"] = "TP_HIT"  # ou "SL_HIT" ou "EXPIRED"
-signal["final_roi"] = 2.0  # ROI real calculado
-signal["exit_timestamp"] = 1736900000000
-```
+- **Relatório de Decisão (NOVO)**: O sistema gera uma narrativa detalhada do trade, guardando o estado dos indicadores (RSI, CVD, OI), o veredito do Conselho de IA e o sentimento do mercado naquele momento.
+- **Histórico Rico**: Esses relatórios são visualizados expandindo os cartões no histórico.
+
+### 7️⃣ **Aprendizado Contínuo (RAG & Feedback Loop)**
+- **RAG Memory**: Todo sinal finalizado alimenta a memória de longo prazo (RAG).
+- **Loop de Feedback**: Antes de validar um novo sinal, o Conselho de IA consulta os "trades similares" do passado para evitar repetir erros ou replicar sucessos.
+- **Auto-Retrain ML**: Treinamento matemático autônomo continua ocorrendo a cada 30 amostras.
 
 ### 7️⃣ **Análise de IA (AI Analytics Service)**
 ```
@@ -334,9 +336,28 @@ O sistema utiliza uma lógica avançada baseada no regime do Bitcoin para maximi
 
 ## 📝 Changelog
 
+### v3.9 (Jan 2026 - Experience Refinement)
+- ✅ **Decision Reports**: Narrativas geradas automaticamente ao fechar sinais, consolidando o "porquê" de cada trade.
+- ✅ **Signal Journey Persistence**: Sinais finalizados ficam 5min extras no monitor ativo com status celebratório.
+- ✅ **Super Profit Visuals**: Novo visual neon/glow para trades que superam o alvo (ex: AXS).
+- ✅ **RAG Feedback Loop**: Integração profunda entre os resultados do histórico e a validação de novos sinais (RAG Learning).
+- ✅ **UI Stability**: Correção de vazamento de barras de progresso em ROIs explosivos.
+
 ### v3.8 (Jan 2026 - Ranging Enforcer)
 - ✅ **Strict Ranging Filter**: No regime BTC Ranging, apenas sinais com Decoupling Score > 0.45 são aceitos.
 - ✅ **ML Threshold Update**: Probabilidade mínima da IA aumentada para 50% (era 40%) para maior qualidade.
+
+### v3.9 (Jan 2026 - Smart Money Hunger Index)
+- ✅ **IHI (Institutional Hunger Index)**: Detecção granular (1-6) de atividade institucional baseada em OI, LSR e CVD.
+- ✅ **LED Dots UI**: Sistema visual discreto de 6 pontos para indicar o nível de "fome" de caça à liquidez.
+- ✅ **Council Integration**: O Conselho de IA agora pondera a Fome Institucional em cada decisão de sinal.
+- ✅ **Extreme High Intensity Pulse**: Animação pulsante vermelha para IHI >= 5 (Squeeze e liquidações iminentes).
+
+### v3.8 (Jan 2026 - Signal Journey Polish)
+- ✅ **Finalized Persistence**: Sinais finalizados agora permanecem 5 minutos na lista ativa para visualização do resultado.
+- ✅ **Super-Profit Neon**: Visual com degradê neon animado e efeito "bounce" para trades que superam o Take Profit.
+- ✅ **Progress Bar Overflow Fix**: Correção de design que impedia barras de ROI alto de vazar do card.
+- ✅ **Celebratory Badges**: Novos badges de "ALVO ATINGIDO" e "STOP LOSS" com efeitos de brilho (Success Glow).
 
 ### v3.7 (Jan 2026 - Surf Logic & Profit Max)
 - ✅ **Surf Logic**: Se o Trailing Stop estiver ativo, o TP fixo é ignorado para capturar 10%+ de lucro.

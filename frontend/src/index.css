@@ -2358,3 +2358,47 @@ body {
   background: rgba(239, 68, 68, 0.2) !important;
   box-shadow: 0 0 15px rgba(239, 68, 68, 0.3) !important;
 }
+/* Institutional Hunger Index (IHI) - LED Dots Style */
+.hunger-index-mini {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  padding-left: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hunger-stars {
+  display: flex;
+  gap: 2px;
+}
+
+.hunger-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.hunger-dot.active {
+  background: #ff9f43;
+  box-shadow: 0 0 4px rgba(255, 159, 67, 0.4);
+}
+
+.hunger-dot.extreme.active {
+  background: #ff4757;
+  box-shadow: 0 0 6px rgba(255, 71, 87, 0.6);
+  animation: ledPulse 0.8s infinite alternate;
+}
+
+.hunger-stars-mini {
+  display: flex;
+  gap: 2px;
+  margin-left: 10px;
+  align-items: center;
+}
+
+@keyframes ledPulse {
+  from { opacity: 0.6; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1.1); }
+}

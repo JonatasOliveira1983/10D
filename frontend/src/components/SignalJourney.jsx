@@ -224,19 +224,29 @@ const LLMHeaderPanel = ({ summary, loading, t }) => {
 // Signal Progress Bar component
 const SignalProgressBar = ({ signal, t }) => {
     const { symbol, direction, entry_price, take_profit, stop_loss, current_roi,
-        highest_roi, llm_validation, trailing_stop_active, partial_tp_hit, timestamp } = signal;
+        highest_roi, llm_validation, trailing_stop_active, partial_tp_hit, timestamp, status } = signal;
 
-    const roi = current_roi || 0;
+    const isFinalized = status && status !== 'ACTIVE';
+    const roi = isFinalized ? (signal.final_roi || current_roi || 0) : (current_roi || 0);
+
+    // Dynamic targets from signal or defaults
     const tp_pct = signal.dynamic_targets?.tp_pct || 2;
     const sl_pct = signal.dynamic_targets?.sl_pct || 1;
 
     // Calculate position on progress bar (-SL to +TP)
     const totalRange = sl_pct + tp_pct;
-    const currentPos = ((roi + sl_pct) / totalRange) * 100;
+
+    // THE FIX: Clamp the ROI to the visual range for the bar, but keep real ROI for label
+    // If it's a "Super Profit", we let it hit 100% and handle visual overflow via CSS gradient/glow
+    const visualRoi = Math.max(-sl_pct, Math.min(tp_pct, roi));
+    const currentPos = ((visualRoi + sl_pct) / totalRange) * 100;
     const clampedPos = Math.max(0, Math.min(100, currentPos));
 
+    // Check for "Super Profit" (vazamento)
+    const isSuperProfit = roi > tp_pct;
+
     // Time active
-    const minutesActive = Math.floor((Date.now() - timestamp) / 60000);
+    const minutesActive = Math.floor((Date.now() - (signal.timestamp || Date.now())) / 60000);
     const timeStr = minutesActive < 60
         ? `${minutesActive}m`
         : `${Math.floor(minutesActive / 60)}h ${minutesActive % 60}m`;
@@ -244,22 +254,27 @@ const SignalProgressBar = ({ signal, t }) => {
     const llmConf = llm_validation?.confidence || 0;
 
     return (
-        <div className={`sj-signal-card ${direction.toLowerCase()}`}>
+        <div className={`sj-signal-card ${direction.toLowerCase()} ${isFinalized ? 'finalized ' + status.toLowerCase() : ''} ${isSuperProfit ? 'super-profit' : ''}`}>
             <div className="signal-header">
                 <div className="signal-info">
                     <span className={`direction-indicator ${direction.toLowerCase()}`} />
                     <span className="signal-symbol">{symbol}</span>
                     <span className={`direction-tag ${direction.toLowerCase()}`}>
-                        {direction}
+                        {isFinalized ? status.replace('_', ' ') : direction}
                     </span>
                 </div>
                 <div className="signal-metrics">
-                    {llmConf > 0 && (
+                    {!isFinalized && llmConf > 0 && (
                         <span className="ai-badge" title="LLM Confidence">
                             <IconAI /> {(llmConf * 100).toFixed(0)}%
                         </span>
                     )}
-                    <span className={`roi-display ${roi >= 0 ? 'positive' : 'negative'}`}>
+                    {isFinalized && (
+                        <span className="status-label">
+                            {status === 'TP_HIT' ? '🎯 TARGET HIT' : status === 'SL_HIT' ? '🛑 STOP HIT' : status}
+                        </span>
+                    )}
+                    <span className={`roi-display ${roi >= 0 ? 'positive' : 'negative'} ${isSuperProfit ? 'bounce' : ''}`}>
                         {roi >= 0 ? '+' : ''}{roi.toFixed(2)}%
                     </span>
                 </div>
@@ -275,11 +290,11 @@ const SignalProgressBar = ({ signal, t }) => {
                     <div className="progress-track">
                         <div className="entry-line" style={{ left: `${(sl_pct / totalRange) * 100}%` }} />
                         <div
-                            className={`progress-fill ${roi >= 0 ? 'positive' : 'negative'}`}
+                            className={`progress-fill ${roi >= 0 ? 'positive' : 'negative'} ${isSuperProfit ? 'glowing' : ''}`}
                             style={{
                                 left: `${(sl_pct / totalRange) * 100}%`,
-                                width: `${Math.abs(roi / totalRange) * 100}%`,
-                                transform: roi < 0 ? 'translateX(-100%)' : 'none'
+                                width: `${(Math.abs(visualRoi) / totalRange) * 100}%`,
+                                transform: visualRoi < 0 ? 'translateX(-100%)' : 'none'
                             }}
                         />
                         <div
@@ -305,6 +320,16 @@ const SignalProgressBar = ({ signal, t }) => {
                 <span className="tag time">{timeStr}</span>
                 {highest_roi > 0 && (
                     <span className="tag highest">{t('signalJourney.max')}: +{highest_roi.toFixed(1)}%</span>
+                )}
+                {signal.hunger_score && (
+                    <div className="hunger-stars-mini" title={`Institutional Hunger: ${signal.hunger_score}/6`}>
+                        {[...Array(6)].map((_, i) => (
+                            <div
+                                key={i}
+                                className={`hunger-dot ${i < signal.hunger_score ? 'active' : ''} ${signal.hunger_score >= 5 ? 'extreme' : ''}`}
+                            />
+                        ))}
+                    </div>
                 )}
             </div>
         </div>
@@ -344,17 +369,35 @@ export default function SignalJourney({ signals, history, loading }) {
     const [llmSummary, setLlmSummary] = useState(null);
     const [sentiment, setSentiment] = useState(null);
     const [activePage, setActivePage] = useState(1);
-    const SIGNALS_PER_PAGE = 5;
+
+    // NEW: Persistent closed signals for 5 minutes
+    const [recentClosures, setRecentClosures] = useState([]);
+    const SIGNALS_PER_PAGE = 6;
+
+    // Track signal transitions (Active -> Closed)
+    useEffect(() => {
+        if (!signals || loading) return;
+
+        // Check for signals that disappeared from "signals" but appeared in "history" (or just recently closed)
+        const now = Date.now();
+        const activeIds = new Set(signals.map(s => s.id));
+
+        // Finalized signals from history that are very recent (last 5 mins)
+        const freshClosures = history.filter(h => {
+            const exitTime = h.exit_timestamp || h.timestamp; // Fallback if no exit_ts
+            return (now - exitTime) < 5 * 60 * 1000;
+        });
+
+        setRecentClosures(freshClosures);
+    }, [signals, history, loading]);
 
     // Fetch LLM summary and Sentiment
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch LLM Summary
                 const sumRes = await fetch('/api/llm/summary');
                 if (sumRes.ok) setLlmSummary(await sumRes.json());
 
-                // Fetch Sentiment
                 const sentRes = await fetchSentiment();
                 if (sentRes && sentRes.analysis) setSentiment(sentRes.analysis);
             } catch (error) {
@@ -367,6 +410,16 @@ export default function SignalJourney({ signals, history, loading }) {
 
         return () => clearInterval(interval);
     }, []);
+
+    // Combine active signals and recent closures
+    const combinedSignals = React.useMemo(() => {
+        // Remove duplicates if a signal exists in both (unlikely but safe)
+        const closureIds = new Set(recentClosures.map(r => r.id));
+        const trulyActive = signals.filter(s => !closureIds.has(s.id));
+
+        // Sort: Active first, then recent closures (most recent first)
+        return [...trulyActive, ...recentClosures];
+    }, [signals, recentClosures]);
 
     // Calculate summary from available data if API not ready
     const computedSummary = llmSummary || (() => {
@@ -386,19 +439,18 @@ export default function SignalJourney({ signals, history, loading }) {
         };
     })();
 
-    // Pagination Logic for Active Signals
-    const totalActivePages = Math.ceil(signals.length / SIGNALS_PER_PAGE);
-    const paginatedSignals = signals.slice(
+    // Pagination Logic
+    const totalPages = Math.ceil(combinedSignals.length / SIGNALS_PER_PAGE);
+    const paginatedSignals = combinedSignals.slice(
         (activePage - 1) * SIGNALS_PER_PAGE,
         activePage * SIGNALS_PER_PAGE
     );
 
-    // Reset page if signals change and current page becomes empty
     useEffect(() => {
-        if (activePage > totalActivePages && totalActivePages > 0) {
-            setActivePage(totalActivePages);
+        if (activePage > totalPages && totalPages > 0) {
+            setActivePage(totalPages);
         }
-    }, [signals.length, totalActivePages, activePage]);
+    }, [combinedSignals.length, totalPages, activePage]);
 
     return (
         <div className="signal-journey">
@@ -412,25 +464,30 @@ export default function SignalJourney({ signals, history, loading }) {
                         <IconSignal />
                         <h3>{t('signalJourney.activeSignals')}</h3>
                     </div>
-                    {signals.length > 0 && (
-                        <span className="section-badge">{signals.length} {t('signalJourney.active')}</span>
+                    {combinedSignals.length > 0 && (
+                        <div className="section-badges">
+                            <span className="section-badge">{signals.length} {t('signalJourney.active')}</span>
+                            {recentClosures.length > 0 && (
+                                <span className="section-badge closure-badge">+{recentClosures.length} RECENTES</span>
+                            )}
+                        </div>
                     )}
                 </div>
-                {signals.length === 0 ? (
+                {combinedSignals.length === 0 ? (
                     <div className="empty-state">
                         <IconSignal />
                         <p>{t('signalJourney.noSignals')}</p>
                     </div>
                 ) : (
                     <>
-                        <div className="signals-list">
+                        <div className="signals-grid-layout">
                             {paginatedSignals.map(signal => (
                                 <SignalProgressBar key={signal.id} signal={signal} t={t} />
                             ))}
                         </div>
                         <PaginationControls
                             currentPage={activePage}
-                            totalPages={totalActivePages}
+                            totalPages={totalPages}
                             onPageChange={setActivePage}
                             t={t}
                         />
@@ -439,4 +496,4 @@ export default function SignalJourney({ signals, history, loading }) {
             </div>
         </div>
     );
-};
+}

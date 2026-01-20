@@ -48,9 +48,16 @@ class TechnicalAgent(BaseAgent):
                 score -= 10
                 reasoning.append("Overbought RSI (Chasing tops)")
                 
-        # 3. Volume Check
-            score -= 10
-            reasoning.append("Weak Volume")
+        # 3. Institutional Hunger Index (Fome do Smart Money)
+        hunger_data = signal.get("liquidity_details", {})
+        hunger_score = hunger_data.get("intensity_score", 1)
+        
+        if hunger_score >= 5:
+            score += 25
+            reasoning.append(f"Extreme Smart Money Hunger ({hunger_score}/6): Imminent Volatility")
+        elif hunger_score >= 3:
+            score += 10
+            reasoning.append(f"High Smart Money Hunger ({hunger_score}/6)")
             
         # 4. RAG Memory Check (The Ghost of Trades Past)
         similar_trades = self.memory.find_similar(signal, k=5)

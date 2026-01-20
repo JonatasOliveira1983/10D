@@ -531,6 +531,7 @@ class SignalGenerator:
                 "rsi_crossover_btc": best_signal.get("rsi_crossover_btc"),
                 "rsi_crossover_details": analysis["institutional"]["rsi_crossover_btc"].get("details", {}),
                 "liquidity_hunt": analysis["institutional"]["liquidity_hunt"]["target"],
+                "hunger_score": analysis["institutional"]["liquidity_hunt"]["details"].get("intensity_score", 1),
                 "liquidity_aligned": score_result.get("confirmations", {}).get("liquidity_aligned", False),
                 "liquidity_details": analysis["institutional"]["liquidity_hunt"]["details"]
             },
@@ -988,7 +989,7 @@ class SignalGenerator:
                 
                 print("[LOAD] Recarregando estado do Supabase...", flush=True)
                 loaded_active = self.db.get_active_signals()
-                loaded_history = self.db.get_signal_history(limit=HISTORY_RETENTION_HOURS * 2)
+                loaded_history = self.db.get_signal_history(limit=1000)
                 
                 # Merge loaded data with any in-memory data
                 for sym, sig in loaded_active.items():
@@ -1230,6 +1231,15 @@ class SignalGenerator:
                 self.signal_history.append(signal)
                 finalized.append(signal)
                 
+                # === DECISION REPORT GENERATION ===
+                try:
+                    outcome_data = {"status": status, "roi": roi}
+                    decision_report = self._generate_decision_report(signal, outcome_data)
+                    signal["decision_report"] = decision_report
+                    print(f"[REPORT] Decision report generated for {symbol}", flush=True)
+                except Exception as e:
+                    print(f"[REPORT] Error generating report: {e}", flush=True)
+
                 # RAG Memory Auto-Feed: Aprende com trades finalizados (TP/SL)
                 if status in ["TP_HIT", "SL_HIT"]:
                     try:
@@ -1342,5 +1352,55 @@ class SignalGenerator:
             "db_connected": self.db.is_connected(),
             "db_connecting": self.db.is_connecting(),
             "system_ready": self.system_ready
+        }
+
+    def _generate_decision_report(self, signal: Dict, outcome: Dict) -> Dict:
+        """
+        Generate a comprehensive decision report for the signal lifecycle.
+        Aggregates Technicals, Institutional data, AI reasoning, and Context.
+        """
+        # 1. Technical Context
+        indicators = signal.get("indicators", {})
+        institutional = signal.get("institutional", {})
+        
+        technical_summary = {
+            "rsi": indicators.get("rsi"),
+            "trend": indicators.get("trend_4h"),
+            "cvd_delta": institutional.get("cvd_delta"),
+            "open_interest": institutional.get("oi_latest"),
+            "ls_ratio": institutional.get("lsr_latest"),
+            "score": signal.get("score"),
+            "score_breakdown": signal.get("score_breakdown")
+        }
+        
+        # 2. AI & Council Context
+        llm_validation = signal.get("llm_validation", {})
+        council_decision = {
+            "approved": llm_validation.get("approved", False),
+            "confidence": llm_validation.get("confidence"),
+            "reasoning": llm_validation.get("reasoning"),
+            "action": llm_validation.get("suggested_action")
+        }
+        
+        # 3. Market Context (News & Sentiment)
+        market_narrative = {
+            "sentiment_score": self.market_sentiment.get("score"),
+            "sentiment_label": self.market_sentiment.get("sentiment"),
+            "news_summary": self.market_sentiment.get("summary"),
+            "btc_regime": signal.get("btc_regime")
+        }
+        
+        # 4. Outcome Analysis
+        outcome_analysis = {
+            "final_status": outcome.get("status"),
+            "final_roi": outcome.get("roi"),
+        }
+        
+        return {
+            "timestamp": int(time.time() * 1000),
+            "technicals": technical_summary,
+            "council": council_decision,
+            "market": market_narrative,
+            "outcome": outcome_analysis
         }
 

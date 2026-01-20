@@ -244,6 +244,20 @@ export default function SignalCard({ signal, isPinned, onPin }) {
                             <span className="icon">{(signal.institutional.liquidity_aligned || signal.confirmations?.liquidity_aligned) ? '🐋' : '○'}</span>
                             Liq{signal.institutional.liquidity_hunt === 'LONG_HUNT' ? '↓' : signal.institutional.liquidity_hunt === 'SHORT_HUNT' ? '↑' : ''}
                         </span>
+                        {/* THE HUNGER INDEX (IHI) */}
+                        <div className="hunger-index-mini" title={`Institutional Hunger: ${signal.hunger_score || 0}/6`}>
+                            <div className="hunger-stars">
+                                {[...Array(6)].map((_, i) => (
+                                    <div
+                                        key={i}
+                                        className={`hunger-dot ${i < (signal.hunger_score || 0) ? 'active' : ''} ${(signal.hunger_score || 0) >= 5 ? 'extreme' : ''}`}
+                                    />
+                                ))}
+                            </div>
+                            <span className="hunger-status" style={{ fontSize: '0.65rem', marginLeft: '5px', color: (signal.hunger_score || 0) >= 5 ? '#ff4757' : (signal.hunger_score || 0) >= 3 ? '#ff9f43' : 'rgba(255,255,255,0.4)' }}>
+                                {signal.hunger_label || 'Neutro'}
+                            </span>
+                        </div>
                     </>
                 )}
             </div>

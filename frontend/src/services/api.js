@@ -39,9 +39,9 @@ export async function fetchStats() {
     }
 }
 
-export async function fetchHistory(limit = 50) {
+export async function fetchHistory(limit = 50, hours = 0) {
     try {
-        const response = await fetch(`${API_BASE}/history?limit=${limit}`);
+        const response = await fetch(`${API_BASE}/history?limit=${limit}&hours=${hours}`);
         if (!response.ok) throw new Error('Failed to fetch history');
         return await response.json();
     } catch (error) {

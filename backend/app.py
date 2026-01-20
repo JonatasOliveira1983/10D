@@ -11,6 +11,13 @@ BUILD_VERSION = "2026-01-14-2227-SUPABASE-FIX"
 # EARLY DEBUG - before any complex imports
 import sys
 print(f"[DEBUG] ===== BUILD VERSION: {BUILD_VERSION} =====", flush=True)
+# FORCE UTF-8 STDOUT/STDERR FOR WINDOWS
+import os
+import io
+if os.name == 'nt':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 print("[DEBUG] app.py starting - before imports", flush=True)
 
 from flask import Flask, jsonify, request, send_from_directory
@@ -238,18 +245,23 @@ def get_signals():
         return jsonify({"error": str(e)}), 500
 
 
+
+
 @app.route("/api/history")
 def get_history():
-    """Get signal history (limited to last 24h for clean UI)"""
-    limit = request.args.get("limit", 50, type=int)
-    # Hardcoded 24h retention as requested
-    history = generator.get_signal_history(limit, hours_limit=24)
-    
-    return jsonify(sanitize_for_json({
-        "history": history,
-        "count": len(history),
-        "retention_policy": "24h"
-    }))
+    """Get signal history"""
+    try:
+        limit = request.args.get("limit", 50, type=int)
+        hours = request.args.get("hours", 0, type=int)
+        
+        history = generator.get_signal_history(limit=limit, hours_limit=hours)
+        return jsonify(sanitize_for_json({
+            "history": history,
+            "count": len(history)
+        }))
+    except Exception as e:
+        print(f"[API ERROR] /api/history failed: {e}", flush=True)
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/stats")

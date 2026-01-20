@@ -491,49 +491,71 @@ def detect_rsi_crossover_vs_btc(alt_candles: List[Dict], btc_candles: List[Dict]
 def detect_liquidity_hunt_target(lsr_data: Optional[List[Dict]], oi_data: Optional[List[Dict]]) -> Tuple[Optional[str], Dict]:
     """
     Predict where whales will hunt liquidity based on LSR imbalance and OI levels.
+    Also calculates an intensity score (1-6) representing the 'hunger' of the smart money.
     
     Logic:
-    - LSR > LSR_LONG_HEAVY (1.5): Too many longs → stops below → whales will hunt LONG stops
-    - LSR < LSR_SHORT_HEAVY (0.7): Too many shorts → stops above → whales will hunt SHORT stops
-    - OI high: More capital at risk = bigger liquidation potential
-    
-    Returns:
-        Tuple of (hunt_target, details)
-        hunt_target: "LONG_HUNT" (whales will push down), "SHORT_HUNT" (whales will push up), or None
+    - LSR Imbalance: High LSR = Long stops hunt (Down), Low LSR = Short stops hunt (Up).
+    - OI Growth: Rapid increase in OI indicates robots are loading positions.
+    - Intensity Score (Hunger Index):
+        1-2: Low/Neutral. No clear imbalance.
+        3-4: Moderate. Robots active, looking for liquidity.
+        5-6: High. Aggressive hunting, imminent squeeze/liquidation.
     """
     if not lsr_data or len(lsr_data) < 2:
-        return None, {"error": "Not enough LSR data"}
+        return None, {"error": "Not enough LSR data", "intensity_score": 1}
     
     current_lsr = lsr_data[0].get("ratio", 1.0)
     prev_lsr = lsr_data[1].get("ratio", 1.0)
     
-    # Calculate OI intensity (is it high?)
-    oi_high = False
+    # Base Intensity Calculation
+    intensity = 1
+    
+    # 1. LSR Imbalance Intensity
+    if current_lsr >= 2.0 or current_lsr <= 0.5:
+        intensity += 2  # Extreme imbalance
+    elif current_lsr >= 1.5 or current_lsr <= 0.7:
+        intensity += 1  # Moderate imbalance
+        
+    # 2. Open Interest Intensity
     oi_ratio = 1.0
     if oi_data and len(oi_data) >= 5:
         current_oi = oi_data[0].get("openInterest", 0)
-        avg_oi = sum(d.get("openInterest", 0) for d in oi_data[:5]) / 5
+        recent_ois = [d.get("openInterest", 0) for d in oi_data[:5]]
+        avg_oi = sum(recent_ois) / 5
+        
         if avg_oi > 0:
             oi_ratio = current_oi / avg_oi
-            oi_high = oi_ratio >= OI_HIGH_MULTIPLIER
+            if oi_ratio >= 1.3: # 30% jump
+                intensity += 2
+            elif oi_ratio >= 1.15: # 15% jump
+                intensity += 1
+                
+    # 3. LSR Movement (Fome em aceleração)
+    lsr_change = abs(current_lsr - prev_lsr) / prev_lsr if prev_lsr > 0 else 0
+    if lsr_change > 0.1: # 10% change in one interval
+        intensity += 1
+
+    # Clamp intensity 1 to 6
+    intensity_score = max(1, min(6, intensity))
     
     details = {
         "current_lsr": round(current_lsr, 3),
         "prev_lsr": round(prev_lsr, 3),
-        "lsr_threshold_long": LSR_LONG_HEAVY,
-        "lsr_threshold_short": LSR_SHORT_HEAVY,
+        "lsr_threshold_long": 1.5,
+        "lsr_threshold_short": 0.7,
         "oi_ratio": round(oi_ratio, 2),
-        "oi_high": oi_high
+        "intensity_score": intensity_score,
+        "hunger_label": "EXTREME" if intensity_score >= 5 else "HIGH" if intensity_score >= 3 else "LOW"
     }
     
-    # Detect imbalance
-    if current_lsr >= LSR_LONG_HEAVY:
+    # Detect hunt direction
+    if current_lsr >= 1.5:
         # Too many longs = whales will hunt LONG stops (push price DOWN first)
         details["hunt_direction"] = "DOWN_THEN_UP"
         details["sardinha_side"] = "LONG"
         return "LONG_HUNT", details
     
-    elif current_lsr <= LSR_SHORT_HEAVY:
+    elif current_lsr <= 0.7:
         # Too many shorts = whales will hunt SHORT stops (push price UP first)
         details["hunt_direction"] = "UP_THEN_DOWN"
         details["sardinha_side"] = "SHORT"

@@ -65,9 +65,10 @@ SIGNAL: {signal.get('symbol')} {signal.get('direction')} | Entry: {signal.get('e
 
 INSTRUCTIONS:
 1. REVIEW the agents' arguments.
-2. The RISK AGENT's veto ("REJECTED") should be taken very seriously.
-3. The FUNDAMENTAL AGENT (Sentinel) protects against market crashes.
-4. DECIDE if the trade proceeds or not.
+2. DISSECT the 'Smart Money Hunger' (IHI 1-6 stars). High hunger means robots are aggressively seeking liquidity.
+3. The RISK AGENT's veto ("REJECTED") should be taken very seriously.
+4. The FUNDAMENTAL AGENT (Sentinel) protects against market crashes.
+5. DECIDE if the trade proceeds or not.
 
 RESPOND IN JSON FORMAT ONLY:
 {{
