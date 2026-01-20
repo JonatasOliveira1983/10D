@@ -158,6 +158,29 @@ Usuário acessa 4 páginas principais:
 
 ---
 
+## 🚦 Fluxo de Vida do Sinal (The Lifecycle)
+
+Desmistificando como o 10D opera do início ao fim:
+
+### 1. Nascimento & Filtros (O Funil)
+Nem todo sinal vira trade. O funil é rigoroso:
+- **Filtro Técnico**: Scan em 100 pares. Se o Score < 100, é descartado.
+- **Filtro de Regime (Novo)**: Se BTC está Lateral, apenas moedas "Desgrudadas" passam.
+- **Filtro de IA**: O modelo ML calcula a probabilidade. Se < 50%, é bloqueado.
+
+### 2. Monitoramento Inteligente (A Onda)
+Uma vez aprovado, o sinal entra no **Live Monitor** (loop de 5 segundos):
+- **Alvo Dinâmico**: O sistema persegue 2% de lucro inicial.
+- **Proteção Rápida**: Bateu 2%? O **Stop Loss sobe para a Entrada** (Risco Zero).
+- **Surf Logic**: Bateu 3%? O **Trailing Stop** liga. O TP fixo é ignorado e o sistema deixa o lucro correr até a tendência virar.
+
+### 3. Finalização & Aprendizado (O Ciclo)
+O sinal morre quando bate no Stop (Normal ou Trailing) ou expira.
+- **Auto-Training**: A cada 30 sinais finalizados, o sistema **automaticamente** re-treina o cérebro da IA.
+- **Quem controla o treino?** É um algoritmo determinístico (Python), não a LLM. A LLM **consome** os dados gerados para dar conselhos, mas o treino matemático é feito pelo Scikit-Learn.
+
+---
+
 ## 🛠️ Tecnologias
 
 | Camada | Tecnologia |
