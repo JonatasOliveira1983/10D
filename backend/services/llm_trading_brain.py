@@ -563,13 +563,14 @@ INSTRUCTIONS:
    - 46-54: Neutral
    - 55-75: Greed (Bullish)
    - 76-100: Extreme Greed (Bullish)
-2. Summarize the main narrative in ONE sentence.
+2. Summarize the main narrative in ONE sentence IN PORTUGUESE (PT-BR).
+3. The summary must be natural and avoid robotic phrasing.
 
 RESPOND IN JSON FORMAT ONLY:
 {{
   "score": 0-100,
   "sentiment": "BEARISH" or "NEUTRAL" or "BULLISH",
-  "summary": "One sentence summary"
+  "summary": "Resumo em Português"
 }}"""
 
         response = self._call_gemini(prompt, max_tokens=150)
