@@ -790,7 +790,7 @@ class SignalGenerator:
                         if self.current_btc_regime == "RANGING":
                             # Only decoupled alts in Ranging
                             if signal.get("decoupling_score", 0) < SNIPER_DECOUPLING_THRESHOLD:
-                                print(f"[SNIPER FILTER] {symbol} REJECTED: Low decoupling ({signal.get('decoupling_score', 0)}) in RANGING market.", flush=True)
+                                print(f"[SNIPER FILTER] {symbol} REJECTED: Decoupling Score ({signal.get('decoupling_score', 0)}) < {SNIPER_DECOUPLING_THRESHOLD} in RANGING market. (Strict Enforcement)", flush=True)
                                 continue
                         elif self.current_btc_regime in ["TRENDING", "BREAKOUT"]:
                             # Only best scores in Trending

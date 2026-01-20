@@ -273,7 +273,7 @@ TAKE_PROFIT_PERCENT = 2.0    # 2% de lucro
 SIGNAL_TTL_MINUTES = 120     # 2 horas de validade (expiração)
 PAIR_LIMIT = 100             # Monitora os top 100 pares
 ML_ENABLED = True            # Ativa/Desativa o motor de ML
-ML_PROBABILITY_THRESHOLD = 0.40 # 40% de confiança mínima da IA
+ML_PROBABILITY_THRESHOLD = 0.50 # 50% de confiança mínima da IA (Atualizado)
 ML_MIN_SAMPLES = 100         # Sinais necessários para 1º treino
 ML_AUTO_RETRAIN_INTERVAL = 30 # Retreina a cada 30 novas amostras
 ```
@@ -284,7 +284,7 @@ ML_AUTO_RETRAIN_INTERVAL = 30 # Retreina a cada 30 novas amostras
 
 O sistema utiliza uma lógica avançada baseada no regime do Bitcoin para maximizar os lucros (Alvo de 6%+) e reduzir ruídos:
 
-- **BTC Lateral (Ranging)**: O sistema entra em modo Sniper apenas para moedas "desgrudadas" (Decoupling Score > 0.6). Sinais correlacionados são ignorados. Alvo: 6%.
+- **BTC Lateral (Ranging)**: O sistema entra em modo Sniper **APENAS** para moedas "desgrudadas" (Decoupling Score > 0.45). Sinais correlacionados são **REJEITADOS**. Alvo: 6%.
 - **BTC em Tendência (Trending)**: Apenas sinais "Elite" com Score técnico de 100% e Probabilidade ML > 50% são aceitos. Alvo: 6%.
 - **Monitoramento Exclusivo**: Sinais que não atendem aos critérios Sniper são automaticamente descartados da memória e do banco de dados para focar apenas nas operações de alto ganho.
 
@@ -310,6 +310,10 @@ O sistema utiliza uma lógica avançada baseada no regime do Bitcoin para maximi
 ---
 
 ## 📝 Changelog
+
+### v3.8 (Jan 2026 - Ranging Enforcer)
+- ✅ **Strict Ranging Filter**: No regime BTC Ranging, apenas sinais com Decoupling Score > 0.45 são aceitos.
+- ✅ **ML Threshold Update**: Probabilidade mínima da IA aumentada para 50% (era 40%) para maior qualidade.
 
 ### v3.7 (Jan 2026 - Surf Logic & Profit Max)
 - ✅ **Surf Logic**: Se o Trailing Stop estiver ativo, o TP fixo é ignorado para capturar 10%+ de lucro.

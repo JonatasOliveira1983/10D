@@ -146,7 +146,7 @@ DEBUG = False  # Disabled to prevent auto-restart and state loss
 # =============================================================================
 
 ML_ENABLED = True
-ML_PROBABILITY_THRESHOLD = 0.45  # 45% minimum probability (Lowered from 50% to allow more signals)
+ML_PROBABILITY_THRESHOLD = 0.50  # 50% minimum probability (Updated by user request)
 ML_MIN_SAMPLES = 100             # Minimum samples required to train model
 ML_AUTO_RETRAIN_INTERVAL = 30    # Retrain every 30 new finalized signals (more aggressive)
 ML_MODEL_PATH = "services/ml_model.pkl"
