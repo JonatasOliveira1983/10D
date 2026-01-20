@@ -62,7 +62,7 @@ class MLTrainingBridge:
         with open(self.brain_path, "w") as f:
             json.dump(insights, f, indent=4)
             
-        print(f"Ciclo ML concluído. Insights salvos em: {self.brain_path}", flush=True)
+        print(f"Ciclo ML concluido. Insights salvos em: {self.brain_path}", flush=True)
         return insights
 
 if __name__ == "__main__":

@@ -62,31 +62,32 @@ const IconSignal = () => (
 const SentimentWidget = ({ sentiment, t }) => {
     if (!sentiment) return null;
 
-    // sentiment: { score, sentiment, summary }
     const { score, sentiment: label, summary } = sentiment;
 
-    let color = '#9ca3af'; // Neutral (Gray)
-    let icon = '😐';
-    if (score >= 55) { color = '#00d4aa'; icon = '🐮'; } // Bullish (Green)
-    if (score <= 45) { color = '#ef4444'; icon = '🐻'; } // Bearish (Red)
+    let color = 'var(--text-muted)';
+    if (score >= 55) color = 'var(--long-color)';
+    if (score <= 45) color = 'var(--short-color)';
 
     return (
-        <div className="sentiment-widget">
-            <div className="sentiment-content">
-                <div className="sentiment-left">
-                    <span className="sentiment-icon">{icon}</span>
-                    <div className="sentiment-info">
-                        <span className="sentiment-label" style={{ color }}>{label}</span>
-                        <span className="sentiment-score">Fear & Greed: {score}</span>
+        <div className="sentiment-bar">
+            <div className="sentiment-top">
+                <div className="sentiment-main">
+                    <span className="sentiment-tag" style={{ backgroundColor: `${color}22`, color }}>
+                        {label}
+                    </span>
+                    <span className="sentiment-index">Fear & Greed Index: <strong>{score}</strong></span>
+                </div>
+                <div className="sentiment-gauge">
+                    <div className="gauge-track">
+                        <div className="gauge-fill" style={{ width: `${score}%`, backgroundColor: color }} />
                     </div>
                 </div>
-                <div className="sentiment-right">
-                    <p className="sentiment-summary">"{summary}"</p>
+            </div>
+            {summary && (
+                <div className="sentiment-insight">
+                    <p>"{summary}"</p>
                 </div>
-            </div>
-            <div className="sentiment-progress-bg">
-                <div className="sentiment-progress-fill" style={{ width: `${score}%`, background: color }} />
-            </div>
+            )}
         </div>
     );
 };
@@ -310,165 +311,29 @@ const SignalProgressBar = ({ signal, t }) => {
     );
 };
 
-// History Table with expandable rows
-const HistoryTable = ({ history, loading, t }) => {
-    const [expandedId, setExpandedId] = useState(null);
-
-    // Filter to last 10 days
-    const tenDaysAgo = Date.now() - (10 * 24 * 60 * 60 * 1000);
-    const filteredHistory = history.filter(s => s.timestamp > tenDaysAgo);
-
-    const getStatusIcon = (status) => {
-        switch (status) {
-            case 'TP_HIT': return <span className="status-icon success">●</span>;
-            case 'SL_HIT': return <span className="status-icon error">●</span>;
-            case 'EXPIRED': return <span className="status-icon warning">●</span>;
-            default: return <span className="status-icon pending">●</span>;
-        }
-    };
-
-    const formatDate = (ts) => {
-        const d = new Date(ts);
-        return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`;
-    };
-
-    const calculateCapture = (signal) => {
-        const finalRoi = signal.final_roi || signal.current_roi || 0;
-        const highestRoi = signal.highest_roi || 0;
-        if (highestRoi <= 0 || finalRoi <= 0) return null;
-        return Math.min(100, (finalRoi / highestRoi) * 100);
-    };
+// Pagination Controls Component (Reusable)
+const PaginationControls = ({ currentPage, totalPages, onPageChange, t }) => {
+    if (totalPages <= 1) return null;
 
     return (
-        <div className="sj-history-container">
-            <div className="sj-section-header">
-                <div className="section-title-group">
-                    <IconSignal />
-                    <h3>{t('signalJourney.history')}</h3>
-                </div>
-                <span className="section-badge">{t('signalJourney.last10Days')} • {filteredHistory.length} {t('signalJourney.trades')}</span>
-            </div>
-
-            <div className="sj-table">
-                <div className="table-header-row">
-                    <span>{t('signalJourney.date')}</span>
-                    <span>{t('signalJourney.symbol')}</span>
-                    <span>{t('signalJourney.direction')}</span>
-                    <span>{t('signalJourney.roi')}</span>
-                    <span>{t('signalJourney.capture')}</span>
-                    <span>{t('signalJourney.status')}</span>
-                </div>
-
-                {filteredHistory.length === 0 && (
-                    <div className="table-empty">
-                        {t('signalJourney.noHistory')}
-                    </div>
-                )}
-
-                {filteredHistory.map((signal) => {
-                    const isExpanded = expandedId === signal.id;
-                    const capture = calculateCapture(signal);
-                    const roi = signal.final_roi || signal.current_roi || 0;
-
-                    return (
-                        <React.Fragment key={signal.id}>
-                            <div
-                                className={`table-data-row ${isExpanded ? 'expanded' : ''}`}
-                                onClick={() => setExpandedId(isExpanded ? null : signal.id)}
-                            >
-                                <span className="cell">{formatDate(signal.timestamp)}</span>
-                                <span className="cell symbol">{signal.symbol}</span>
-                                <span className={`cell direction ${signal.direction?.toLowerCase()}`}>
-                                    {signal.direction}
-                                </span>
-                                <span className={`cell roi ${roi >= 0 ? 'positive' : 'negative'}`}>
-                                    {roi >= 0 ? '+' : ''}{roi.toFixed(2)}%
-                                </span>
-                                <span className="cell capture">
-                                    {capture ? `${capture.toFixed(0)}%` : '--'}
-                                </span>
-                                <span className="cell status">
-                                    {getStatusIcon(signal.status)}
-                                </span>
-                            </div>
-
-                            {isExpanded && (
-                                <div className="expanded-content">
-                                    <div className="detail-columns">
-                                        <div className="detail-column">
-                                            <h4>{t('signalJourney.setup')}</h4>
-                                            <div className="detail-item">
-                                                <span>{t('signalJourney.type')}:</span>
-                                                <span>{signal.signal_type?.replace('_', ' ')}</span>
-                                            </div>
-                                            <div className="detail-item">
-                                                <span>{t('signalJourney.entry')}:</span>
-                                                <span>${signal.entry_price?.toFixed(2)}</span>
-                                            </div>
-                                            <div className="detail-item">
-                                                <span>TP:</span>
-                                                <span>${signal.take_profit?.toFixed(2)}</span>
-                                            </div>
-                                            <div className="detail-item">
-                                                <span>SL:</span>
-                                                <span>${signal.stop_loss?.toFixed(2)}</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="detail-column">
-                                            <h4>{t('signalJourney.intelligence')}</h4>
-                                            <div className="detail-item">
-                                                <span>{t('signalJourney.mlProb')}:</span>
-                                                <span>{signal.ml_probability ? `${(signal.ml_probability * 100).toFixed(0)}%` : '--'}</span>
-                                            </div>
-                                            <div className="detail-item">
-                                                <span>{t('signalJourney.llmConfidence')}:</span>
-                                                <span>{signal.llm_validation?.confidence ? `${(signal.llm_validation.confidence * 100).toFixed(0)}%` : '--'}</span>
-                                            </div>
-                                            <div className="detail-item">
-                                                <span>{t('signalJourney.btcRegime')}:</span>
-                                                <span>{signal.btc_regime || '--'}</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="detail-column">
-                                            <h4>{t('signalJourney.result')}</h4>
-                                            <div className="detail-item">
-                                                <span>{t('signalJourney.finalRoi')}:</span>
-                                                <span className={roi >= 0 ? 'positive' : 'negative'}>
-                                                    {roi >= 0 ? '+' : ''}{roi.toFixed(2)}%
-                                                </span>
-                                            </div>
-                                            <div className="detail-item">
-                                                <span>{t('signalJourney.high')}:</span>
-                                                <span>+{signal.highest_roi?.toFixed(2) || 0}%</span>
-                                            </div>
-                                            <div className="detail-item">
-                                                <span>{t('signalJourney.capture')}:</span>
-                                                <span>{capture ? `${capture.toFixed(0)}%` : '--'}</span>
-                                            </div>
-                                            {capture && (
-                                                <div className="capture-visual">
-                                                    <div className="capture-bar">
-                                                        <div className="capture-fill" style={{ width: `${capture}%` }} />
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {signal.llm_validation?.reasoning && (
-                                        <div className="insight-box">
-                                            <h4>{t('signalJourney.llmInsight')}</h4>
-                                            <p>{signal.llm_validation.reasoning}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </React.Fragment>
-                    );
-                })}
-            </div>
+        <div className="sj-pagination">
+            <button
+                className="pagination-btn"
+                disabled={currentPage === 1}
+                onClick={() => onPageChange(currentPage - 1)}
+            >
+                ← {t('signalJourney.prev')}
+            </button>
+            <span className="pagination-info">
+                {currentPage} / {totalPages}
+            </span>
+            <button
+                className="pagination-btn"
+                disabled={currentPage === totalPages}
+                onClick={() => onPageChange(currentPage + 1)}
+            >
+                {t('signalJourney.next')} →
+            </button>
         </div>
     );
 };
@@ -478,6 +343,8 @@ export default function SignalJourney({ signals, history, loading }) {
     const { t } = useTranslation();
     const [llmSummary, setLlmSummary] = useState(null);
     const [sentiment, setSentiment] = useState(null);
+    const [activePage, setActivePage] = useState(1);
+    const SIGNALS_PER_PAGE = 5;
 
     // Fetch LLM summary and Sentiment
     useEffect(() => {
@@ -519,6 +386,20 @@ export default function SignalJourney({ signals, history, loading }) {
         };
     })();
 
+    // Pagination Logic for Active Signals
+    const totalActivePages = Math.ceil(signals.length / SIGNALS_PER_PAGE);
+    const paginatedSignals = signals.slice(
+        (activePage - 1) * SIGNALS_PER_PAGE,
+        activePage * SIGNALS_PER_PAGE
+    );
+
+    // Reset page if signals change and current page becomes empty
+    useEffect(() => {
+        if (activePage > totalActivePages && totalActivePages > 0) {
+            setActivePage(totalActivePages);
+        }
+    }, [signals.length, totalActivePages, activePage]);
+
     return (
         <div className="signal-journey">
             <LLMHeaderPanel summary={computedSummary} loading={loading} t={t} />
@@ -541,15 +422,21 @@ export default function SignalJourney({ signals, history, loading }) {
                         <p>{t('signalJourney.noSignals')}</p>
                     </div>
                 ) : (
-                    <div className="signals-list">
-                        {signals.map(signal => (
-                            <SignalProgressBar key={signal.id} signal={signal} t={t} />
-                        ))}
-                    </div>
+                    <>
+                        <div className="signals-list">
+                            {paginatedSignals.map(signal => (
+                                <SignalProgressBar key={signal.id} signal={signal} t={t} />
+                            ))}
+                        </div>
+                        <PaginationControls
+                            currentPage={activePage}
+                            totalPages={totalActivePages}
+                            onPageChange={setActivePage}
+                            t={t}
+                        />
+                    </>
                 )}
             </div>
-
-            <HistoryTable history={history} loading={loading} t={t} />
         </div>
     );
-}
+};

@@ -356,7 +356,7 @@ class LLMTradingBrain:
         return {
             "approved": True,
             "confidence": 0.5,
-            "reasoning": "Council deadlock - defaulting to approval",
+            "reasoning": "Council skipped (Technical Fallback)",
             "suggested_action": "PROCEED"
         }
     

@@ -48,14 +48,20 @@ class BTCRegimeTracker:
             "sl": SL_BREAKOUT,
             "priority": "momentum",
             "description": "BTC rompendo níveis, aumentar alvos"
+        },
+        "SNIPER": {
+            "tp": 0.06,  # Force 6%
+            "sl": 0.01,  # 1% SL for sniper
+            "priority": "sniper",
+            "description": "MODO SNIPER: Alvo agressivo de 6%+"
         }
     }
     
     def __init__(self):
         self.current_regime = "TRENDING"  # Default
         self.regime_history = []  # Track regime changes
-        self.last_24h_high = None
         self.last_24h_low = None
+        self.last_24h_change = 0.0
         
     def detect_regime(
         self, 
@@ -114,6 +120,11 @@ class BTCRegimeTracker:
         avg_atr = sum([a for a in atr_values[-10:] if a]) / 10 if any(atr_values[-10:]) else current_atr
         atr_expansion = current_atr / avg_atr if avg_atr > 0 else 1
         
+        # Calculate 24h change
+        price_24h_ago = btc_candles_30m[-lookback_24h]["close"]
+        price_change_24h = (current_price - price_24h_ago) / price_24h_ago if price_24h_ago > 0 else 0
+        self.last_24h_change = price_change_24h
+
         details = {
             "bb_width": round(bb_width * 100, 3),  # As percentage
             "atr_pct": round(atr_pct * 100, 3),    # As percentage
@@ -122,7 +133,8 @@ class BTCRegimeTracker:
             "atr_expansion": round(atr_expansion, 2),
             "high_24h": round(high_24h, 2),
             "low_24h": round(low_24h, 2),
-            "current_price": round(current_price, 2)
+            "current_price": round(current_price, 2),
+            "price_change_24h": round(price_change_24h * 100, 2)
         }
         
         # === REGIME DETECTION LOGIC ===
@@ -236,16 +248,21 @@ class BTCRegimeTracker:
             print(f"[BTC REGIME] Error calculating decoupling: {e}", flush=True)
             return 0.0
     
-    def get_dynamic_targets(self, regime: str = None) -> Tuple[float, float]:
+    def get_dynamic_targets(self, regime: str = None, force_sniper: bool = False) -> Tuple[float, float]:
         """
         Get TP and SL percentages based on current regime.
         
         Args:
             regime: Override regime (uses current if None)
+            force_sniper: If True, returns sniper targets (6%)
             
         Returns:
             Tuple of (tp_percent, sl_percent)
         """
+        if force_sniper:
+            config = self.REGIMES["SNIPER"]
+            return config["tp"], config["sl"]
+            
         regime = regime or self.current_regime
         config = self.REGIMES.get(regime, self.REGIMES["TRENDING"])
         return config["tp"], config["sl"]
@@ -260,7 +277,8 @@ class BTCRegimeTracker:
             "priority": config["priority"],
             "description": config["description"],
             "high_24h": self.last_24h_high,
-            "low_24h": self.last_24h_low
+            "low_24h": self.last_24h_low,
+            "change_24h": round(self.last_24h_change * 100, 2)
         }
 
 

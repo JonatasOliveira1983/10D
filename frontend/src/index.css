@@ -382,16 +382,21 @@ body {
 }
 
 .btc-regime-indicator .target-item {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 600;
   font-family: 'JetBrains Mono', monospace;
 }
 
-.btc-regime-indicator .target-item.tp {
+.btc-regime-indicator .target-item.price {
+  color: var(--text-primary);
+  opacity: 0.9;
+}
+
+.btc-regime-indicator .target-item.change.positive {
   color: var(--long-color);
 }
 
-.btc-regime-indicator .target-item.sl {
+.btc-regime-indicator .target-item.change.negative {
   color: var(--short-color);
 }
 
@@ -433,6 +438,44 @@ body {
 
   50% {
     box-shadow: 0 0 0 4px rgba(124, 58, 237, 0);
+  }
+}
+
+/* Sniper Mode Styles */
+.btc-regime-indicator.regime-sniper {
+  border-color: #ff3366;
+  background: rgba(255, 51, 102, 0.05);
+  box-shadow: 0 0 15px rgba(255, 51, 102, 0.1);
+}
+
+.btc-regime-indicator.regime-sniper .regime-value {
+  background: rgba(255, 51, 102, 0.2);
+  color: #ff3366;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sniper-badge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: #ffffff;
+  background: #ff3366;
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+  animation: flash-sniper 1s infinite alternate;
+}
+
+@keyframes flash-sniper {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0.8;
+    transform: scale(1.05);
   }
 }
 

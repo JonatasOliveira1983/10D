@@ -14,6 +14,9 @@ print(f"[DEBUG] ===== BUILD VERSION: {BUILD_VERSION} =====", flush=True)
 print("[DEBUG] app.py starting - before imports", flush=True)
 
 from flask import Flask, jsonify, request, send_from_directory
+from decimal import Decimal
+from datetime import datetime, date
+import uuid
 print("[DEBUG] Flask imported OK", flush=True)
 
 from flask_cors import CORS
@@ -50,6 +53,20 @@ analytics_service = AIAnalyticsService(generator.db)
 # Background scanning flag
 scanning = False
 scan_thread = None
+
+def sanitize_for_json(obj):
+    """Recursively convert Decimal to float and handle other non-serializable types"""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    elif isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    elif isinstance(obj, uuid.UUID):
+        return str(obj)
+    elif isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize_for_json(v) for v in obj]
+    return obj
 
 
 def background_scanner():
@@ -196,19 +213,29 @@ def get_pairs():
 @app.route("/api/signals")
 def get_signals():
     """Get active signals"""
-    min_score = request.args.get("min_score", 0, type=int)
-    
-    signals = generator.get_active_signals()
-    
-    # Filter by minimum score if specified
-    if min_score > 0:
-        signals = [s for s in signals if s["score"] >= min_score]
-    
-    return jsonify({
-        "signals": signals,
-        "count": len(signals),
-        "filter": {"min_score": min_score}
-    })
+    try:
+        min_score = request.args.get("min_score", 0, type=int)
+        
+        signals = generator.get_active_signals()
+        
+        # Filter by minimum score if specified
+        if min_score > 0:
+            signals = [s for s in signals if s["score"] >= min_score]
+        
+        return jsonify(sanitize_for_json({
+            "signals": signals,
+            "count": len(signals),
+            "filter": {"min_score": min_score}
+        }))
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"[API ERROR] /api/signals failed: {e}", flush=True)
+        try:
+            print(f"[API DEBUG] First signal sample: {str(signals[0]) if signals else 'No signals'}", flush=True)
+        except:
+            pass
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/history")
@@ -218,18 +245,18 @@ def get_history():
     # Hardcoded 24h retention as requested
     history = generator.get_signal_history(limit, hours_limit=24)
     
-    return jsonify({
+    return jsonify(sanitize_for_json({
         "history": history,
         "count": len(history),
         "retention_policy": "24h"
-    })
+    }))
 
 
 @app.route("/api/stats")
 def get_stats():
     """Get summary statistics"""
     stats = generator.get_stats()
-    return jsonify(stats)
+    return jsonify(sanitize_for_json(stats))
 
 
 @app.route("/api/scan", methods=["POST"])
@@ -278,10 +305,10 @@ def analyze_symbol(symbol):
     signal = generator.analyze_pair(symbol.upper())
     
     if signal:
-        return jsonify({
+        return jsonify(sanitize_for_json({
             "found": True,
             "signal": signal
-        })
+        }))
     
     return jsonify({
         "found": False,
@@ -294,11 +321,11 @@ def get_btc_regime():
     """Get current BTC market regime and dynamic TP/SL targets"""
     try:
         regime_info = generator.btc_tracker.get_regime_info()
-        return jsonify({
+        return jsonify(sanitize_for_json({
             "status": "OK",
             **regime_info,
             "regime_details": generator.current_regime_details
-        })
+        }))
     except Exception as e:
         return jsonify({
             "status": "ERROR",
@@ -694,7 +721,11 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", API_PORT))
     
     # Start the server
-    print(f"\n[SERVER] Starting server on http://{API_HOST}:{port}", flush=True)
+    print(f"\n[SERVER] ATTEMPTING TO START on http://{API_HOST}:{port}", flush=True)
+    print(f"[SERVER] Threads active: {threading.active_count()}", flush=True)
     print("=" * 60, flush=True)
     
-    app.run(host=API_HOST, port=port, debug=False, threaded=True, use_reloader=False)
+    try:
+        app.run(host=API_HOST, port=port, debug=False, threaded=True, use_reloader=False)
+    except Exception as e:
+        print(f"[SERVER CRASH] Failed to start Flask: {e}", flush=True)

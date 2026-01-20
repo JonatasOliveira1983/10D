@@ -20,6 +20,7 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
 
     const tenMMenuItems = [
         { id: 'signal-journey', icon: <IconBrain />, label: t('nav.signalJourney') },
+        { id: 'journey-history', icon: <IconHistory />, label: 'Histórico Journey' },
         { id: 'organizer', icon: <IconOrganizer />, label: t('nav.organizer') },
     ];
 
@@ -106,6 +107,17 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
                             <IconSettings />
                         </div>
                         <span className="nav-label">Configurações</span>
+                    </button>
+
+                    <button
+                        className={`nav-item ${currentPage === 'journey-history' ? 'active' : ''}`}
+                        onClick={() => onNavigate('journey-history')}
+                        title="Histórico Journey"
+                    >
+                        <div className="nav-icon-wrapper">
+                            <IconHistory />
+                        </div>
+                        <span className="nav-label">Histórico Journey</span>
                     </button>
                 </nav>
 

@@ -7,15 +7,15 @@ Uses Random Forest Classifier trained on historical signal data
 import os
 import json
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime
-import numpy as np
-import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
-import joblib
 import pytz
+
+# Lazy loading for heavy libraries
+# from sklearn.ensemble import RandomForestClassifier
+# from sklearn.model_selection import train_test_split
+# from sklearn.metrics import ...
+# import joblib
 
 
 class MLPredictor:
@@ -50,11 +50,12 @@ class MLPredictor:
         # Try to load existing model
         self.load_model()
     
-    def prepare_training_data(self) -> Tuple[np.ndarray, np.ndarray, List[Dict]]:
+    def prepare_training_data(self) -> Tuple[Any, Any, List[Dict]]:
         """
         Prepare training data from database
         Returns: (X_features, y_labels, raw_signals)
         """
+        import numpy as np
         print("[ML] Preparing training data from database...", flush=True)
         
         # Get signals with ai_features
@@ -144,6 +145,12 @@ class MLPredictor:
             
             print(f"[ML] Training set: {len(X_train)}, Test set: {len(X_test)}", flush=True)
             
+            print(f"[ML] Training set: {len(X_train)}, Test set: {len(X_test)}", flush=True)
+            
+            # Lazy import sklearn
+            from sklearn.ensemble import RandomForestClassifier
+            from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+            
             # Train Random Forest
             self.model = RandomForestClassifier(
                 n_estimators=100,
@@ -220,6 +227,7 @@ class MLPredictor:
             return 0.5
         
         try:
+            import numpy as np
             # Extract features in correct order
             feature_vector = [
                 features.get("oi_change_pct", 0),
@@ -254,6 +262,7 @@ class MLPredictor:
             timestamp = datetime.now(self.tz).strftime("%Y-%m-%d_%H-%M")
             versioned_path = self.model_path.replace(".pkl", f"_{timestamp}.pkl")
             
+            import joblib
             joblib.dump(self.model, self.model_path)
             joblib.dump(self.model, versioned_path)
             
@@ -269,6 +278,7 @@ class MLPredictor:
         """Load trained model from disk"""
         try:
             if os.path.exists(self.model_path):
+                import joblib
                 self.model = joblib.load(self.model_path)
                 print(f"[ML] [OK] Model loaded from {self.model_path}", flush=True)
                 return True

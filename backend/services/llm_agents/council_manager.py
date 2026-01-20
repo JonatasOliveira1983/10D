@@ -85,25 +85,36 @@ RESPOND IN JSON FORMAT ONLY:
         # 3. Call LLM for Synthesis
         llm_response = llm_call_func(prompt)
         
-        # 4. Parse Response
+        # 4. Handle Empty/Rate-Limited Response
+        if llm_response is None:
+            return {
+                "approved": True, # Fallback to approval on technical failure
+                "confidence": 0.5,
+                "reasoning": "Council skipped (Rate Limit/Technical Issue)",
+                "council_outputs": agent_outputs
+            }
+        
+        # 5. Parse Response
         return self._parse_response(llm_response, agent_outputs)
 
     def _parse_response(self, response: str, agent_outputs: Dict) -> Dict:
         """Parse JSON response safely"""
         default_response = {
-            "approved": False,
-            "confidence": 0.0,
+            "approved": True, # Default to True for non-blocking fallback
+            "confidence": 0.5,
             "reasoning": "Council deadlock (Parsing Error)",
             "council_outputs": agent_outputs
         }
         
-        if not response:
+        if not response or not isinstance(response, str):
             return default_response
 
         try:
             # Clean generic markdown
             if "```" in response:
-                response = response.split("```")[1].replace("json", "").strip()
+                parts = response.split("```")
+                if len(parts) >= 2:
+                    response = parts[1].replace("json", "").strip()
             
             start = response.find('{')
             end = response.rfind('}') + 1

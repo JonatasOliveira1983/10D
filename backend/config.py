@@ -66,16 +66,19 @@ SR_LOOKBACK_DAYS = 20           # 20 days for high/low
 # TRADING SETTINGS
 # =============================================================================
 # Trading Settings
-STOP_LOSS_PERCENT = 0.01   # 1%
-TAKE_PROFIT_PERCENT = 0.02  # 2%
 MIN_LEVERAGE = 50           # Minimum 50x leverage required
 HISTORY_RETENTION_HOURS = 72 # 3 days
 
 # Smart Exit Settings
+STOP_LOSS_PERCENT = 0.01   # 1%
+TAKE_PROFIT_PERCENT = 0.02  # 2% (Default for Trending)
 PARTIAL_TP_PERCENT = 0.02    # 2% (Target 1 - Close 50% and move SL to Entry)
 TRAILING_STOP_TRIGGER = 0.03 # 3% (Activate Trailing Stop)
 TRAILING_STOP_DISTANCE = 0.01 # 1% (SL follows price at 1% distance)
 TARGET_SNIPER_6 = 0.06       # 6% Super Target
+SNIPER_FORCE_TARGET = 0.06   # Force 6% target in sniper mode
+SNIPER_DECOUPLING_THRESHOLD = 0.45 # Minimum decoupling for ranging sniper (Lowered from 0.6)
+SNIPER_BEST_SCORE_THRESHOLD = 85  # Minimum score for trending sniper (Lowered from 100)
 
 # Signal Freshness Settings
 SIGNAL_TTL_MINUTES = 120     # 120 minutes for cleanup (2 hours)
@@ -143,7 +146,7 @@ DEBUG = False  # Disabled to prevent auto-restart and state loss
 # =============================================================================
 
 ML_ENABLED = True
-ML_PROBABILITY_THRESHOLD = 0.40  # 40% minimum probability (lowered for more signals)
+ML_PROBABILITY_THRESHOLD = 0.45  # 45% minimum probability (Lowered from 50% to allow more signals)
 ML_MIN_SAMPLES = 100             # Minimum samples required to train model
 ML_AUTO_RETRAIN_INTERVAL = 30    # Retrain every 30 new finalized signals (more aggressive)
 ML_MODEL_PATH = "services/ml_model.pkl"

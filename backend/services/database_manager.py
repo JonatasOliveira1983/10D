@@ -2,11 +2,14 @@ import os
 import json
 import time
 from typing import List, Dict, Optional
-from supabase import create_client, Client
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv(override=True)
+
+# Lazy import - Supabase will be imported only when needed
+Client = None  # Type hint placeholder
+
 
 class DatabaseManager:
     """Gerenciador de conexão e operações com Supabase (PostgreSQL)"""
@@ -14,6 +17,9 @@ class DatabaseManager:
     def __init__(self):
         self.url = os.environ.get("SUPABASE_URL")
         self.key = os.environ.get("SUPABASE_ANON_KEY")
+        self.client = None
+        self._connection_in_progress = False
+        self._connection_thread = None
         
         print(f"[DB INIT] SUPABASE_URL present: {bool(self.url)}", flush=True)
         print(f"[DB INIT] SUPABASE_ANON_KEY present: {bool(self.key)}", flush=True)
@@ -24,54 +30,101 @@ class DatabaseManager:
             print(f"[DB INIT] SUPABASE_ANON_KEY length: {len(self.key)} chars", flush=True)
         
         if not self.url or not self.key:
-            print("[DB ERROR] SUPABASE_URL ou SUPABASE_ANON_KEY não encontradas no .env", flush=True)
+            print("[DB ERROR] SUPABASE_URL ou SUPABASE_ANON_KEY nao encontradas no .env", flush=True)
             self.client = None
         else:
+            # Start background connection immediately
+            print("[DB INIT] Starting background Supabase connection...", flush=True)
+            self.start_background_connection()
+    
+    def start_background_connection(self):
+        """Start Supabase connection in background thread (non-blocking)"""
+        if self._connection_in_progress or self.client is not None:
+            return
+        
+        import threading
+        
+        self._connection_in_progress = True
+        
+        def connect_async():
             try:
-                print("[DB INIT] Attempting to create Supabase client (with timeout)...", flush=True)
-                # Create client with timeout to avoid hanging
-                import signal
-                
-                def timeout_handler(signum, frame):
-                    raise TimeoutError("Supabase connection timeout")
-                
-                # Set timeout for Windows (using threading instead of signal)
-                import threading
-                
-                result = [None]
-                error = [None]
-                
-                def create_client_thread():
-                    try:
-                        result[0] = create_client(self.url, self.key)
-                    except Exception as e:
-                        error[0] = e
-                
-                thread = threading.Thread(target=create_client_thread, daemon=True)
-                thread.start()
-                thread.join(timeout=5.0)  # 5 second timeout
-                
-                if thread.is_alive():
-                    print("[DB WARN] Supabase connection timeout (5s) - continuing without DB", flush=True)
-                    self.client = None
-                elif error[0]:
-                    raise error[0]
-                else:
-                    self.client: Client = result[0]
-                    print(f"[DB] [OK] Conexao com Supabase estabelecida - URL: {self.url[:30]}...", flush=True)
-                    
+                print("[DB ASYNC] Connecting to Supabase in background...", flush=True)
+                from supabase import create_client as supabase_create_client
+                self.client = supabase_create_client(self.url, self.key)
+                print(f"[DB ASYNC] [OK] Supabase connected! URL: {self.url[:30]}...", flush=True)
             except Exception as e:
-                print(f"[DB ERROR] Falha ao conectar ao Supabase: {type(e).__name__}: {e}", flush=True)
-                import traceback
-                traceback.print_exc()
-                self.client = None
-                print("[DB WARN] Sistema continuará sem persistência em banco de dados", flush=True)
+                print(f"[DB ASYNC ERROR] Failed to connect: {type(e).__name__}: {e}", flush=True)
+            finally:
+                self._connection_in_progress = False
+        
+        self._connection_thread = threading.Thread(target=connect_async, daemon=True)
+        self._connection_thread.start()
+    
+    def is_connected(self) -> bool:
+        """Check if Supabase is connected (non-blocking)"""
+        return self.client is not None
+    
+    def is_connecting(self) -> bool:
+        """Check if connection is in progress"""
+        return self._connection_in_progress
+    
+    def _ensure_client(self, blocking: bool = False) -> bool:
+        """Check if client is ready. Non-blocking by default."""
+        if self.client is not None:
+            return True
+        
+        if not self.url or not self.key:
+            return False
+        
+        # If not blocking, just start background connection and return False
+        if not blocking:
+            if not self._connection_in_progress:
+                self.start_background_connection()
+            return False
+        
+        # Blocking mode: wait for connection (legacy behavior)
+        try:
+            print("[DB INIT] Lazy loading Supabase client (blocking)...", flush=True)
+            import threading
+            
+            result = [None]
+            error = [None]
+            
+            def create_client_thread():
+                try:
+                    from supabase import create_client as supabase_create_client
+                    result[0] = supabase_create_client(self.url, self.key)
+                except Exception as e:
+                    error[0] = e
+            
+            thread = threading.Thread(target=create_client_thread, daemon=True)
+            thread.start()
+            thread.join(timeout=30.0)  # 30 second timeout for blocking mode
+            
+            if thread.is_alive():
+                print("[DB WARN] Supabase connection timeout (30s) - continuing without DB", flush=True)
+                return False
+            elif error[0]:
+                print(f"[DB ERROR] Falha ao conectar ao Supabase: {type(error[0]).__name__}: {error[0]}", flush=True)
+                return False
+            else:
+                self.client = result[0]
+                print(f"[DB] [OK] Conexao com Supabase estabelecida - URL: {self.url[:30]}...", flush=True)
+                return True
+                
+        except Exception as e:
+            print(f"[DB ERROR] Falha ao conectar ao Supabase: {type(e).__name__}: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            self.client = None
+            print("[DB WARN] Sistema continuara sem persistencia em banco de dados", flush=True)
+            return False
 
     # --- Métodos para Sinais ---
 
     def save_signal(self, signal: Dict):
         """Salva ou atualiza um sinal no banco"""
-        if not self.client: return
+        if not self._ensure_client(): return
         
         try:
             # Prepara o payload simplificado para colunas e o completo para JSONB
@@ -100,7 +153,7 @@ class DatabaseManager:
 
     def get_active_signals(self) -> Dict[str, Dict]:
         """Recupera todos os sinais com status ACTIVE"""
-        if not self.client: return {}
+        if not self._ensure_client(): return {}
         
         try:
             response = self.client.table("signals").select("*").eq("status", "ACTIVE").execute()
@@ -123,7 +176,7 @@ class DatabaseManager:
             limit (int): Número máximo de registros
             hours_limit (int): Se > 0, retorna apenas sinais das últimas N horas
         """
-        if not self.client:
+        if not self._ensure_client():
             print("[DB] get_signal_history: client is None", flush=True)
             return []
         
@@ -191,7 +244,7 @@ class DatabaseManager:
 
     def count_labeled_signals(self) -> Dict:
         """Conta sinais por status para verificar dados disponíveis para ML"""
-        if not self.client: return {"total": 0, "tp_hit": 0, "sl_hit": 0, "expired": 0}
+        if not self._ensure_client(): return {"total": 0, "tp_hit": 0, "sl_hit": 0, "expired": 0}
         
         try:
             # Contagem por status
@@ -211,7 +264,7 @@ class DatabaseManager:
 
     def get_signals_with_features(self, limit: int = 500) -> List[Dict]:
         """Recupera sinais finalizados que possuem ai_features (otimizado para ML)"""
-        if not self.client: return []
+        if not self._ensure_client(): return []
         
         try:
             response = self.client.table("signals") \
@@ -231,7 +284,7 @@ class DatabaseManager:
 
     def save_trading_plan(self, data: Dict):
         """Salva o plano de trading do usuário"""
-        if not self.client: return
+        if not self._ensure_client(): return
         
         try:
             payload = {
@@ -244,7 +297,7 @@ class DatabaseManager:
 
     def get_trading_plan(self) -> Optional[Dict]:
         """Recupera o plano de trading do usuário"""
-        if not self.client: return None
+        if not self._ensure_client(): return None
         
         try:
             response = self.client.table("trading_plan").select("data").eq("user_id", "default_user").execute()

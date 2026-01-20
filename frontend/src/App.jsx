@@ -9,6 +9,7 @@ import AIAnalytics from './components/AIAnalytics';
 import MLPerformance from './components/MLPerformance';
 import LiveMonitor from './components/LiveMonitor';
 import SignalJourney from './components/SignalJourney';
+import JourneyHistory from './components/JourneyHistory';
 import SettingsPage from './components/SettingsPage';
 import { fetchSignals, fetchStats, fetchHistory, fetchBTCRegime } from './services/api';
 
@@ -145,6 +146,12 @@ export default function App() {
                             {currentPage === 'signal-journey' && (
                                 <SignalJourney
                                     signals={signals}
+                                    history={history}
+                                    loading={loading}
+                                />
+                            )}
+                            {currentPage === 'journey-history' && (
+                                <JourneyHistory
                                     history={history}
                                     loading={loading}
                                 />

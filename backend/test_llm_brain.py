@@ -15,16 +15,16 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 def test_llm_brain():
     print("=" * 60)
-    print("🧠 LLM Trading Brain Test")
+    print("LLM Trading Brain Test")
     print("=" * 60)
     
     # 1. Test import
     print("\n[1] Testing import...")
     try:
         from services.llm_trading_brain import LLMTradingBrain
-        print("✅ Import successful")
+        print("[OK] Import successful")
     except Exception as e:
-        print(f"❌ Import failed: {e}")
+        print(f"[FAIL] Import failed: {e}")
         return
     
     # 2. Test initialization
@@ -37,10 +37,10 @@ def test_llm_brain():
             "LLM_MIN_CONFIDENCE": LLM_MIN_CONFIDENCE
         }
         brain = LLMTradingBrain(config)
-        print(f"✅ Initialization successful")
+        print(f"[OK] Initialization successful")
         print(f"   Model enabled: {brain.is_enabled()}")
     except Exception as e:
-        print(f"❌ Initialization failed: {e}")
+        print(f"[FAIL] Initialization failed: {e}")
         return
     
     # 3. Test connection
@@ -49,12 +49,12 @@ def test_llm_brain():
         result = brain.test_connection()
         print(f"   Status: {result.get('status')}")
         if result.get('status') == 'OK':
-            print(f"✅ Connection successful")
+            print(f"[OK] Connection successful")
             print(f"   Response: {result.get('response', '')[:50]}...")
         else:
-            print(f"⚠️ Connection issue: {result.get('message')}")
+            print(f"[WARN] Connection issue: {result.get('message')}")
     except Exception as e:
-        print(f"❌ Connection test failed: {e}")
+        print(f"[FAIL] Connection test failed: {e}")
     
     # 4. Test signal validation
     print("\n[4] Testing signal validation...")
@@ -83,9 +83,9 @@ def test_llm_brain():
         print(f"   Confidence: {validation.get('confidence', 0):.0%}")
         print(f"   Action: {validation.get('suggested_action')}")
         print(f"   Reasoning: {validation.get('reasoning', '')[:60]}...")
-        print("✅ Validation test complete")
+        print("[OK] Validation test complete")
     except Exception as e:
-        print(f"❌ Validation test failed: {e}")
+        print(f"[FAIL] Validation test failed: {e}")
     
     # 5. Test TP optimization
     print("\n[5] Testing TP optimization...")
@@ -95,9 +95,9 @@ def test_llm_brain():
         print(f"   Suggested TP: {tp_result.get('suggested_tp_pct')}%")
         print(f"   Should adjust: {tp_result.get('should_adjust')}")
         print(f"   Reasoning: {tp_result.get('reasoning', '')[:50]}...")
-        print("✅ TP optimization test complete")
+        print("[OK] TP optimization test complete")
     except Exception as e:
-        print(f"❌ TP optimization test failed: {e}")
+        print(f"[FAIL] TP optimization test failed: {e}")
     
     # 6. Test exit analysis
     print("\n[6] Testing exit analysis...")
@@ -107,9 +107,9 @@ def test_llm_brain():
         print(f"   Action: {exit_result.get('action')}")
         print(f"   Confidence: {exit_result.get('confidence', 0):.0%}")
         print(f"   Reasoning: {exit_result.get('reasoning', '')[:50]}...")
-        print("✅ Exit analysis test complete")
+        print("[OK] Exit analysis test complete")
     except Exception as e:
-        print(f"❌ Exit analysis test failed: {e}")
+        print(f"[FAIL] Exit analysis test failed: {e}")
     
     # 7. Get status
     print("\n[7] Brain status:")
@@ -119,12 +119,12 @@ def test_llm_brain():
         print(f"   Model: {status.get('model')}")
         print(f"   Total requests: {status.get('stats', {}).get('total_requests', 0)}")
         print(f"   Cache hits: {status.get('stats', {}).get('cache_hits', 0)}")
-        print("✅ Status retrieved")
+        print("[OK] Status retrieved")
     except Exception as e:
-        print(f"❌ Status failed: {e}")
+        print(f"[FAIL] Status failed: {e}")
     
     print("\n" + "=" * 60)
-    print("🎉 All tests complete!")
+    print("[DONE] All tests complete!")
     print("=" * 60)
 
 if __name__ == "__main__":

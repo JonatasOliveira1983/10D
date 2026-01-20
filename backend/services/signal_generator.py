@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import pytz
 import sys
 import os
+from decimal import Decimal
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import (
@@ -23,6 +24,7 @@ from config import (
     ML_AUTO_RETRAIN_INTERVAL, ML_MODEL_PATH, ML_METRICS_PATH,
     ML_HYBRID_SCORE_WEIGHT, DECOUPLING_SCORE_BONUS,
     PARTIAL_TP_PERCENT, TRAILING_STOP_TRIGGER, TRAILING_STOP_DISTANCE, TARGET_SNIPER_6,
+    SNIPER_FORCE_TARGET, SNIPER_DECOUPLING_THRESHOLD, SNIPER_BEST_SCORE_THRESHOLD,
     LLM_ENABLED, LLM_MODEL, LLM_VALIDATE_SIGNALS, LLM_OPTIMIZE_TP,
     LLM_MONITOR_EXITS, LLM_CACHE_TTL_SECONDS, LLM_MIN_CONFIDENCE
 )
@@ -74,6 +76,16 @@ print("[SG] rag_memory imported OK", flush=True)
 # UTILITY FUNCTIONS (Module Level)
 # ============================================================================
 
+def _sanitize_obj(obj):
+    """Recursively convert Decimal to float and handle other non-serializable types"""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    elif isinstance(obj, dict):
+        return {k: _sanitize_obj(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_sanitize_obj(v) for v in obj]
+    return obj
+
 def round_step(price: float, step: float) -> float:
     """Round price to the nearest step size (tick size)"""
     if step <= 0:
@@ -110,7 +122,7 @@ class SignalGenerator:
                 print("[!] AVISO: ML esta habilitado mas o modelo ainda nao foi treinado.", flush=True)
                 print("="*80, flush=True)
                 print("\nO sistema vai funcionar em MODO FALLBACK (apenas regras, sem ML).", flush=True)
-                print("Quando houver 100+ amostras finalizadas, o modelo será treinado automaticamente.", flush=True)
+                print("Quando houver 100+ amostras finalizadas, o modelo sera treinado automaticamente.", flush=True)
                 print("="*80 + "\n", flush=True)
             else:
                 print("[ML] [OK] Modelo ML carregado com sucesso!", flush=True)
@@ -441,6 +453,23 @@ class SignalGenerator:
             best_signal["score"] += DECOUPLING_SCORE_BONUS
             print(f"[DECOUPLING BONUS] {symbol} score +{DECOUPLING_SCORE_BONUS} (decoupling: {decoupling_score:.2f})", flush=True)
         
+        # [SNIPER LOGIC] Determine if this signal qualifies for Sniper Mode (6% target)
+        is_sniper_signal = False
+        if self.current_btc_regime == "RANGING" and decoupling_score >= SNIPER_DECOUPLING_THRESHOLD:
+            is_sniper_signal = True
+            print(f"[SNIPER MODE] {symbol} (RANGING + Decoupled) -> Targeting 6%!", flush=True)
+        elif self.current_btc_regime in ["TRENDING", "BREAKOUT"] and best_signal["score"] >= SNIPER_BEST_SCORE_THRESHOLD:
+            is_sniper_signal = True
+            print(f"[SNIPER MODE] {symbol} (TRENDING + High Score) -> Targeting 6%!", flush=True)
+
+        # Get TP/SL targets (dynamic or sniper)
+        # FORCE SNIPER TARGET (6%+) for all approved signals to allow "Surf"
+        tp_pct, sl_pct = self.btc_tracker.get_dynamic_targets(self.current_btc_regime, force_sniper=is_sniper_signal)
+        
+        # Override to 6% if it's a sniper signal, ensuring consistency
+        if is_sniper_signal:
+            tp_pct = TARGET_SNIPER_6
+        
         if best_signal["direction"] == "LONG":
             stop_loss = current_price * (1 - sl_pct)
             take_profit = current_price * (1 + tp_pct)
@@ -508,6 +537,7 @@ class SignalGenerator:
             "ai_features": self._capture_ai_features(symbol, analysis, best_signal, decoupling_score),
             # BTC Regime Tracking
             "btc_regime": self.current_btc_regime,
+            "is_sniper": is_sniper_signal,
             "dynamic_targets": {
                 "tp_pct": round(tp_pct * 100, 2),
                 "sl_pct": round(sl_pct * 100, 2)
@@ -601,7 +631,57 @@ class SignalGenerator:
                     signal["llm_tp_suggestion"] = None
         
         return signal
-    
+    def _update_active_signals_prices(self):
+
+        """
+        Batch update current prices for all active signals.
+        This avoids N network calls in get_active_signals (read path).
+        """
+        if not self.active_signals:
+            return
+
+        try:
+            # Batch fetch all tickers (Bybit v5 supports category=linear)
+            # Fetching all is often faster than N individual calls
+            tickers = self.client.get_all_tickers()
+            
+            # Create a lookup map
+            price_map = {t["symbol"]: float(t["lastPrice"]) for t in tickers if "symbol" in t and "lastPrice" in t}
+            
+            # Update our active signals in memory
+            for symbol, signal in self.active_signals.items():
+                if symbol in price_map:
+                    current_price = price_map[symbol]
+                    signal["current_price"] = current_price # Store for frontend if needed
+                    
+                    # Recalculate entry zone
+                    entry_price = signal["entry_price"]
+                    direction = signal["direction"]
+                    
+                    dist_pct = (current_price - entry_price) / entry_price
+                    if direction == "SHORT": dist_pct = -dist_pct
+                    
+                    # Zone update logic
+                    if abs(dist_pct) <= ENTRY_ZONE_IDEAL:
+                        signal["entry_zone"] = "IDEAL"
+                    elif dist_pct < -ENTRY_ZONE_IDEAL:
+                        signal["entry_zone"] = "WAIT"
+                    elif dist_pct > ENTRY_ZONE_LATE:
+                        signal["entry_zone"] = "LATE"
+                    else:
+                        signal["entry_zone"] = "NEAR"
+                        
+                    # Also update ROI for display if needed
+                    if signal.get("status") not in ["TP_HIT", "SL_HIT"]:
+                         if direction == "LONG":
+                             roi = (current_price - entry_price) / entry_price
+                         else:
+                             roi = (entry_price - current_price) / entry_price
+                         signal["current_roi"] = roi * 100
+                         
+        except Exception as e:
+            print(f"[PRICE UPDATE ERROR] Failed to batch update prices: {e}", flush=True)
+
     def _capture_ai_features(self, symbol: str, analysis: Dict, best_signal: Dict, decoupling_score: float = 0.0) -> Dict:
         """
         Captura um instantâneo (snapshot) de métricas de mercado para treinamento de IA.
@@ -703,7 +783,19 @@ class SignalGenerator:
                         else:
                             # No ML: Apply original rule (score must be 100%)
                             if signal["score"] < 100:
-                                print(f"[SKIP] {symbol} score {signal['score']:.1f}% < 100%, não será monitorado", flush=True)
+                                print(f"[SKIP] {symbol} score {signal['score']:.1f}% < 100%, nao sera monitorado", flush=True)
+                                continue
+                        
+                        # [SNIPER FILTER] Enforce strict selection rules
+                        if self.current_btc_regime == "RANGING":
+                            # Only decoupled alts in Ranging
+                            if signal.get("decoupling_score", 0) < SNIPER_DECOUPLING_THRESHOLD:
+                                print(f"[SNIPER FILTER] {symbol} REJECTED: Low decoupling ({signal.get('decoupling_score', 0)}) in RANGING market.", flush=True)
+                                continue
+                        elif self.current_btc_regime in ["TRENDING", "BREAKOUT"]:
+                            # Only best scores in Trending
+                            if signal["score"] < SNIPER_BEST_SCORE_THRESHOLD:
+                                print(f"[SNIPER FILTER] {symbol} REJECTED: Score ({signal['score']:.1f}) < {SNIPER_BEST_SCORE_THRESHOLD} in TRENDING market.", flush=True)
                                 continue
                         
                         # LLM Intelligence Layer - additional validation (soft filter - logs warning but doesn't block)
@@ -714,7 +806,7 @@ class SignalGenerator:
                             llm_info = f" | LLM: {llm_conf:.0%}"
                             if not llm_val.get("approved") and llm_conf >= LLM_MIN_CONFIDENCE:
                                 # LLM disapproved but with good confidence - this is a warning
-                                print(f"[LLM WARNING] {symbol} - LLM não aprovou mas seguindo com sinal (conf: {llm_conf:.0%})", flush=True)
+                                print(f"[LLM WARNING] {symbol} - LLM nao aprovou mas seguindo com sinal (conf: {llm_conf:.0%})", flush=True)
                         
                         self.active_signals[symbol] = signal
                         new_signals.append(signal)
@@ -733,9 +825,18 @@ class SignalGenerator:
                 print(f"[SCAN ERROR] {symbol}: {e}", flush=True)
                 continue
         
+        # === BATCH PRICE UPDATE ===
+        # Update prices for all active signals (both new and old)
+        # This ensures get_active_signals is fast (no network calls)
+        self._update_active_signals_prices()
+        
         # Summary after scan
         active_count = len(self.active_signals)
         print(f"[SCAN] Complete. Found {len(new_signals)} new signals. Total active: {active_count}", flush=True)
+        
+        # Log why signals were skipped (to help user debugging)
+        if not new_signals and total_pairs > 0:
+             print(f"[SCAN INFO] Nenhum sinal novo atendeu aos critérios de Sniper ({self.current_btc_regime}). Filtros ativos: Score >= {SNIPER_BEST_SCORE_THRESHOLD if self.current_btc_regime != 'RANGING' else 'N/A'}, Decoupling >= {SNIPER_DECOUPLING_THRESHOLD if self.current_btc_regime == 'RANGING' else 'N/A'}", flush=True)
         
         # Check if ML model should be retrained
         if ML_ENABLED and self.ml_predictor and self.ml_predictor.should_retrain():
@@ -750,64 +851,49 @@ class SignalGenerator:
         return new_signals
     
     def get_active_signals(self) -> List[Dict]:
-        """Get all currently active signals with freshness check"""
+        """Get all currently active signals (Instant - No Network Calls)"""
         current_time = int(time.time() * 1000)
-        initial_count = len(self.active_signals)
         active_list = []
-        to_remove = []  # Collect symbols to remove to avoid dict modification during iteration
+        to_remove = []  # Collect symbols to remove
         
-        # We also need to update the entry zone for display
+        # Iterate over a COPY to avoid issues if other thread modifies
         for symbol, signal in list(self.active_signals.items()):
-            # 1. Freshness Check (Expire older than 2 hours)
+            # 1. Freshness Check (Expire older than TTL)
             minutes_active = (current_time - signal["timestamp"]) / (1000 * 60)
             if minutes_active > SIGNAL_TTL_MINUTES:
                 print(f"[AUTO-CLEANUP] Expiring {symbol} {int(minutes_active)}m old (descartado)", flush=True)
                 signal["status"] = "EXPIRED"
                 signal["exit_timestamp"] = current_time
-                self.save_signal_to_db(signal) # REGRA: Agora salvamos EXPIRED para análise de IA
+                self.save_signal_to_db(signal)
                 to_remove.append(symbol)
                 continue
             
-            # 2. Update Entry Zone (Best effort)
-            try:
-                # Get current price
-                ticker = self.client.get_ticker(symbol)
-                if ticker:
-                    current_price = ticker["lastPrice"]
-                    entry_price = signal["entry_price"]
-                    direction = signal["direction"]
-                    
-                    dist_pct = (current_price - entry_price) / entry_price
-                    if direction == "SHORT": dist_pct = -dist_pct
-                    
-                    # Missed Entry Check
-                    if dist_pct < -ENTRY_MISSED_PERCENT:
-                        print(f"[AUTO-CLEANUP] Expiring {symbol} (Missed Entry - descartado)", flush=True)
-                        signal["status"] = "EXPIRED"
-                        signal["exit_timestamp"] = current_time
-                        self.save_signal_to_db(signal) # REGRA: Salvar no DB para histórico completo
-                        to_remove.append(symbol)
-                        continue
-
-                    # Zone update
-                    if abs(dist_pct) <= ENTRY_ZONE_IDEAL:
-                        signal["entry_zone"] = "IDEAL"
-                    elif dist_pct < -ENTRY_ZONE_IDEAL:
-                        signal["entry_zone"] = "WAIT"
-                    elif dist_pct > ENTRY_ZONE_LATE:
-                        signal["entry_zone"] = "LATE"
-                    else:
-                        signal["entry_zone"] = "NEAR"
-            except Exception as e:
-                print(f"[ERROR] Updating zone for {symbol}: {e}", flush=True)
-                
-            active_list.append(signal)
+            # Check for Missed Entry (based on updated prices from background scan)
+            # If current_roi is significantly negative (price moved away) before entry?
+            # Or just rely on zone. If zone is WAIT for too long?
+            # For now, simplistic approach: if price moved > 1% away against us before triggering?
+            # Implementing "Missed Entry" logic requires tracking if it EVER entered entry zone.
+            # Keeping it simple: if it's LATE and very far, maybe expire?
+            # For now, just trust the _update_active_signals_prices logic for zone.
+            
+            if "entry_zone" not in signal:
+                signal["entry_zone"] = "NEAR" # Default
+            
+            # [SNIPER EXCLUSIVE] Double check filter for UI delivery
+            if signal.get("is_sniper", False):
+                active_list.append(signal)
+            else:
+                to_remove.append(symbol)
         
-        # Remove expired signals after iteration completes
-        for symbol in to_remove:
-            if symbol in self.active_signals:
-                del self.active_signals[symbol]
-        
+        # Remove expired or non-sniper
+        for sym in to_remove:
+            sig = self.active_signals.get(sym)
+            if sig:
+                sig["status"] = "DISCARDED"
+                sig["exit_timestamp"] = current_time
+                self.save_signal_to_db(sig)
+            self.active_signals.pop(sym, None)
+            
         # Custom sort: Entry Zone Priority (IDEAL > WAIT > NEAR > LATE) then by Score
         def sort_priority(sig):
             zone_weights = {"IDEAL": 4, "WAIT": 3, "NEAR": 2, "LATE": 1}
@@ -882,14 +968,48 @@ class SignalGenerator:
         pass
 
     def load_state(self):
-        """Load active signals and history from Supabase"""
-        try:
-            print("[LOAD] Recarregando estado do Supabase...", flush=True)
-            self.active_signals = self.db.get_active_signals()
-            self.signal_history = self.db.get_signal_history(limit=HISTORY_RETENTION_HOURS * 2) # Estimativa
-            print(f"[LOAD] Estado carregado: {len(self.active_signals)} ativos, {len(self.signal_history)} histórico", flush=True)
-        except Exception as e:
-            print(f"[LOAD ERROR] Falha ao carregar estado: {e}", flush=True)
+        """Load active signals and history from Supabase (non-blocking)"""
+        import threading
+        
+        def load_async():
+            try:
+                # Wait for DB to be ready (non-blocking check in loop)
+                max_wait = 60  # Wait up to 60 seconds
+                waited = 0
+                while not self.db.is_connected() and waited < max_wait:
+                    if not self.db.is_connecting():
+                        self.db.start_background_connection()
+                    time.sleep(1)
+                    waited += 1
+                
+                if not self.db.is_connected():
+                    print("[LOAD] DB not connected after 60s, continuing with empty state", flush=True)
+                    return
+                
+                print("[LOAD] Recarregando estado do Supabase...", flush=True)
+                loaded_active = self.db.get_active_signals()
+                loaded_history = self.db.get_signal_history(limit=HISTORY_RETENTION_HOURS * 2)
+                
+                # Merge loaded data with any in-memory data
+                for sym, sig in loaded_active.items():
+                    if sym not in self.active_signals:
+                        self.active_signals[sym] = _sanitize_obj(sig)
+                
+                # Merge history (avoid duplicates by ID)
+                existing_ids = {s.get("id") for s in self.signal_history}
+                for sig in loaded_history:
+                    if sig.get("id") not in existing_ids:
+                        self.signal_history.append(_sanitize_obj(sig))
+                
+                print(f"[LOAD] Estado carregado: {len(self.active_signals)} ativos, {len(self.signal_history)} historico", flush=True)
+            except Exception as e:
+                print(f"[LOAD ERROR] Falha ao carregar estado: {e}", flush=True)
+        
+        # Start background loading
+        print("[LOAD] Starting background state loading...", flush=True)
+        load_thread = threading.Thread(target=load_async, daemon=True)
+        load_thread.start()
+
 
     def monitor_active_signals(self):
         """Monitor active signals for TP, SL, or Volume Climax hits"""
@@ -918,6 +1038,16 @@ class SignalGenerator:
             tp = signal["take_profit"]
             sl = signal["stop_loss"]
             direction = signal["direction"]
+            is_sniper = signal.get("is_sniper", False)
+
+            # [SNIPER EXCLUSIVE] Immediately discard signals that are NOT sniper
+            if not is_sniper:
+                print(f"[MONITOR PURGE] {symbol} is NOT a Sniper signal. Removing from monitoring.", flush=True)
+                signal["status"] = "DISCARDED" # Permanent status for DB
+                signal["exit_timestamp"] = current_time
+                self.save_signal_to_db(signal)
+                del self.active_signals[symbol]
+                continue
             
             # Initialize hit flag for this iteration
             hit = False
@@ -987,22 +1117,29 @@ class SignalGenerator:
                         
                         action = exit_analysis.get("action", "HOLD")
                         if action == "EXIT" and exit_analysis.get("confidence", 0) >= LLM_MIN_CONFIDENCE:
-                            print(f"[LLM EXIT] [EXIT] {symbol} recomenda saída em {roi:.2f}%: {exit_analysis.get('reasoning', '')[:40]}", flush=True)
+                            print(f"[LLM EXIT] [EXIT] {symbol} recomenda saida em {roi:.2f}%: {exit_analysis.get('reasoning', '')[:40]}", flush=True)
                         elif action == "PARTIAL":
                             print(f"[LLM PARTIAL] {symbol} recomenda fechamento parcial em {roi:.2f}%", flush=True)
                     except Exception as e:
                         print(f"[LLM ERROR] Exit analysis failed for {symbol}: {e}", flush=True)
             
             # 2. Standard TP/SL Check (Real-time trigger)
-            # TP is now either the original OR the dynamic one from Trailing Stop
+            # [SURF LOGIC] If Trailing Stop is active, IGNORE the hard TP. 
+            # We let the Trailing Stop handle the exit to capture 10%+ moves.
+            trailing_active = signal.get("trailing_stop_active", False)
+            
             if direction == "LONG":
-                if current_price >= tp:
+                # Only check TP hit if NOT trailing
+                if not trailing_active and current_price >= tp:
                     hit, status = self._verify_with_klines(symbol, direction, entry_price, tp, sl)
-                elif current_price <= signal["stop_loss"]: # Check against possibly moved SL
-                    hit, status = True, "SL_HIT" # SL was hit
+                # Always check SL/Trailing Stop hit
+                elif current_price <= signal["stop_loss"]:
+                    hit, status = True, "SL_HIT"
             else: # SHORT
-                if current_price <= tp:
+                # Only check TP hit if NOT trailing
+                if not trailing_active and current_price <= tp:
                     hit, status = self._verify_with_klines(symbol, direction, entry_price, tp, sl)
+                # Always check SL/Trailing Stop hit
                 elif current_price >= signal["stop_loss"]:
                     hit, status = True, "SL_HIT"
             
@@ -1098,7 +1235,7 @@ class SignalGenerator:
                     try:
                         outcome = {"status": status, "roi": signal.get("final_roi", 0)}
                         self.rag_memory.add_memory(signal, outcome)
-                        print(f"[RAG] [MEMORY] Trade adicionado à memória: {symbol} {status} ({roi:.2f}%)", flush=True)
+                        print(f"[RAG] [MEMORY] Trade adicionado a memoria: {symbol} {status} ({roi:.2f}%)", flush=True)
                     except Exception as e:
                         print(f"[RAG] [WARN] Erro ao salvar na memória: {e}", flush=True)
                 
@@ -1201,5 +1338,9 @@ class SignalGenerator:
             "short_signals": short_count,
             "average_score": round(avg_score, 1),
             "total_historical": len(self.signal_history),
-            "signal_types": type_counts
+            "signal_types": type_counts,
+            "db_connected": self.db.is_connected(),
+            "db_connecting": self.db.is_connecting(),
+            "system_ready": self.system_ready
         }
+

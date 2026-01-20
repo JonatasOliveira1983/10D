@@ -1,4 +1,4 @@
-# 🚀 10D - Sistema de Sinais de Trading com IA (v3.0)
+# 🚀 10D - Sistema de Sinais de Trading com IA (v3.7)
 
 Sistema avançado de análise e geração de sinais para criptomoedas que monitora os **top 100 pares da Bybit** em tempo real, utilizando estratégias técnicas filtradas por tendência e **Machine Learning Autônomo** para otimização contínua.
 
@@ -80,7 +80,8 @@ Sinal Ativo → Monitor de Preço → Aplica Saídas Inteligentes → TP/SL
 - **Monitoramento em Tempo Real**: Verifica preço a cada 5 segundos.
 - ✅ **Partial Take Profit**: Ao atingir **2% de lucro**, o sistema move o Stop Loss para o **Preço de Entrada (Breakeven)**. Lucro protegido!
 - ✅ **Trailing Stop**: Ao atingir **3% de lucro**, o Trailing Stop é ativado. O SL segue o preço a uma distância de 1%.
-- ✅ **Sniper Target**: Foco em capturar correções ou explosões de até **6%**, surfando a tendência com o lucro travado.
+- ✅ **Surf Logic (NOVO)**: Ao ativar o Trailing Stop (em 3%), o sistema ignora o Take Profit fixo e deixa a operação correr para capturar movimentos de **10% a 15%+**.
+- ✅ **Sniper Target 6%**: Todos os sinais Sniper agora buscam um alvo inicial unificado de **6%**, com proteção de capital garantida.
 - **Expiração**: 2 horas de validade caso o preço não atinja os alvos.
 
 ### 6️⃣ **Finalização do Sinal**
@@ -197,7 +198,7 @@ cd frontend
 npm install
 npm run dev
 ```
-Frontend roda em: **http://localhost:3001**
+Frontend roda em: **http://localhost:3001** (Conforme configurado em `vite.config.js`)
 
 ---
 
@@ -279,6 +280,14 @@ ML_AUTO_RETRAIN_INTERVAL = 30 # Retreina a cada 30 novas amostras
 
 ---
 
+## Estratégia Sniper (BTC Regime)
+
+O sistema utiliza uma lógica avançada baseada no regime do Bitcoin para maximizar os lucros (Alvo de 6%+) e reduzir ruídos:
+
+- **BTC Lateral (Ranging)**: O sistema entra em modo Sniper apenas para moedas "desgrudadas" (Decoupling Score > 0.6). Sinais correlacionados são ignorados. Alvo: 6%.
+- **BTC em Tendência (Trending)**: Apenas sinais "Elite" com Score técnico de 100% e Probabilidade ML > 50% são aceitos. Alvo: 6%.
+- **Monitoramento Exclusivo**: Sinais que não atendem aos critérios Sniper são automaticamente descartados da memória e do banco de dados para focar apenas nas operações de alto ganho.
+
 ## 🐛 Troubleshooting
 
 ### Problema: Auditoria de IA sem dados
@@ -288,11 +297,31 @@ ML_AUTO_RETRAIN_INTERVAL = 30 # Retreina a cada 30 novas amostras
 **Solução:** Verifique variáveis de ambiente no Cloud Run ou `.env` local
 
 ### Problema: Frontend não carrega sinais
-**Solução:** Confirme que backend está rodando em `localhost:5001`
+**Solução:** Confirme que o backend está rodando em `localhost:5001`.
+
+### Problema: Erro 404 ao acessar localhost:3001 (Página não encontrada)
+**Solução:** 
+1. Verifique se o processo do Vite não travou em outra porta (ex: 3000).
+2. Verifique o arquivo `frontend/vite.config.js` e garanta que `server.port` está definido como `3001`.
+3. Tente matar processos antigos do Node: `taskkill /F /IM node.exe /T` (Windows).
+4. Limpe o cache do navegador (F5).
+
 
 ---
 
 ## 📝 Changelog
+
+### v3.7 (Jan 2026 - Surf Logic & Profit Max)
+- ✅ **Surf Logic**: Se o Trailing Stop estiver ativo, o TP fixo é ignorado para capturar 10%+ de lucro.
+- ✅ **Fast Breakeven**: SL movido para entrada automaticamente ao atingir 2% de ROI.
+- ✅ **Unified Sniper Target**: Alvo de 6% padrão para todos os sinais Sniper qualificados.
+- ✅ **Price Update Batch Fix**: Corrigido erro de sincronização de preços em lote para sinais ativos.
+
+### v3.6 (Jan 2026 - Stability & Windows Fixes)
+- ✅ **Council Stability**: Melhoria na detecção de "Rate Limit" do Gemini, evitando erros de processamento genéricos.
+- ✅ **Non-blocking Council**: O sistema não trava mais se a IA atingir limites de taxa; ele segue com fallback seguro.
+- ✅ **Windows Encoding Fix**: Remoção completa de caracteres não-ASCII e emojis de logs críticos para evitar crashes em terminais Windows.
+- ✅ **Improved Error Handling**: Lógica de erro do CouncilManager refinada para diferenciar falhas técnicas de rejeições de sinais.
 
 ### v3.5 (Jan 2026 - Sentiment Intelligence)
 - ✅ **Sentiment Analysis**: Novo motor que analisa o "humor do mercado" em tempo real.
