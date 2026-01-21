@@ -115,6 +115,7 @@ SCORE_LSR_CLEANUP = 10
 SCORE_ABSORPTION_CONFIRMED = 20
 SCORE_RSI_CROSSOVER_BTC = 25    # ALT RSI crosses above BTC RSI (decoupling)
 SCORE_LIQUIDITY_ALIGNED = 30    # Signal aligns with predicted liquidity hunt direction
+MIN_SCORE_TO_SAVE = 70          # Minimum score to save signal (Relaxed to 70 for Training)
 
 # =============================================================================
 # API SETTINGS
@@ -146,7 +147,7 @@ DEBUG = False  # Disabled to prevent auto-restart and state loss
 # =============================================================================
 
 ML_ENABLED = True
-ML_PROBABILITY_THRESHOLD = 0.50  # 50% minimum probability (Updated by user request)
+ML_PROBABILITY_THRESHOLD = 0.25  # 25% minimum probability (Training Mode)
 ML_MIN_SAMPLES = 100             # Minimum samples required to train model
 ML_AUTO_RETRAIN_INTERVAL = 30    # Retrain every 30 new finalized signals (more aggressive)
 ML_MODEL_PATH = "services/ml_model.pkl"

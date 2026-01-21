@@ -4,7 +4,7 @@ REST API for frontend communication and serving static files
 """
 
 # VERSION STAMP - to verify which code is running
-BUILD_VERSION = "2026-01-20-PT-BR-FIXED"
+BUILD_VERSION = "2026-01-21-v5.0-STABLE"
 
 
 
@@ -837,6 +837,55 @@ def manage_trading_plan():
         return jsonify({"success": False, "message": "No data found in Supabase"}), 404
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+
+
+# =============================================================================
+# Bankroll Management Routes
+# =============================================================================
+
+@app.route("/api/bankroll/status")
+def get_bankroll_status():
+    """Get active bankroll status"""
+    try:
+        if not generator.bankroll_manager:
+              return jsonify({"status": "DISABLED", "message": "Bankroll Manager disabled"}), 503
+        
+        status = generator.bankroll_manager.get_status()
+        return jsonify(sanitize_for_json(status if status else {}))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/bankroll/trades")
+def get_bankroll_trades():
+    """Get bankroll trades history"""
+    try:
+        limit = request.args.get("limit", 50, type=int)
+        # Fetch directly from DB via manager's connection for simplicity
+        res = generator.db.client.table("bankroll_trades").select("*").order("opened_at", desc=True).limit(limit).execute()
+        return jsonify(sanitize_for_json(res.data))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/bankroll/reset", methods=["POST"])
+def reset_bankroll():
+    """Reset simulation (Dev tool)"""
+    try:
+        # Reset bankroll_status to default
+        generator.db.client.table("bankroll_status").update({
+            "current_balance": 20.0,
+            "active_slots_used": 0,
+            "trade_count_cycle": 0
+        }).eq("id", 1).execute()
+        
+        # Clear trades (Simulated wipe)
+        try:
+             generator.db.client.table("bankroll_trades").delete().neq("symbol", "XYZ_PROTECT").execute()
+        except:
+             pass 
+        
+        return jsonify({"message": "Bankroll reset to $20.0"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # =============================================================================

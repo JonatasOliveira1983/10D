@@ -13,7 +13,7 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
         { id: 'dashboard', icon: <IconDashboard />, label: t('nav.invest'), mobileLabel: t('nav.invest') },
         { id: 'signal-journey', icon: <IconBrain />, label: t('nav.signalJourney'), mobileLabel: 'Journey' },
         { id: 'agents', icon: <IconAI />, label: 'Agentes', mobileLabel: 'Agentes' },
-        { id: 'organizer', icon: <IconOrganizer />, label: t('nav.organizer'), mobileLabel: '10M' },
+        { id: 'banca', icon: <IconOrganizer />, label: 'Banca', mobileLabel: 'Banca' },
     ];
 
     // Legacy AI menu items - kept for backwards compatibility but not shown
@@ -22,7 +22,7 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
     const tenMMenuItems = [
         { id: 'signal-journey', icon: <IconBrain />, label: t('nav.signalJourney') },
         { id: 'journey-history', icon: <IconHistory />, label: 'Histórico Journey' },
-        { id: 'organizer', icon: <IconOrganizer />, label: t('nav.organizer') },
+        { id: 'banca', icon: <IconOrganizer />, label: 'Banca' },
     ];
 
     // Close menus when clicking outside
@@ -168,33 +168,24 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
                     </div>
                 </button>
 
-                {/* Agentes */}
-                <button
-                    className={`mobile-nav-item ${currentPage === 'agents' ? 'active' : ''}`}
-                    onClick={() => onNavigate('agents')}
-                    title="Agentes"
-                >
-                    <div className="nav-icon-wrapper">
-                        <IconAI />
-                    </div>
-                </button>
 
-                {/* 10M - Com Submenu */}
+
+                {/* 10M - Banca Submenu */}
                 <button
-                    className={`mobile-nav-item ${(currentPage === 'live-monitor' || currentPage === 'organizer' || currentPage === 'history' || show10MMenu) ? 'active' : ''}`}
+                    className={`mobile-nav-item ${(currentPage === 'live-monitor' || currentPage === 'banca' || currentPage === 'history' || show10MMenu) ? 'active' : ''}`}
                     onClick={handle10MClick}
-                    title="10M"
+                    title="Banca"
                 >
                     <div className="nav-icon-wrapper">
                         <IconOrganizer />
                     </div>
                 </button>
 
-                {/* AI - Central Destacado - Navega direto para Signal Journey */}
+                {/* AI - Central Destacado - Agora vai para Agentes */}
                 <button
-                    className={`mobile-nav-item ai-central ${currentPage === 'signal-journey' ? 'active' : ''}`}
-                    onClick={() => onNavigate('signal-journey')}
-                    title="Signal Journey"
+                    className={`mobile-nav-item ai-central ${currentPage === 'agents' ? 'active' : ''}`}
+                    onClick={() => onNavigate('agents')}
+                    title="Agentes (Neural Network)"
                 >
                     <div className="nav-icon-wrapper-large">
                         <span className="ai-logo-text">AI</span>

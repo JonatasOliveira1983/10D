@@ -36,7 +36,8 @@ from config import (
     PARTIAL_TP_PERCENT, TRAILING_STOP_TRIGGER, TRAILING_STOP_DISTANCE, TARGET_SNIPER_6,
     SNIPER_FORCE_TARGET, SNIPER_DECOUPLING_THRESHOLD, SNIPER_BEST_SCORE_THRESHOLD,
     LLM_ENABLED, LLM_MODEL, LLM_VALIDATE_SIGNALS, LLM_OPTIMIZE_TP,
-    LLM_MONITOR_EXITS, LLM_CACHE_TTL_SECONDS, LLM_MIN_CONFIDENCE
+    LLM_MONITOR_EXITS, LLM_CACHE_TTL_SECONDS, LLM_MIN_CONFIDENCE,
+    MIN_SCORE_TO_SAVE
 )
 
 import json
@@ -85,7 +86,9 @@ from services.llm_agents.adaptive_bias_agent import AdaptiveBiasAgent
 from services.llm_agents.liquidity_sentinel_agent import LiquiditySentinelAgent
 from services.llm_agents.strategist_agent import StrategistAgent
 from services.llm_agents.portfolio_governor_agent import PortfolioGovernorAgent
+from services.llm_agents.portfolio_governor_agent import PortfolioGovernorAgent
 from services.llm_agents.global_anchor_agent import GlobalAnchorAgent
+from services.bankroll_manager import BankrollManager
 
 
 # ============================================================================
@@ -166,7 +169,12 @@ class SignalGenerator:
         # Initialize Intelligence Agents (Strategist, Governor, Anchor)
         self.strategist_agent = StrategistAgent()
         self.governor_agent = PortfolioGovernorAgent()
+        self.strategist_agent = StrategistAgent()
+        self.governor_agent = PortfolioGovernorAgent()
         self.anchor_agent = GlobalAnchorAgent()
+        
+        # Initialize Bankroll Manager (The Elite Simulator)
+        self.bankroll_manager = BankrollManager(self.db, self.client)
         
         # State for Intelligence
         self.global_macro_context = {"confidence_multiplier": 1.0, "global_sentiment": "NEUTRAL"}
@@ -827,20 +835,29 @@ class SignalGenerator:
                     # Check if we already have an active signal for this pair
                     if symbol not in self.active_signals:
                         # ML-Based Filtering (if ML enabled)
-                        if ML_ENABLED and self.ml_predictor and signal.get("ml_probability") is not None:
-                            # If ML probability is below threshold, block the signal
-                            if signal["ml_probability"] < ML_PROBABILITY_THRESHOLD:
-                                print(f"[ML FILTER] {symbol} probability {signal['ml_probability']:.2%} < {ML_PROBABILITY_THRESHOLD:.0%}, bloqueado", flush=True)
-                                continue
-                            # If ML approves (>= threshold), allow signal even if score < 100%
-                            print(f"[ML APPROVED] {symbol} - ML: {signal['ml_probability']:.2%} >= {ML_PROBABILITY_THRESHOLD:.0%}", flush=True)
-                        else:
-                            # No ML: Apply original rule (score must be 100%)
-                            if signal["score"] < 100:
-                                print(f"[SKIP] {symbol} score {signal['score']:.1f}% < 100%, nao sera monitorado", flush=True)
-                                continue
+                        ml_approved = False
                         
-                        if signal and signal["score"] >= SNIPER_BEST_SCORE_THRESHOLD:
+                        if ML_ENABLED and self.ml_predictor and signal.get("ml_probability") is not None:
+                            # If ML probability is below threshold, log it but check Technical Score as fallback
+                            if signal["ml_probability"] < ML_PROBABILITY_THRESHOLD:
+                                print(f"[ML FILTER] {symbol} probability {signal['ml_probability']:.2%} < {ML_PROBABILITY_THRESHOLD:.0%}, bloqueado temporariamente", flush=True)
+                                # IMPORTANT: For training purposes, we might want to let high technical score signals pass even if ML is unsure?
+                                # For now, we respect the ML lock.
+                                continue
+                            else:
+                                # ML Approves
+                                ml_approved = True
+                                print(f"[ML APPROVED] {symbol} - ML: {signal['ml_probability']:.2%} >= {ML_PROBABILITY_THRESHOLD:.0%}", flush=True)
+                        
+                        # Technical Score Check
+                        # [DATA COLLECTION] Use RAW Rules Score if available (don't let ML dilute it)
+                        raw_score = signal.get("score_breakdown", {}).get("rules_score", signal["score"])
+                        
+                        if raw_score < MIN_SCORE_TO_SAVE:
+                            print(f"[SKIP] {symbol} Raw Score {raw_score:.1f}% < {MIN_SCORE_TO_SAVE}%, nao sera monitorado", flush=True)
+                            continue
+                        
+                        if signal:
                         # 4. PORTFOLIO GOVERNANCE CHECK
                         # Before adding to active, check if Governor allows it
                             if LLM_ENABLED:
@@ -851,12 +868,17 @@ class SignalGenerator:
                                 )
                                 signal["governor_report"] = gov_res
                                 if not gov_res.get("authorized", True):
-                                    print(f"[GOVERNOR] 🚫 Signal {symbol} REJECTED: {gov_res.get('reasoning')}", flush=True)
-                                    continue
+                                    # [DATA COLLECTION MODE] Log warning but DO NOT BLOCK
+                                    print(f"[GOVERNOR] ⚠️ Signal {symbol} NOT AUTHORIZED (Soft Veto): {gov_res.get('reasoning')} - Proceeding for Data Collection", flush=True)
+                                    signal["governor_veto"] = True  # Tag it so we know it was vetoed
+                                    # continue  <-- DISABLED FOR TRAINING
                                 if gov_res.get("suggested_size_reduction", 0) > 0:
                                     print(f"[GOVERNOR] ⚠️ {symbol} size reduced by {gov_res.get('suggested_size_reduction')*100:.0f}%", flush=True)
 
                         # [SNIPER FILTER] Enforce strict selection rules
+                        # [DATA COLLECTION] Use RAW Score for Sniper check too (allow signals with high Technical but low ML)
+                        sniper_check_score = raw_score # Use the calculated raw_score from above
+                        
                         if self.current_btc_regime == "RANGING":
                             # Only decoupled alts in Ranging
                             if signal.get("decoupling_score", 0) < SNIPER_DECOUPLING_THRESHOLD:
@@ -864,8 +886,8 @@ class SignalGenerator:
                                 continue
                         elif self.current_btc_regime in ["TRENDING", "BREAKOUT"]:
                             # Only best scores in Trending
-                            if signal["score"] < SNIPER_BEST_SCORE_THRESHOLD:
-                                print(f"[SNIPER FILTER] {symbol} REJECTED: Score ({signal['score']:.1f}) < {SNIPER_BEST_SCORE_THRESHOLD} in TRENDING market.", flush=True)
+                            if sniper_check_score < SNIPER_BEST_SCORE_THRESHOLD:
+                                print(f"[SNIPER FILTER] {symbol} REJECTED: Score ({sniper_check_score:.1f}) < {SNIPER_BEST_SCORE_THRESHOLD} in TRENDING market.", flush=True)
                                 continue
                         
                         # LLM Intelligence Layer - additional validation (soft filter - logs warning but doesn't block)
@@ -883,10 +905,21 @@ class SignalGenerator:
                         sig_type = signal['signal_type'].replace('_', ' ')
                         ml_info = f" | ML: {signal['ml_probability']:.2%}" if signal.get('ml_probability') else ""
                         print(f"[NEW SIGNAL] {symbol} {signal['direction']} ({sig_type}) Score: {signal['score']:.1f}%{ml_info}{llm_info}", flush=True)
+                        
+                        # === BANKROLL MANAGER (SIMULATION) ===
+                        # Assess if this signal qualifies for the Elite Bankroll
+                        if self.bankroll_manager:
+                            self.bankroll_manager.assess_signal(signal)
+                            
                         self.save_signal_to_db(signal) # Save on new signal
                 
                 # Periodic cleanup of history (every scan)
                 self.cleanup_history()
+                
+                # Update Bankroll Positions (Simulation)
+                if self.bankroll_manager:
+                    # We pass empty dict for now, allowing manager to fetch what it needs
+                    self.bankroll_manager.update_positions({})
 
                 # === 5. STRATEGIST REFLECTION ===
                 # Every 20 scans or if history is fresh, run strategist

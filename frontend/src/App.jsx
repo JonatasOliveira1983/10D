@@ -3,7 +3,9 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import OpeningPage from './components/OpeningPage';
+
 import TradesOrganizerPage from './components/TradesOrganizer/TradesOrganizerPage';
+import BancaPage from './components/Banca/BancaPage'; // New Import
 import HistoryView from './components/HistoryView';
 import AIAnalytics from './components/AIAnalytics';
 import MLPerformance from './components/MLPerformance';
@@ -125,6 +127,9 @@ export default function App() {
                             )}
                             {currentPage === 'organizer' && (
                                 <TradesOrganizerPage />
+                            )}
+                            {currentPage === 'banca' && (
+                                <BancaPage />
                             )}
                             {currentPage === 'history' && (
                                 <HistoryView
