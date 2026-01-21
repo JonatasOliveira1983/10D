@@ -457,6 +457,12 @@ O sistema utiliza uma lógica avançada baseada no regime do Bitcoin para maximi
 - ✅ Feature: Logs aprimorados em `database_manager.py`
 - ✅ Feature: Build version tracking em produção
 
+### v4.0 (Jan 2026)
+- **New Agents View**: Dedicated page for monitoring AI agents in real-time.
+- **Mobile Responsive**: Full mobile support for Agents view and improved navigation.
+- **System Stability**: Various fixes for signal confirmation and backend reliability.
+- **Localization**: Complete PT-BR translation for UI and Agents.
+
 ### v1.0 (Dez 2025)
 - Lançamento inicial com 4 estratégias
 - Integração com Supabase

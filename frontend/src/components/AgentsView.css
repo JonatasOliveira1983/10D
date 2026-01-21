@@ -35,6 +35,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    white-space: nowrap;
 }
 
 .pulse {
@@ -65,7 +66,7 @@
 
 .agents-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1.5rem;
 }
 
@@ -87,11 +88,13 @@
     display: flex;
     gap: 1rem;
     margin-bottom: 1.5rem;
+    align-items: center;
 }
 
 .agent-icon {
     width: 48px;
     height: 48px;
+    min-width: 48px;
     background: rgba(0, 210, 255, 0.1);
     border-radius: 12px;
     display: flex;
@@ -217,5 +220,36 @@
 
     to {
         transform: rotate(360deg);
+    }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .agents-view {
+        padding: 1rem;
+        padding-bottom: 100px;
+        /* Space for bottom nav */
+    }
+
+    .agents-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .agents-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .status-badge {
+        align-self: flex-start;
+    }
+
+    .agents-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .agent-card {
+        padding: 1.25rem;
     }
 }

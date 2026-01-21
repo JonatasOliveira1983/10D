@@ -1,5 +1,5 @@
 """
-CryptoFastSignals - Configuration
+CryptoFastSignals - Configuration v4.0.0
 """
 
 # =============================================================================
