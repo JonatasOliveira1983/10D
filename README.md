@@ -232,10 +232,18 @@ GEMINI_API_KEY=sua_chave_gemini
 ### 2. Iniciar Backend
 
 ```powershell
+```powershell
 cd backend
+python -m venv venv
+# Windows:
+venv\Scripts\activate
+# Linux/Mac:
+source venv/bin/activate
+
 pip install -r requirements.txt
 python app.py
 ```
+> **Nota Importante:** Se encontrar erros como `ModuleNotFoundError: No module named 'dotenv'` ou `pytz`, certifique-se de que o ambiente virtual está ativo e rode `pip install -r requirements.txt` novamente.
 Backend roda em: **http://localhost:5001**
 
 ### 3. Iniciar Frontend
