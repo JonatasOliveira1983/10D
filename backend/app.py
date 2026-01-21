@@ -4,7 +4,7 @@ REST API for frontend communication and serving static files
 """
 
 # VERSION STAMP - to verify which code is running
-BUILD_VERSION = "2026-01-14-2227-SUPABASE-FIX"
+BUILD_VERSION = "2026-01-20-PT-BR-FIXED"
 
 
 
@@ -14,9 +14,14 @@ print(f"[DEBUG] ===== BUILD VERSION: {BUILD_VERSION} =====", flush=True)
 # FORCE UTF-8 STDOUT/STDERR FOR WINDOWS
 import os
 import io
-if os.name == 'nt':
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
+# Ensure UTF-8 output even if TextIOWrapper is already set (safe check)
+try:
+    if os.name == 'nt' and (not hasattr(sys.stdout, 'encoding') or sys.stdout.encoding.lower() != 'utf-8'):
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+except (AttributeError, io.UnsupportedOperation):
+    pass
 
 print("[DEBUG] app.py starting - before imports", flush=True)
 
@@ -44,6 +49,7 @@ from services.signal_generator import SignalGenerator
 from services.signal_generator import SignalGenerator
 from services.ai_analytics_service import AIAnalyticsService
 from services.news_service import news_service
+from services.health_monitor import HealthMonitor
 print("[DEBUG] SignalGenerator imported OK", flush=True)
 
 # Initialize Flask app
@@ -56,6 +62,8 @@ print("[DEBUG] Creating SignalGenerator instance...", flush=True)
 generator = SignalGenerator()
 # Initialize AI Analytics Service
 analytics_service = AIAnalyticsService(generator.db)
+# Initialize Health Monitor
+health_monitor = HealthMonitor(generator)
 
 # Background scanning flag
 scanning = False
@@ -110,6 +118,19 @@ def delayed_init():
     # Wait a few seconds for server to bind
     time.sleep(2)
     
+    # === NEW: Wait for DB connection (Max 30s) ===
+    print("[INIT] Waiting for Database connection...", flush=True)
+    wait_start = time.time()
+    while not generator.db.is_connected() and time.time() - wait_start < 30:
+        if not generator.db.is_connecting() and not generator.db.is_connected():
+            generator.db.start_background_connection()
+        time.sleep(1)
+    
+    if generator.db.is_connected():
+        print("[INIT] Database connected successfully!", flush=True)
+    else:
+        print("[INIT] [WARN] Database connection timeout - proceed with caution", flush=True)
+
     try:
         # === STEP 1: Initialize pairs (FAST) ===
         print(f"[INIT] Calling generator.initialize({PAIR_LIMIT})...", flush=True)
@@ -123,6 +144,9 @@ def delayed_init():
         scan_thread.start()
         print(f"[SCANNER] Started (interval: {UPDATE_INTERVAL_SECONDS}s)", flush=True)
 
+        # === NEW: Start System Health Monitor ===
+        health_monitor.start()
+
         # === STEP 3: Train ML model (SLOW/HEAVY) ===
         if ML_ENABLED and generator.ml_predictor:
             print("=" * 60, flush=True)
@@ -131,6 +155,11 @@ def delayed_init():
             
             # Always try to train/retrain at startup
             try:
+                # Get current labeled signals count for progress reporting
+                stats = generator.db.count_labeled_signals()
+                total_samples = stats.get("total", 0)
+                print(f"[ML STARTUP] Amostras rotuladas encontradas: {total_samples}/{ML_MIN_SAMPLES}", flush=True)
+
                 if not generator.ml_predictor.model:
                     print("[ML STARTUP] Nenhum modelo carregado. Iniciando treinamento...", flush=True)
                 else:
@@ -141,9 +170,11 @@ def delayed_init():
                 
                 if train_result.get("status") == "SUCCESS":
                     accuracy = train_result.get("metrics", {}).get("accuracy", 0)
+                    print(f"============================================================", flush=True)
                     print(f"[ML STARTUP] [OK] Modelo treinado com sucesso! Acc: {accuracy:.2%}", flush=True)
+                    print(f"============================================================", flush=True)
                 elif train_result.get("status") == "INSUFFICIENT_DATA":
-                    print(f"[ML STARTUP] [WARN] Dados insuficientes. Sistema em modo FALLBACK.", flush=True)
+                    print(f"[ML STARTUP] [WARN] Dados insuficientes ({total_samples}/{ML_MIN_SAMPLES}). Sistema em modo FALLBACK.", flush=True)
                 else:
                     print(f"[ML STARTUP] [ERROR] Erro no treinamento: {train_result}", flush=True)
             except Exception as e:
@@ -168,31 +199,6 @@ threading.Thread(target=delayed_init, daemon=True).start()
 
 
 # =============================================================================
-# Frontend Routes
-# =============================================================================
-
-@app.route("/")
-def serve_index():
-    """Serve the React frontend index.html"""
-    if os.path.exists(os.path.join(app.static_folder, 'index.html')):
-        return send_from_directory(app.static_folder, 'index.html')
-    else:
-        return jsonify({
-            "name": "10D Trading System",
-            "version": "1.0.0",
-            "status": "online",
-            "message": "Frontend not found. Please build it first."
-        })
-
-@app.errorhandler(404)
-def not_found(e):
-    """Catch-all for React Router paths"""
-    if os.path.exists(os.path.join(app.static_folder, 'index.html')):
-        return send_from_directory(app.static_folder, 'index.html')
-    return jsonify({"error": "Not found"}), 404
-
-
-# =============================================================================
 # API Routes
 # =============================================================================
 
@@ -206,6 +212,75 @@ def get_version():
         "api_secret_loaded": bool(os.environ.get("BYBIT_API_SECRET")),
         "status": "running"
     })
+
+
+@app.route("/api/system/health")
+def get_system_health():
+    """Get system health vitals and AI assessment"""
+    try:
+        return jsonify(health_monitor.get_full_report())
+    except Exception as e:
+        return jsonify({"status": "ERROR", "message": str(e)}), 500
+
+
+@app.route("/api/system/agents")
+def get_agents_status():
+    """Get status and metrics for all specialized agents"""
+    try:
+        # Aggregate data from core agents
+        agents = [
+            {
+                "id": "health_monitor",
+                "name": "Monitor de Saúde",
+                "status": "SAUDÁVEL",
+                "role": "Vitais do Sistema & Diagnóstico IA",
+                "last_action": "Checando CPU/Memória/DB"
+            },
+            {
+                "id": "scout",
+                "name": "Scout de Viés",
+                "status": "ATIVO",
+                "role": "Reação de Preço em Tempo Real",
+                "last_action": "Monitorando sinais ativos"
+            },
+            {
+                "id": "sentinel",
+                "name": "Sentinela de Liquidez",
+                "status": "ATIVO",
+                "role": "Fluxo de Ordens & Absorção",
+                "last_action": "Analisando CVD/OI"
+            },
+            {
+                "id": "strategist",
+                "name": "Estrategista Global",
+                "status": "ATIVO",
+                "role": "Aprendizado & Post-Mortem",
+                "report": generator.strategist_report,
+                "last_action": "Refletindo sobre histórico"
+            },
+            {
+                "id": "governor",
+                "name": "Governador de Portfólio",
+                "status": "ATIVO",
+                "role": "Correlação & Risco",
+                "last_action": "Autorizando novos sinais"
+            },
+            {
+                "id": "anchor",
+                "name": "Âncora Global",
+                "status": "ATIVO",
+                "role": "Contexto Macro (DXY/SP500)",
+                "context": generator.global_macro_context,
+                "last_action": "Definindo confiança global"
+            }
+        ]
+        return jsonify({
+            "status": "OK",
+            "agents": agents,
+            "system_readiness": generator.system_ready
+        })
+    except Exception as e:
+        return jsonify({"status": "ERROR", "message": str(e)}), 500
 
 
 @app.route("/api/pairs")
@@ -238,13 +313,7 @@ def get_signals():
         import traceback
         traceback.print_exc()
         print(f"[API ERROR] /api/signals failed: {e}", flush=True)
-        try:
-            print(f"[API DEBUG] First signal sample: {str(signals[0]) if signals else 'No signals'}", flush=True)
-        except:
-            pass
         return jsonify({"error": str(e)}), 500
-
-
 
 
 @app.route("/api/history")
@@ -255,6 +324,7 @@ def get_history():
         hours = request.args.get("hours", 0, type=int)
         
         history = generator.get_signal_history(limit=limit, hours_limit=hours)
+        print(f"[API] /api/history: limit={limit}, hours={hours} -> returning {len(history)} items", flush=True)
         return jsonify(sanitize_for_json({
             "history": history,
             "count": len(history)
@@ -262,6 +332,51 @@ def get_history():
     except Exception as e:
         print(f"[API ERROR] /api/history failed: {e}", flush=True)
         return jsonify({"error": str(e)}), 500
+
+@app.route("/api/debug/state")
+def debug_state():
+    """Debug route to check internal state"""
+    try:
+        return jsonify({
+            "active_count": len(generator.active_signals),
+            "history_count": len(generator.signal_history),
+            "monitored_pairs": len(generator.monitored_pairs),
+            "system_ready": generator.system_ready,
+            "db_connected": generator.db.is_connected(),
+            "sample_signal": generator.signal_history[0] if generator.signal_history else None
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# =============================================================================
+# Frontend Routes (Moved down to avoid shadowing API)
+# =============================================================================
+
+@app.route("/")
+def serve_index():
+    """Serve the React frontend index.html"""
+    if os.path.exists(os.path.join(app.static_folder, 'index.html')):
+        return send_from_directory(app.static_folder, 'index.html')
+    else:
+        return jsonify({
+            "name": "10D Trading System",
+            "version": "1.0.0",
+            "status": "online",
+            "message": "Frontend not found. Please build it first."
+        })
+
+@app.errorhandler(404)
+def not_found(e):
+    """Catch-all for React Router paths"""
+    # If the path starts with /api/, don't serve index.html, it's a real 404 for an API
+    if request.path.startswith('/api/'):
+        return jsonify({"error": "API route not found"}), 404
+
+    if os.path.exists(os.path.join(app.static_folder, 'index.html')):
+        return send_from_directory(app.static_folder, 'index.html')
+    return jsonify({"error": "Not found"}), 404
+
+
 
 
 @app.route("/api/stats")

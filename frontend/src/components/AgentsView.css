@@ -1,0 +1,221 @@
+.agents-view {
+    padding: 2rem;
+    color: white;
+}
+
+.agents-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 1.5rem;
+}
+
+.agents-header h1 {
+    font-size: 2rem;
+    background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    color: #8892b0;
+    font-size: 0.9rem;
+}
+
+.status-badge {
+    background: rgba(0, 210, 255, 0.1);
+    border: 1px solid rgba(0, 210, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pulse {
+    width: 8px;
+    height: 8px;
+    background: #00d2ff;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #00d2ff;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.95);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(0.95);
+        opacity: 0.5;
+    }
+}
+
+.agents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+.agent-card {
+    background: rgba(17, 25, 40, 0.75);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.125);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.agent-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(0, 210, 255, 0.4);
+}
+
+.agent-card-header {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.agent-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(0, 210, 255, 0.1);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #00d2ff;
+}
+
+.agent-info h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.2rem;
+}
+
+.status-tag {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.status-tag.healthy,
+.status-tag.active {
+    background: rgba(0, 255, 127, 0.1);
+    color: #00ff7f;
+}
+
+.agent-role,
+.agent-last-action {
+    margin-bottom: 1rem;
+}
+
+.agent-role label,
+.agent-last-action label {
+    font-size: 0.75rem;
+    color: #64ffda;
+    display: block;
+    margin-bottom: 0.3rem;
+    text-transform: uppercase;
+}
+
+.agent-role p,
+.agent-last-action p {
+    font-size: 0.9rem;
+    color: #ccd6f6;
+}
+
+.agent-thought {
+    margin-top: 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 1rem;
+    border-left: 3px solid #64ffda;
+}
+
+.thought-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: #64ffda;
+    margin-bottom: 0.5rem;
+}
+
+.agent-thought p {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    font-style: italic;
+    color: #a8b2d1;
+}
+
+.grade-badge {
+    margin-top: 0.5rem;
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    background: #64ffda;
+    color: #0a192f;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.75rem;
+}
+
+.macro-stats {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+}
+
+.multiplier {
+    color: #00d2ff;
+}
+
+.macro-summary {
+    margin-top: 0.5rem;
+}
+
+.agents-footer {
+    margin-top: 3rem;
+    text-align: center;
+    color: #8892b0;
+    font-size: 0.8rem;
+}
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 40vh;
+    gap: 1rem;
+}
+
+.spin {
+    animation: rotate 2s linear infinite;
+    color: #00d2ff;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

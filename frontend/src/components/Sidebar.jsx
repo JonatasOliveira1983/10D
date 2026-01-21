@@ -12,6 +12,7 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
     const menuItems = [
         { id: 'dashboard', icon: <IconDashboard />, label: t('nav.invest'), mobileLabel: t('nav.invest') },
         { id: 'signal-journey', icon: <IconBrain />, label: t('nav.signalJourney'), mobileLabel: 'Journey' },
+        { id: 'agents', icon: <IconAI />, label: 'Agentes', mobileLabel: 'Agentes' },
         { id: 'organizer', icon: <IconOrganizer />, label: t('nav.organizer'), mobileLabel: '10M' },
     ];
 
@@ -164,6 +165,17 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
                 >
                     <div className="nav-icon-wrapper">
                         <IconDashboard />
+                    </div>
+                </button>
+
+                {/* Agentes */}
+                <button
+                    className={`mobile-nav-item ${currentPage === 'agents' ? 'active' : ''}`}
+                    onClick={() => onNavigate('agents')}
+                    title="Agentes"
+                >
+                    <div className="nav-icon-wrapper">
+                        <IconAI />
                     </div>
                 </button>
 

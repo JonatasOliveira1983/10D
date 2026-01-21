@@ -78,7 +78,7 @@ TRAILING_STOP_DISTANCE = 0.01 # 1% (SL follows price at 1% distance)
 TARGET_SNIPER_6 = 0.06       # 6% Super Target
 SNIPER_FORCE_TARGET = 0.06   # Force 6% target in sniper mode
 SNIPER_DECOUPLING_THRESHOLD = 0.45 # Minimum decoupling for ranging sniper (Lowered from 0.6)
-SNIPER_BEST_SCORE_THRESHOLD = 85  # Minimum score for trending sniper (Lowered from 100)
+SNIPER_BEST_SCORE_THRESHOLD = 80  # Minimum score for trending sniper (Lowered from 85)
 
 # Signal Freshness Settings
 SIGNAL_TTL_MINUTES = 120     # 120 minutes for cleanup (2 hours)

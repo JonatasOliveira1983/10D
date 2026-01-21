@@ -11,6 +11,7 @@ import LiveMonitor from './components/LiveMonitor';
 import SignalJourney from './components/SignalJourney';
 import JourneyHistory from './components/JourneyHistory';
 import SettingsPage from './components/SettingsPage';
+import AgentsView from './components/AgentsView';
 import { fetchSignals, fetchStats, fetchHistory, fetchBTCRegime } from './services/api';
 
 const POLL_INTERVAL = 5000; // 5 seconds
@@ -161,6 +162,9 @@ export default function App() {
                                     theme={theme}
                                     onToggleTheme={toggleTheme}
                                 />
+                            )}
+                            {currentPage === 'agents' && (
+                                <AgentsView />
                             )}
                         </main>
                     </div>

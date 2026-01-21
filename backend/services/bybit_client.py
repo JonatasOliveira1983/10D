@@ -10,6 +10,15 @@ import hmac
 from typing import List, Dict, Optional
 import sys
 import os
+import io
+
+# FORCE UTF-8 STDOUT/STDERR FOR WINDOWS
+try:
+    if os.name == 'nt' and (not hasattr(sys.stdout, 'encoding') or sys.stdout.encoding.lower() != 'utf-8'):
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+except (AttributeError, io.UnsupportedOperation):
+    pass
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import BYBIT_BASE_URL, MIN_LEVERAGE, EXCLUDED_PAIRS

@@ -12,6 +12,16 @@ from datetime import datetime, timedelta
 import pytz
 import sys
 import os
+import io
+
+# FORCE UTF-8 STDOUT/STDERR FOR WINDOWS
+try:
+    if os.name == 'nt' and (not hasattr(sys.stdout, 'encoding') or sys.stdout.encoding.lower() != 'utf-8'):
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+except (AttributeError, io.UnsupportedOperation):
+    pass
+
 from decimal import Decimal
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -70,6 +80,12 @@ print("[SG] news_service imported OK", flush=True)
 print("[SG] Importing rag_memory...", flush=True)
 from services.rag_memory import RAGMemory
 print("[SG] rag_memory imported OK", flush=True)
+
+from services.llm_agents.adaptive_bias_agent import AdaptiveBiasAgent
+from services.llm_agents.liquidity_sentinel_agent import LiquiditySentinelAgent
+from services.llm_agents.strategist_agent import StrategistAgent
+from services.llm_agents.portfolio_governor_agent import PortfolioGovernorAgent
+from services.llm_agents.global_anchor_agent import GlobalAnchorAgent
 
 
 # ============================================================================
@@ -142,6 +158,21 @@ class SignalGenerator:
         # Initialize RAG Memory (Visual Memory Engine)
         self.rag_memory = RAGMemory(storage_path="data/memory_index.json")
         print("[RAG] [OK] RAG Memory Engine inicializado", flush=True)
+
+        # Initialize Specialized Agents (Scout & Sentinel)
+        self.scout_agent = AdaptiveBiasAgent()
+        self.sentinel_agent = LiquiditySentinelAgent()
+        
+        # Initialize Intelligence Agents (Strategist, Governor, Anchor)
+        self.strategist_agent = StrategistAgent()
+        self.governor_agent = PortfolioGovernorAgent()
+        self.anchor_agent = GlobalAnchorAgent()
+        
+        # State for Intelligence
+        self.global_macro_context = {"confidence_multiplier": 1.0, "global_sentiment": "NEUTRAL"}
+        self.strategist_report = {}
+        
+        print("[AGENTS] [OK] Intelligence Neural Layer inicializada", flush=True)
 
         # Initialize LLM Trading Brain (Gemini)
         if LLM_ENABLED:
@@ -735,15 +766,18 @@ class SignalGenerator:
             return {}
 
     def scan_all_pairs(self) -> List[Dict]:
-        """Scan all monitored pairs for signals"""
+        """Core engine: Scans all monitored pairs and generates signals"""
+        if not self.system_ready:
+            print("[SCAN] System not ready. Skipping.", flush=True)
+            return []
+
         new_signals = []
         total_pairs = len(self.monitored_pairs)
         
         print(f"[SCAN] Starting scan of {total_pairs} pairs...", flush=True)
         
         # Fetch BTC candles once for RS calculation
-        # Update market sentiment if needed
-        self._update_market_sentiment()
+        # Sentiment update moved to after regime detection
         
         try:
             self.current_btc_candles = self.client.get_klines("BTCUSDT", "30", 100)
@@ -761,6 +795,25 @@ class SignalGenerator:
         except Exception as e:
             print(f"[BTC REGIME] Error detecting regime: {e}", flush=True)
             self.current_btc_regime = "TRENDING"
+            
+        # Update market sentiment if needed
+        self._update_market_sentiment()
+
+        # === 1. MACRO ANCHOR ANALYSIS ===
+        # Run after regime detection to have BTC price and latest sentiment
+        if LLM_ENABLED:
+            try:
+                macro_data = {
+                    "btc_price": self.current_regime_details.get("current_price", 0),
+                    "market_sentiment": getattr(self, "market_sentiment", {}).get("sentiment", "NEUTRAL"),
+                    "dxy_trend": "STABLE",
+                    "sp500_status": "NORMAL"
+                }
+                anchor_res = self.anchor_agent.analyze_macro_context(macro_data, lambda p: self.llm_brain.call_gemini(p))
+                self.global_macro_context = anchor_res
+                print(f"[ANCHOR] Global Sentiment: {anchor_res.get('global_sentiment')} (Conf Multiplier: {anchor_res.get('confidence_multiplier')})", flush=True)
+            except Exception as e:
+                print(f"[ANCHOR ERROR] Macro analysis failed: {e}", flush=True)
             
         for i, symbol in enumerate(self.monitored_pairs):
             try:
@@ -787,6 +840,22 @@ class SignalGenerator:
                                 print(f"[SKIP] {symbol} score {signal['score']:.1f}% < 100%, nao sera monitorado", flush=True)
                                 continue
                         
+                        if signal and signal["score"] >= SNIPER_BEST_SCORE_THRESHOLD:
+                        # 4. PORTFOLIO GOVERNANCE CHECK
+                        # Before adding to active, check if Governor allows it
+                            if LLM_ENABLED:
+                                gov_res = self.governor_agent.authorize_trade(
+                                    signal, 
+                                    list(self.active_signals.values()), 
+                                    lambda p: self.llm_brain.call_gemini(p)
+                                )
+                                signal["governor_report"] = gov_res
+                                if not gov_res.get("authorized", True):
+                                    print(f"[GOVERNOR] 🚫 Signal {symbol} REJECTED: {gov_res.get('reasoning')}", flush=True)
+                                    continue
+                                if gov_res.get("suggested_size_reduction", 0) > 0:
+                                    print(f"[GOVERNOR] ⚠️ {symbol} size reduced by {gov_res.get('suggested_size_reduction')*100:.0f}%", flush=True)
+
                         # [SNIPER FILTER] Enforce strict selection rules
                         if self.current_btc_regime == "RANGING":
                             # Only decoupled alts in Ranging
@@ -818,6 +887,18 @@ class SignalGenerator:
                 
                 # Periodic cleanup of history (every scan)
                 self.cleanup_history()
+
+                # === 5. STRATEGIST REFLECTION ===
+                # Every 20 scans or if history is fresh, run strategist
+                if LLM_ENABLED and len(self.signal_history) >= 5:
+                    # Run roughly once an hour (assuming 3 min scans)
+                    if int(time.time()) % 20 == 0: 
+                        print("[STRATEGIST] 🧠 Running post-mortem analysis...", flush=True)
+                        report = self.strategist_agent.analyze_performance(
+                            self.signal_history, 
+                            lambda p: self.llm_brain.call_gemini(p)
+                        )
+                        self.strategist_report = report
 
                 # Small delay to avoid rate limiting
                 time.sleep(0.1)
@@ -905,12 +986,20 @@ class SignalGenerator:
     
     def get_signal_history(self, limit: int = 50, hours_limit: int = 0) -> List[Dict]:
         """Get signal history (most recent first) with optional time filtering"""
+        print(f"[SG] get_signal_history: limit={limit}, hours={hours_limit}. History Size: {len(self.signal_history)}", flush=True)
         filtered_history = self.signal_history
         
         if hours_limit > 0:
             current_time = int(time.time() * 1000)
             cutoff = current_time - (hours_limit * 60 * 60 * 1000)
             filtered_history = [s for s in self.signal_history if s.get("timestamp", 0) > cutoff]
+            print(f"[SG] Filtered history: {len(filtered_history)} signals", flush=True)
+            
+        # Fallback if empty
+        if not filtered_history and self.db.is_connected():
+            print("[SG] Memory empty, fetching from DB fallback...", flush=True)
+            db_history = self.db.get_signal_history(limit=limit, hours_limit=hours_limit)
+            return db_history
             
         return filtered_history[-limit:][::-1]
     
@@ -1101,28 +1190,57 @@ class SignalGenerator:
                     if not was_trailing:
                         print(f"[TRAILING] {symbol} activated at {roi:.2f}% - SL: ${signal['stop_loss']}", flush=True)
             
-            # --- LLM EXIT ANALYSIS ---
-            # Only check every few iterations to save rate limit (when ROI is significant)
-            if LLM_MONITOR_EXITS and self.llm_brain and roi >= 1.5:
+            # --- LLM MONITOR EXITS & TRAP DETECTION ---
+            # Only check every few iterations to save rate limit (when ROI is significant or trade is aging)
+            minutes_active = (current_time - signal["timestamp"]) / 60000
+            if LLM_MONITOR_EXITS and self.llm_brain and (roi >= 1.5 or minutes_active >= 5):
                 # Only analyze if we haven't checked recently (every ~5 minutes per signal)
                 last_llm_check = signal.get("last_llm_exit_check", 0)
                 if current_time - last_llm_check > 300000:  # 5 minutes
                     try:
+                        llm_func = lambda p: self.llm_brain.call_gemini(p)
+                        
+                        # A. Scout Analysis (Price Reaction)
+                        candles_1m = self.client.get_klines(symbol, "1", 10)
+                        scout_report = self.scout_agent.analyze_reaction(signal, candles_1m, llm_func)
+                        signal["scout_report"] = scout_report
+                        
+                        # B. Sentinel Analysis (Order Flow)
+                        # We capture current features as flow data
+                        flow_data = self._capture_ai_features(symbol, {"institutional": {}, "current_price": current_price}, signal)
+                        sentinel_report = self.sentinel_agent.analyze_order_flow(signal, flow_data, llm_func)
+                        signal["sentinel_report"] = sentinel_report
+                        
+                        signal["last_llm_exit_check"] = current_time
+                        
+                        # TRAP DETECTION LOGIC
+                        # If both agents are worried, or Sentinel sees ABORT_AND_FLIP
+                        if sentinel_report.get("action") == "ABORT_AND_FLIP" or \
+                           (scout_report.get("status") == "TRAP_DETECTED" and sentinel_report.get("trap_probability", 0) > 0.6):
+                            
+                            print(f"[TRAP DETECTED] ⚠️ Scout: {scout_report.get('status')} | Sentinel: {sentinel_report.get('flow_status')}", flush=True)
+                            print(f"[TRAP REASON] {sentinel_report.get('reasoning')}", flush=True)
+                            
+                            # TRIGGER FLIP
+                            self._trigger_signal_flip(signal, current_price)
+                            continue # Move to next signal, this one is flipped
+                        
+                        # Standard exit analysis (legacy)
                         market_momentum = {
                             "trend": "BULLISH" if roi > 0 else "BEARISH",
                             "volume_status": "NORMAL"
                         }
                         exit_analysis = self.llm_brain.analyze_exit_opportunity(signal, roi, market_momentum)
                         signal["llm_exit_analysis"] = exit_analysis
-                        signal["last_llm_exit_check"] = current_time
                         
                         action = exit_analysis.get("action", "HOLD")
                         if action == "EXIT" and exit_analysis.get("confidence", 0) >= LLM_MIN_CONFIDENCE:
                             print(f"[LLM EXIT] [EXIT] {symbol} recomenda saida em {roi:.2f}%: {exit_analysis.get('reasoning', '')[:40]}", flush=True)
                         elif action == "PARTIAL":
                             print(f"[LLM PARTIAL] {symbol} recomenda fechamento parcial em {roi:.2f}%", flush=True)
+                            
                     except Exception as e:
-                        print(f"[LLM ERROR] Exit analysis failed for {symbol}: {e}", flush=True)
+                        print(f"[LLM ERROR] Advanced monitoring failed for {symbol}: {e}", flush=True)
             
             # 2. Standard TP/SL Check (Real-time trigger)
             # [SURF LOGIC] If Trailing Stop is active, IGNORE the hard TP. 
@@ -1254,6 +1372,45 @@ class SignalGenerator:
                 
         return finalized
     
+    def _trigger_signal_flip(self, original_signal: Dict, current_price: float):
+        """
+        Triggers a 'Flip' (Stop and Reverse).
+        Closes the current bias and opens the opposite direction.
+        """
+        symbol = original_signal["symbol"]
+        old_direction = original_signal["direction"]
+        new_direction = "SHORT" if old_direction == "LONG" else "LONG"
+        
+        print(f"[FLIP] 🔄 Triggering FLIP on {symbol}: {old_direction} -> {new_direction}", flush=True)
+        
+        # 1. Close original signal in memory/DB
+        original_signal["status"] = "FLIPPED"
+        original_signal["exit_price"] = current_price
+        original_signal["exit_timestamp"] = int(time.time() * 1000)
+        self.save_signal_to_db(original_signal)
+        self.signal_history.append(original_signal)
+        
+        # 2. Analyze pair for new direction
+        # We manually construct a "Turbo Flip" signal based on the original's indicators
+        # but with the opposite bias.
+        new_signal = self.analyze_pair(symbol)
+        
+        if new_signal and new_signal["direction"] == new_direction:
+            # Add a tag to know it's a flip
+            new_signal["is_flip"] = True
+            new_signal["flip_from_id"] = original_signal["id"]
+            new_signal["score"] = max(new_signal["score"], 100) # Force high score for flips
+            
+            # Start monitoring new signal
+            self.active_signals[symbol] = new_signal
+            self.save_signal_to_db(new_signal)
+            print(f"[FLIP] [OK] New {new_direction} signal activated for {symbol} (Score: {new_signal['score']})", flush=True)
+        else:
+            # Fallback: remove from active if no valid flip found
+            if symbol in self.active_signals:
+                del self.active_signals[symbol]
+            print(f"[FLIP] [WARN] Could not find valid technical confirmation for {new_direction} flip on {symbol}.", flush=True)
+
     def _verify_with_klines(self, symbol: str, direction: str, entry: float, tp: float, sl: float) -> tuple:
         """
         Verifica se TP ou SL foi atingido e retorna o status apropriado.

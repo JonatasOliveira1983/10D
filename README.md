@@ -1,4 +1,4 @@
-# 🚀 10D - Sistema de Sinais de Trading com IA (v3.9)
+# 🚀 10D - Sistema de Sinais de Trading com IA (v4.0)
 
 Sistema avançado de análise e geração de sinais para criptomoedas que monitora os **top 100 pares da Bybit** em tempo real, utilizando estratégias técnicas filtradas por tendência e **Machine Learning Autônomo** para otimização contínua.
 
@@ -20,6 +20,12 @@ Bybit API → Market Data (30M + 4H)
 - Coleta candles de **30 minutos** (timeframe principal)
 - Coleta candles de **4 horas** (filtro de tendência)
 - Coleta métricas de derivativos: **Open Interest**, **Long/Short Ratio**, **CVD**
+
+#### 🌍 Localização e Idioma
+- **Interface Completa em Português (PT-BR):** Todos os agentes, métricas e insights são apresentados em português nativo.
+- **Raciocínio Adaptado:** Os agentes (Strategist, Governor, Anchor) foram instruídos a gerar pensamentos e relatórios diretamente em PT-BR.
+
+## 🛠️ Instalação e Uso
 
 ### 2️⃣ **Geração de Sinais (Signal Generator)**
 ```
@@ -83,6 +89,7 @@ Sinal Ativo → Monitor de Preço → Aplica Saídas Inteligentes → TP/SL
 - ✅ **Surf Logic (NOVO)**: Ao ativar o Trailing Stop (em 3%), o sistema ignora o Take Profit fixo e deixa a operação correr para capturar movimentos de **10% a 15%+**.
 - ✅ **Sniper Target 6%**: Todos os sinais Sniper agora buscam um alvo inicial unificado de **6%**, com proteção de capital garantida.
 - **Expiração**: 2 horas de validade caso o preço não atinja os alvos.
+- ✅ **Reversão de Posição (FLIP)**: Se o Scout e o Sentinel detectarem uma **Bull/Bear Trap**, o sistema executa um "Stop & Reverse", fechando a posição atual e abrindo uma na direção oposta para capturar o rompimento real.
 
 ### 6️⃣ **Finalização do Sinal & Relatórios**
 ```
@@ -183,6 +190,21 @@ O sinal morre quando bate no Stop (Normal ou Trailing) ou expira.
 
 ---
 
+## 🧠 Rede Neural de Agentes (Neural Agent Network)
+
+O 10D evoluiu para uma rede neural de agentes especializados que colaboram para maximizar a precisão:
+
+| Agente | Missão | Momento de Atuação |
+|--------|---------|-------------------|
+| **Scout (Batedor)** | Monitora a reação do preço e a força do viés. | Durante o Trade |
+| **Sentinel (Sentinela)** | Detecta absorção e manipulação institucional (Order Flow). | Durante o Trade |
+| **Strategist (Estrategista)** | Aprende com o histórico e faz o "Post-Mortem" das perdas. | Pós-Trade / Contínuo |
+| **Portfolio Governor** | Controla a correlação e impede exposição excessiva. | Pré-Trade |
+| **Global Anchor** | Sincroniza o sistema com o cenário Macro (DXY/SP500). | Global / Contínuo |
+| **Health Monitor** | Garante a integridade técnica (CPU/DB/API). | Infraestrutura |
+
+---
+
 ## 🛠️ Tecnologias
 
 | Camada | Tecnologia |
@@ -235,6 +257,10 @@ Frontend roda em: **http://localhost:3001** (Conforme configurado em `vite.confi
 - `GET /api/stats` - Estatísticas gerais
 - `POST /api/scan` - Forçar scan manual
 
+### Sistema & Agentes
+- `GET /api/system/health` - Vitals do sistema e diagnóstico de IA
+- `GET /api/system/agents` - Status, missões e reflexões de todos os agentes (Dashboard Agentes)
+
 ### AI Analytics
 - `GET /api/ai/analytics` - Correlações e performance
 - `GET /api/ai/progress` - Progresso da coleta (X/300)
@@ -260,7 +286,13 @@ Frontend roda em: **http://localhost:3001** (Conforme configurado em `vite.confi
 │       ├── database_manager.py     # CRUD Supabase
 │       ├── ai_analytics_service.py # Análise de performance
 │       ├── ml_training_bridge.py   # Treinamento ML
-│       └── ai_assistant_service.py # Mentor 10D (Gemini)
+│       ├── ai_assistant_service.py # Mentor 10D (Gemini)
+│       └── llm_agents/             # 🧠 Camada de Agentes Especializados
+│           ├── adaptive_bias_agent.py    # O Scout (Preço)
+│           ├── liquidity_sentinel_agent.py # O Sentinel (Fluxo)
+│           ├── strategist_agent.py       # O Estrategista (Learning)
+│           ├── portfolio_governor_agent.py # O Governor (Risco)
+│           └── global_anchor_agent.py    # O Anchor (Macro)
 ├── frontend/
 │   ├── src/
 │   │   ├── App.jsx                 # Roteamento principal
@@ -335,6 +367,13 @@ O sistema utiliza uma lógica avançada baseada no regime do Bitcoin para maximi
 ---
 
 ## 📝 Changelog
+
+### v4.0 (Jan 2026 - Neural Intelligence Phase)
+- ✅ **Neural Agent Network**: Implementação de 5 agentes especializados para gestão dinâmica (Scout, Sentinel, Strategist, Governor, Anchor).
+- ✅ **Flip Strategy (Stop & Reverse)**: Sistema agora detecta armadilhas institucionais (Traps) e inverte a posição para capturar o rompimento real.
+- ✅ **Agentes Dashboard**: Nova página no frontend para monitorar a saúde e o "pensamento" de cada agente em tempo real.
+- ✅ **Portfolio Governance**: Proteção contra correlação excessiva e gestão de exposição global.
+- ✅ **Global Anchor**: Integração de dados Macro (DXY, SP500) para ajuste dinâmico de confiança.
 
 ### v3.9 (Jan 2026 - Experience Refinement)
 - ✅ **Decision Reports**: Narrativas geradas automaticamente ao fechar sinais, consolidando o "porquê" de cada trade.
