@@ -24,7 +24,7 @@ steps:
       - '--min-instances'
       - '1'
       - '--memory'
-      - '512Mi'
+      - '1Gi'
       - '--cpu'
       - '1'
 
