@@ -4,6 +4,7 @@ import './AgentsView.css';
 
 export default function AgentsView() {
     const [agents, setAgents] = useState([]);
+    const [councilDebate, setCouncilDebate] = useState(null);
     const [loading, setLoading] = useState(true);
     const [lastUpdate, setLastUpdate] = useState(null);
 
@@ -13,6 +14,7 @@ export default function AgentsView() {
             const data = await response.json();
             if (data.status === 'OK') {
                 setAgents(data.agents);
+                setCouncilDebate(data.council_debate);
                 setLastUpdate(new Date().toLocaleTimeString());
             }
             setLoading(false);
@@ -36,6 +38,7 @@ export default function AgentsView() {
             case 'strategist': return <Cpu size={24} />;
             case 'governor': return <Shield size={24} className="text-warning" />;
             case 'anchor': return <Globe size={24} />;
+            case 'elite_manager': return <Zap size={24} className="text-emerald-400" />;
             default: return <Activity size={24} />;
         }
     };
@@ -108,8 +111,66 @@ export default function AgentsView() {
                                     <p className="macro-summary">{agent.context.summary}</p>
                                 </div>
                             )}
+
+                            {agent.id === 'elite_manager' && agent.learning && (
+                                <div className="agent-thought elite">
+                                    <div className="thought-header">
+                                        <Zap size={16} />
+                                        <span>Status de Sniper</span>
+                                    </div>
+                                    <div className="elite-stats">
+                                        <div className="stat-row">
+                                            <span>XP: {agent.learning.experience_points}</span>
+                                            <span className="strategy">{agent.learning.current_strategy}</span>
+                                        </div>
+                                        <div className="xp-bar">
+                                            <div className="xp-fill" style={{ width: `${(agent.learning.experience_points % 100)}%` }}></div>
+                                        </div>
+                                    </div>
+                                    <p className="elite-reflection">{agent.learning.last_reflection}</p>
+                                </div>
+                            )}
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* COUNCIL DEBATE AUDIT SECTION */}
+            {councilDebate && (
+                <div className="council-audit-section fade-in">
+                    <div className="audit-header">
+                        <MessageSquare size={24} className="text-violet-400" />
+                        <h2>Última Deliberação do Conselho</h2>
+                        <span className="audit-badge">Auditoria em Tempo Real</span>
+                    </div>
+
+                    <div className="debate-grid">
+                        <div className="debate-transcript">
+                            <div className="transcript-header">Razão da Decisão: {councilDebate.approved ? '✅ Aprovado' : '❌ Rejeitado'}</div>
+                            <p className="reasoning-text">"{councilDebate.reasoning}"</p>
+                            <div className="confidence-meter">
+                                <span>Confiança do Conselho</span>
+                                <div className="meter-bar">
+                                    <div className="meter-fill" style={{ width: `${councilDebate.confidence * 100}%` }}></div>
+                                </div>
+                                <span className="conf-pct">{(councilDebate.confidence * 100).toFixed(0)}%</span>
+                            </div>
+                        </div>
+
+                        <div className="votes-summary">
+                            <h3>Votos Individuais</h3>
+                            <div className="votes-list">
+                                {councilDebate.vote_breakdown && Object.entries(councilDebate.vote_breakdown).map(([agent, verdict]) => (
+                                    <div key={agent} className="agent-vote">
+                                        <span className="agent-name">{agent.toUpperCase()}</span>
+                                        <span className={`vote-tag ${verdict === 'APPROVED' ? 'approved' : 'rejected'}`}>
+                                            {verdict === 'APPROVED' ? 'Sim' : 'Não'}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 

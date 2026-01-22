@@ -60,7 +60,8 @@ class BTCRegimeTracker:
     def __init__(self):
         self.current_regime = "TRENDING"  # Default
         self.regime_history = []  # Track regime changes
-        self.last_24h_low = None
+        self.last_24h_high = 0.0
+        self.last_24h_low = 0.0
         self.last_24h_change = 0.0
         
     def detect_regime(

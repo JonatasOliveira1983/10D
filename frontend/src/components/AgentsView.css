@@ -253,3 +253,365 @@
         padding: 1.25rem;
     }
 }
+
+/* Small phones */
+@media (max-width: 480px) {
+    .agents-view {
+        padding: 0.75rem;
+        padding-bottom: 90px;
+    }
+
+    .agents-header {
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+        padding-bottom: 1rem;
+    }
+
+    .agents-header h1 {
+        font-size: 1.25rem;
+    }
+
+    .subtitle {
+        font-size: 0.75rem;
+    }
+
+    .status-badge {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.7rem;
+    }
+
+    .pulse {
+        width: 6px;
+        height: 6px;
+    }
+
+    .agents-grid {
+        gap: 1rem;
+    }
+
+    .agent-card {
+        padding: 1rem;
+        border-radius: 0.75rem;
+    }
+
+    .agent-card-header {
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .agent-icon {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        border-radius: 10px;
+    }
+
+    .agent-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .agent-info h3 {
+        font-size: 0.95rem;
+    }
+
+    .status-tag {
+        font-size: 0.6rem;
+        padding: 0.15rem 0.4rem;
+    }
+
+    .agent-role label,
+    .agent-last-action label {
+        font-size: 0.65rem;
+    }
+
+    .agent-role p,
+    .agent-last-action p {
+        font-size: 0.8rem;
+    }
+
+    .agent-role,
+    .agent-last-action {
+        margin-bottom: 0.75rem;
+    }
+
+    .agent-thought {
+        margin-top: 1rem;
+        padding: 0.75rem;
+    }
+
+    .thought-header {
+        font-size: 0.7rem;
+        gap: 0.35rem;
+    }
+
+    .thought-header svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .agent-thought p {
+        font-size: 0.75rem;
+        line-height: 1.35;
+    }
+
+    .grade-badge {
+        padding: 0.15rem 0.5rem;
+        font-size: 0.65rem;
+    }
+
+    .macro-stats {
+        font-size: 0.85rem;
+    }
+
+    .multiplier {
+        font-size: 0.8rem;
+    }
+
+    .macro-summary {
+        font-size: 0.75rem !important;
+    }
+
+    .agents-footer {
+        margin-top: 2rem;
+        font-size: 0.7rem;
+    }
+
+    .loading-container {
+        height: 30vh;
+    }
+
+    .loading-container svg {
+        width: 36px;
+        height: 36px;
+    }
+
+    .loading-container p {
+        font-size: 0.85rem;
+    }
+}
+
+/* Extra small phones */
+@media (max-width: 380px) {
+    .agents-view {
+        padding: 0.5rem;
+        padding-bottom: 95px;
+    }
+
+    .agents-header h1 {
+        font-size: 1.1rem;
+    }
+
+    .subtitle {
+        font-size: 0.7rem;
+        display: none;
+    }
+
+    .status-badge {
+        font-size: 0.65rem;
+        padding: 0.3rem 0.6rem;
+    }
+
+    .agent-card {
+        padding: 0.875rem;
+    }
+
+    .agent-icon {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+    }
+
+    .agent-info h3 {
+        font-size: 0.85rem;
+    }
+
+    .agent-role p,
+    .agent-last-action p {
+        font-size: 0.75rem;
+    }
+
+    .agent-thought {
+        padding: 0.6rem;
+    }
+
+    .agent-thought p {
+        font-size: 0.7rem;
+    }
+}
+
+/* NEW: Council Audit Section */
+.council-audit-section {
+    margin-top: 4rem;
+    background: rgba(43, 30, 70, 0.2);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 1.5rem;
+    padding: 2rem;
+    backdrop-filter: blur(20px);
+}
+
+.audit-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.audit-header h2 {
+    font-size: 1.5rem;
+    color: #f8f9fa;
+    margin: 0;
+}
+
+.audit-badge {
+    background: rgba(139, 92, 246, 0.2);
+    color: #a78bfa;
+    padding: 0.3rem 0.8rem;
+    border-radius: 2rem;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.debate-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+}
+
+.debate-transcript {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.transcript-header {
+    font-weight: bold;
+    color: #64ffda;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.reasoning-text {
+    line-height: 1.6;
+    color: #ccd6f6;
+    margin-bottom: 1.5rem;
+    font-style: italic;
+}
+
+.confidence-meter {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.9rem;
+    color: #a8b2d1;
+}
+
+.meter-bar {
+    flex: 1;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.meter-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #8b5cf6, #d946ef);
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+
+.conf-pct {
+    font-weight: bold;
+    color: #8b5cf6;
+}
+
+.votes-summary h3 {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    color: #8892b0;
+}
+
+.agent-vote {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+}
+
+.agent-name {
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #8892b0;
+}
+
+.vote-tag {
+    font-size: 0.7rem;
+    font-weight: bold;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+}
+
+.vote-tag.approved {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.vote-tag.rejected {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+/* Elite Agent Specific */
+.agent-thought.elite {
+    border-left-color: #10b981;
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.elite-stats {
+    margin-bottom: 1rem;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.strategy {
+    color: #10b981;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+}
+
+.xp-bar {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #34d399);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+.elite-reflection {
+    font-size: 0.8rem !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .debate-grid {
+        grid-template-columns: 1fr;
+    }
+}

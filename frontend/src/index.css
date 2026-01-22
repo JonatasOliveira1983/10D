@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* =============================================================================
    CryptoFastSignals - Design System with Light/Dark Theme
    ============================================================================= */
@@ -2358,6 +2362,7 @@ body {
   background: rgba(239, 68, 68, 0.2) !important;
   box-shadow: 0 0 15px rgba(239, 68, 68, 0.3) !important;
 }
+
 /* Institutional Hunger Index (IHI) - LED Dots Style */
 .hunger-index-mini {
   display: flex;
@@ -2399,6 +2404,493 @@ body {
 }
 
 @keyframes ledPulse {
-  from { opacity: 0.6; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1.1); }
+  from {
+    opacity: 0.6;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+/* =============================================================================
+   RESPONSIVE IMPROVEMENTS FOR SMALL PHONES (480px and below)
+   ============================================================================= */
+
+@media (max-width: 768px) {
+
+  /* Reduce main content padding */
+  .main-content {
+    padding: var(--space-sm);
+    padding-bottom: 80px;
+    /* Space for mobile nav */
+  }
+
+  /* Header improvements */
+  .header {
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .header-logo {
+    height: 28px;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+  }
+
+  .header-stats {
+    gap: var(--space-md);
+  }
+
+  .stat-value {
+    font-size: 1.1rem;
+  }
+
+  .stat-label {
+    font-size: 0.65rem;
+  }
+
+  /* BTC Regime Mobile */
+  .btc-regime-indicator {
+    padding: var(--space-xs) var(--space-sm);
+  }
+
+  .btc-regime-indicator .regime-targets {
+    display: none;
+  }
+
+  /* Dashboard */
+  .dashboard {
+    gap: var(--space-md);
+  }
+
+  .section-title {
+    font-size: 1rem;
+  }
+
+  /* Signal Grid - 1 column on mobile */
+  .signals-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-sm);
+  }
+
+  /* Signal Card Mobile */
+  .signal-card {
+    padding: var(--space-md);
+  }
+
+  .symbol-name {
+    font-size: 1.1rem;
+  }
+
+  .direction-badge {
+    font-size: 9px;
+    padding: 2px 8px;
+  }
+
+  .price-info {
+    gap: var(--space-xs);
+  }
+
+  .price-item {
+    padding: var(--space-xs);
+  }
+
+  .price-label {
+    font-size: 0.6rem;
+  }
+
+  .price-value {
+    font-size: 0.8rem;
+  }
+
+  .price-value.entry-large {
+    font-size: 1rem;
+  }
+
+  /* Confirmations badges smaller */
+  .confirmations {
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .confirmation-badge {
+    font-size: 0.65rem;
+    padding: 2px 4px;
+  }
+
+  /* SR Info */
+  .sr-info {
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+  }
+
+  .sr-zone,
+  .sr-alignment {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+  }
+
+  /* Sidebar hidden on mobile - bottom nav used instead */
+  .sidebar {
+    display: none;
+  }
+
+  .app-main {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 480px) {
+
+  /* Even more compact for very small screens */
+  .main-content {
+    padding: var(--space-xs);
+    padding-bottom: 85px;
+  }
+
+  .header {
+    padding: 8px 12px;
+  }
+
+  .header-logo {
+    height: 24px;
+  }
+
+  .header-stats {
+    gap: 8px;
+  }
+
+  .stat-value {
+    font-size: 0.95rem;
+  }
+
+  .stat-label.hide-mobile {
+    display: none;
+  }
+
+  /* Signal Card Ultra Compact */
+  .signal-card {
+    padding: 12px;
+    border-radius: var(--radius-md);
+  }
+
+  .card-header {
+    margin-bottom: var(--space-sm);
+  }
+
+  .symbol-name {
+    font-size: 1rem;
+  }
+
+  .symbol-meta {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .direction-badge,
+  .status-badge,
+  .regime-badge {
+    font-size: 8px;
+    padding: 2px 6px;
+  }
+
+  /* Unified Score Badge */
+  .unified-score-badge {
+    font-size: 0.75rem;
+  }
+
+  .score-ml-row {
+    gap: 4px;
+  }
+
+  .ml-label {
+    font-size: 0.6rem;
+  }
+
+  .ml-value,
+  .score-value-inline {
+    font-size: 0.8rem;
+  }
+
+  /* Price info 2 columns instead of 3 */
+  .price-info {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .price-item {
+    padding: 6px;
+  }
+
+  .price-label {
+    font-size: 0.55rem;
+    margin-bottom: 2px;
+  }
+
+  .price-value {
+    font-size: 0.75rem;
+  }
+
+  .price-value.entry-large {
+    font-size: 0.9rem;
+  }
+
+  /* Entry Zone Badge */
+  .entry-zone-badge {
+    font-size: 8px;
+    padding: 2px 6px;
+  }
+
+  .entry-zone-badge .dot {
+    width: 4px;
+    height: 4px;
+  }
+
+  /* Confirmations ultra compact */
+  .confirmations {
+    gap: 3px;
+    margin-top: var(--space-sm);
+  }
+
+  .confirmation-badge {
+    font-size: 0.6rem;
+    padding: 2px 4px;
+    border-radius: 3px;
+  }
+
+  .confirmation-badge .icon {
+    font-size: 0.55rem;
+  }
+
+  /* Hunger Index Mini */
+  .hunger-index-mini {
+    padding-left: 4px;
+    margin-left: 4px;
+  }
+
+  .hunger-dot {
+    width: 4px;
+    height: 4px;
+  }
+
+  .hunger-status {
+    font-size: 0.55rem !important;
+  }
+
+  /* SR Info */
+  .sr-info {
+    margin-top: var(--space-sm);
+  }
+
+  .sr-zone,
+  .sr-alignment {
+    font-size: 0.6rem;
+    padding: 2px 4px;
+  }
+
+  /* Timestamp */
+  .timestamp-highlight {
+    font-size: 0.7rem;
+    padding: 4px 8px;
+  }
+
+  /* Empty State */
+  .empty-state {
+    padding: var(--space-lg);
+  }
+
+  .empty-icon-circle {
+    width: 48px;
+    height: 48px;
+  }
+
+  .empty-title {
+    font-size: 1rem;
+  }
+
+  .empty-text {
+    font-size: 0.8rem;
+  }
+
+  /* Loading State */
+  .loading {
+    padding: var(--space-lg);
+  }
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+  }
+
+  .loading-text {
+    font-size: 0.85rem;
+  }
+}
+
+/* Extra small devices (very small phones) */
+@media (max-width: 380px) {
+  .main-content {
+    padding: 4px;
+    padding-bottom: 90px;
+  }
+
+  .header-content {
+    gap: var(--space-xs);
+  }
+
+  .header-logo {
+    height: 20px;
+  }
+
+  .header-stats {
+    gap: 6px;
+  }
+
+  .stat-value {
+    font-size: 0.85rem;
+  }
+
+  /* BTC Regime - hide entirely on very small screens */
+  .btc-regime-indicator {
+    display: none;
+  }
+
+  /* Signal card - maximum compression */
+  .signal-card {
+    padding: 10px;
+  }
+
+  .card-header {
+    margin-bottom: 8px;
+  }
+
+  .symbol-name {
+    font-size: 0.9rem;
+  }
+
+  .direction-badge,
+  .status-badge {
+    font-size: 7px;
+    padding: 1px 5px;
+  }
+
+  .price-info {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .price-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 8px;
+  }
+
+  .price-label {
+    margin-bottom: 0;
+  }
+
+  .price-value.entry-large {
+    font-size: 0.85rem;
+  }
+
+  /* Hide some confirmations on very small screens */
+  .confirmation-badge:nth-child(n+5) {
+    display: none;
+  }
+
+  /* Pagination Mobile */
+  .pagination-controls {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .pagination-btn {
+    width: 100%;
+    padding: 8px 16px;
+    font-size: 0.8rem;
+  }
+
+  .pagination-info {
+    font-size: 0.75rem;
+    text-align: center;
+  }
+}
+
+/* Mobile Bottom Nav Optimization - Small Screen Adjustments Only */
+@media (max-width: 480px) {
+  .mobile-nav {
+    height: 60px;
+    padding: 4px 0;
+  }
+
+  .mobile-nav-item {
+    min-width: 44px;
+    padding: var(--space-xs);
+  }
+
+  .mobile-nav-item.ai-central .nav-icon-wrapper-large {
+    width: 48px;
+    height: 48px;
+    top: -6px;
+  }
+
+  .mobile-nav-item.ai-central .nav-icon-wrapper-large .ai-logo-text {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .mobile-nav {
+    height: 56px;
+    padding: 2px 0;
+  }
+
+  .mobile-nav-item {
+    min-width: 40px;
+    padding: 4px;
+  }
+
+  .mobile-nav-item .nav-icon-wrapper svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .mobile-nav-item.ai-central .nav-icon-wrapper-large {
+    width: 44px;
+    height: 44px;
+    top: -4px;
+  }
+
+  .mobile-nav-item.ai-central .nav-icon-wrapper-large .ai-logo-text {
+    font-size: 1.1rem;
+  }
+}
+
+/* Desktop-only class utility */
+.desktop-only {
+  display: flex;
+}
+
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+/* Hide mobile only on desktop */
+.mobile-only {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: flex;
+  }
 }

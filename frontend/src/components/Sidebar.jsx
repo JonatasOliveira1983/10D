@@ -4,57 +4,51 @@ import { IconDashboard, IconOrganizer, IconHistory, IconSettings, IconSun, IconM
 
 export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme, onLogout }) {
     const { t } = useTranslation();
-    const [showAIMenu, setShowAIMenu] = useState(false);
+    const [showMLMenu, setShowMLMenu] = useState(false);
     const [show10MMenu, setShow10MMenu] = useState(false);
-    const aiMenuRef = useRef(null);
+    const mlMenuRef = useRef(null);
     const tenMMenuRef = useRef(null);
 
     const menuItems = [
-        { id: 'dashboard', icon: <IconDashboard />, label: t('nav.invest'), mobileLabel: t('nav.invest') },
+        { id: 'dashboard', icon: <IconBrain />, label: t('nav.invest'), mobileLabel: 'M.L' },
         { id: 'signal-journey', icon: <IconBrain />, label: t('nav.signalJourney'), mobileLabel: 'Journey' },
+        { id: 'journey-history', icon: <IconHistory />, label: t('nav.journeyHistory'), mobileLabel: 'Histórico' },
         { id: 'agents', icon: <IconAI />, label: 'Agentes', mobileLabel: 'Agentes' },
         { id: 'banca', icon: <IconOrganizer />, label: 'Banca', mobileLabel: 'Banca' },
-    ];
-
-    // Legacy AI menu items - kept for backwards compatibility but not shown
-    const aiMenuItems = [];
-
-    const tenMMenuItems = [
-        { id: 'signal-journey', icon: <IconBrain />, label: t('nav.signalJourney') },
-        { id: 'journey-history', icon: <IconHistory />, label: 'Histórico Journey' },
-        { id: 'banca', icon: <IconOrganizer />, label: 'Banca' },
     ];
 
     // Close menus when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (aiMenuRef.current && !aiMenuRef.current.contains(event.target)) {
-                setShowAIMenu(false);
+            if (mlMenuRef.current && !mlMenuRef.current.contains(event.target)) {
+                setShowMLMenu(false);
             }
             if (tenMMenuRef.current && !tenMMenuRef.current.contains(event.target)) {
                 setShow10MMenu(false);
             }
         };
 
-        if (showAIMenu || show10MMenu) {
+        if (showMLMenu || show10MMenu) {
             document.addEventListener('mousedown', handleClickOutside);
             return () => document.removeEventListener('mousedown', handleClickOutside);
         }
-    }, [showAIMenu, show10MMenu]);
+    }, [showMLMenu, show10MMenu]);
 
-    const handleAIClick = () => {
-        setShowAIMenu(!showAIMenu);
+    const handleMLClick = () => {
+        setShowMLMenu(!showMLMenu);
         setShow10MMenu(false);
+        if (!showMLMenu) onNavigate('dashboard');
     };
 
     const handle10MClick = () => {
         setShow10MMenu(!show10MMenu);
-        setShowAIMenu(false);
+        setShowMLMenu(false);
+        if (!show10MMenu) onNavigate('banca');
     };
 
-    const handleAIItemClick = (id) => {
+    const handleMLItemClick = (id) => {
         onNavigate(id);
-        setShowAIMenu(false);
+        setShowMLMenu(false);
     };
 
     const handle10MItemClick = (id) => {
@@ -85,19 +79,7 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
                         </button>
                     ))}
 
-                    {aiMenuItems.map(item => (
-                        <button
-                            key={item.id}
-                            className={`nav-item ${currentPage === item.id ? 'active' : ''}`}
-                            onClick={() => onNavigate(item.id)}
-                            title={item.label}
-                        >
-                            <div className="nav-icon-wrapper">
-                                {item.icon}
-                            </div>
-                            <span className="nav-label">{item.label}</span>
-                        </button>
-                    ))}
+                    <div className="sidebar-divider" style={{ margin: '1rem 0', borderTop: '1px solid rgba(255,255,255,0.05)' }}></div>
 
                     <button
                         className={`nav-item ${currentPage === 'settings' ? 'active' : ''}`}
@@ -108,17 +90,6 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
                             <IconSettings />
                         </div>
                         <span className="nav-label">Configurações</span>
-                    </button>
-
-                    <button
-                        className={`nav-item ${currentPage === 'journey-history' ? 'active' : ''}`}
-                        onClick={() => onNavigate('journey-history')}
-                        title="Histórico Journey"
-                    >
-                        <div className="nav-icon-wrapper">
-                            <IconHistory />
-                        </div>
-                        <span className="nav-label">Histórico Journey</span>
                     </button>
                 </nav>
 
@@ -145,11 +116,11 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
             </aside>
 
             {/* Backdrop for submenus */}
-            {(showAIMenu || show10MMenu) && (
+            {(showMLMenu || show10MMenu) && (
                 <div
                     className="mobile-submenu-backdrop"
                     onClick={() => {
-                        setShowAIMenu(false);
+                        setShowMLMenu(false);
                         setShow10MMenu(false);
                     }}
                 />
@@ -157,23 +128,21 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
 
             {/* Mobile Bottom Navigation */}
             <nav className="mobile-nav">
-                {/* Invest */}
+                {/* ML Máquina de Aprendizado */}
                 <button
-                    className={`mobile-nav-item ${currentPage === 'dashboard' ? 'active' : ''}`}
-                    onClick={() => onNavigate('dashboard')}
-                    title="Invest"
+                    className={`mobile-nav-item ${(currentPage === 'dashboard' || currentPage === 'signal-journey' || currentPage === 'journey-history' || showMLMenu) ? 'active' : ''}`}
+                    onClick={handleMLClick}
+                    title="M.L Máquina"
                 >
                     <div className="nav-icon-wrapper">
-                        <IconDashboard />
+                        <IconBrain />
                     </div>
                 </button>
 
-
-
-                {/* 10M - Banca Submenu */}
+                {/* Banca */}
                 <button
-                    className={`mobile-nav-item ${(currentPage === 'live-monitor' || currentPage === 'banca' || currentPage === 'history' || show10MMenu) ? 'active' : ''}`}
-                    onClick={handle10MClick}
+                    className={`mobile-nav-item ${currentPage === 'banca' ? 'active' : ''}`}
+                    onClick={() => onNavigate('banca')}
                     title="Banca"
                 >
                     <div className="nav-icon-wrapper">
@@ -181,11 +150,11 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
                     </div>
                 </button>
 
-                {/* AI - Central Destacado - Agora vai para Agentes */}
+                {/* AI - Central Destacado - Agentes */}
                 <button
                     className={`mobile-nav-item ai-central ${currentPage === 'agents' ? 'active' : ''}`}
                     onClick={() => onNavigate('agents')}
-                    title="Agentes (Neural Network)"
+                    title="Agentes"
                 >
                     <div className="nav-icon-wrapper-large">
                         <span className="ai-logo-text">AI</span>
@@ -215,39 +184,30 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
                 </button>
             </nav>
 
-            {/* AI Submenu */}
-            {showAIMenu && (
-                <div className="mobile-submenu ai-submenu" ref={aiMenuRef}>
+            {/* ML Submenu (Mobile) */}
+            {showMLMenu && (
+                <div className="mobile-submenu ml-submenu" ref={mlMenuRef}>
                     <button
-                        className={`submenu-item ${currentPage === 'ai' ? 'active' : ''}`}
-                        onClick={() => handleAIItemClick('ai')}
-                    >
-                        <IconAI />
-                        <span>Auditoria IA</span>
-                    </button>
-                    <button
-                        className={`submenu-item ${currentPage === 'ml' ? 'active' : ''}`}
-                        onClick={() => handleAIItemClick('ml')}
+                        className={`submenu-item ${currentPage === 'dashboard' ? 'active' : ''}`}
+                        onClick={() => handleMLItemClick('dashboard')}
                     >
                         <IconBrain />
-                        <span>ML Performance</span>
+                        <span>M.L Máquina</span>
                     </button>
-                </div>
-            )}
-
-            {/* 10M Submenu */}
-            {show10MMenu && (
-                <div className="mobile-submenu tenm-submenu" ref={tenMMenuRef}>
-                    {tenMMenuItems.map(item => (
-                        <button
-                            key={item.id}
-                            className={`submenu-item ${currentPage === item.id ? 'active' : ''}`}
-                            onClick={() => handle10MItemClick(item.id)}
-                        >
-                            {item.icon}
-                            <span>{item.label}</span>
-                        </button>
-                    ))}
+                    <button
+                        className={`submenu-item ${currentPage === 'signal-journey' ? 'active' : ''}`}
+                        onClick={() => handleMLItemClick('signal-journey')}
+                    >
+                        <IconBrain />
+                        <span>Signal Journey</span>
+                    </button>
+                    <button
+                        className={`submenu-item ${currentPage === 'journey-history' ? 'active' : ''}`}
+                        onClick={() => handleMLItemClick('journey-history')}
+                    >
+                        <IconHistory />
+                        <span>Histórico Journey</span>
+                    </button>
                 </div>
             )}
         </>

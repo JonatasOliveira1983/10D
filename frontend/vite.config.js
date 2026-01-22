@@ -27,6 +27,12 @@ export default defineConfig({
                         type: 'image/png'
                     }
                 ]
+            },
+            workbox: {
+                // Ensure service-worker.js in public is used or generated properly
+                cleanupOutdatedCaches: true,
+                skipWaiting: true,
+                clientsClaim: true
             }
         })
     ],

@@ -668,3 +668,148 @@
         grid-template-columns: repeat(2, 1fr);
     }
 }
+
+/* Extra small phones */
+@media (max-width: 380px) {
+    .history-view {
+        gap: var(--space-sm);
+    }
+
+    .history-header {
+        padding: var(--space-sm);
+    }
+
+    .history-header::before {
+        width: 3px;
+    }
+
+    .history-icon-wrapper {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+    }
+
+    .history-icon-wrapper svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .history-title-text h2 {
+        font-size: 1rem;
+    }
+
+    .history-title-text p {
+        font-size: 0.7rem;
+        display: none;
+    }
+
+    .history-title-section {
+        gap: 10px;
+    }
+
+    .history-stats-resume {
+        padding: 8px 10px;
+        gap: 8px;
+    }
+
+    .resume-label {
+        font-size: 0.6rem;
+    }
+
+    .resume-value {
+        font-size: 0.9rem;
+    }
+
+    .resume-divider {
+        height: 18px;
+    }
+
+    .history-controls-container {
+        gap: 10px;
+        margin-bottom: var(--space-md);
+    }
+
+    .history-search-input {
+        padding: 8px 10px 8px 36px;
+        font-size: 0.8rem;
+    }
+
+    .search-icon {
+        left: 10px;
+        width: 14px;
+        height: 14px;
+    }
+
+    .history-filter-tabs {
+        gap: 4px;
+        padding: 3px;
+    }
+
+    .h-tab {
+        padding: 5px 10px;
+        font-size: 0.7rem;
+    }
+
+    .history-empty {
+        padding: var(--space-lg);
+        min-height: 200px;
+    }
+
+    .empty-icon-circle {
+        width: 48px;
+        height: 48px;
+    }
+
+    .history-empty h3 {
+        font-size: 0.9rem;
+    }
+
+    .history-empty p {
+        font-size: 0.75rem;
+    }
+
+    .pagination-controls {
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px;
+    }
+
+    .pagination-btn {
+        width: 100%;
+        padding: 8px 14px;
+        font-size: 0.75rem;
+    }
+
+    .pagination-info {
+        font-size: 0.7rem;
+    }
+
+    .report-indicators-group {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+    }
+
+    .mini-stat {
+        padding: 6px;
+    }
+
+    .mini-label {
+        font-size: 0.55rem;
+    }
+
+    .mini-value {
+        font-size: 0.75rem;
+    }
+
+    .report-title {
+        font-size: 0.85rem;
+    }
+
+    .report-label {
+        font-size: 0.65rem;
+    }
+
+    .report-text {
+        font-size: 0.75rem;
+    }
+}

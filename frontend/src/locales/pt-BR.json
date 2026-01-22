@@ -1,7 +1,8 @@
 {
     "nav": {
-        "invest": "Invest",
+        "invest": "M.L Máquina de Aprendizado",
         "signalJourney": "Signal Journey",
+        "journeyHistory": "Histórico Journey",
         "organizer": "Organizador",
         "settings": "Configurações"
     },

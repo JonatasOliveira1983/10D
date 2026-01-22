@@ -176,6 +176,11 @@ class SignalGenerator:
         # Initialize Bankroll Manager (The Elite Simulator)
         self.bankroll_manager = BankrollManager(self.db, self.client)
         
+    def set_push_service(self, push_service):
+        """Inject push service into relevant managers"""
+        self.bankroll_manager.push_service = push_service
+        print("[SG] PushService injected into BankrollManager", flush=True)
+        
         # State for Intelligence
         self.global_macro_context = {"confidence_multiplier": 1.0, "global_sentiment": "NEUTRAL"}
         self.strategist_report = {}
@@ -279,6 +284,7 @@ class SignalGenerator:
         
         # Collect all potential signals
         potential_signals = []
+        best_signal = None
         
         # === SIGNAL TYPE 1: EMA Crossover ===
         ema_signal = analysis["ema"]["signal"]
@@ -472,6 +478,11 @@ class SignalGenerator:
         # Select the BEST signal (highest score)
         best_signal = max(scored_signals, key=lambda x: x["score"])
         
+        # === NEW: MULTI-TIMEFRAME (MTF) CONFLUENCE ===
+        # For Elite Banca signals, we monitor higher timeframes to capture real rompimentos
+        mtf_confluence = self._check_mtf_confluence(symbol, trend_4h)
+        best_signal["mtf_confluence"] = mtf_confluence
+        
         # Calculate SL and TP DYNAMICALLY based on BTC regime
         tp_pct, sl_pct = self.btc_tracker.get_dynamic_targets(self.current_btc_regime)
         
@@ -583,9 +594,8 @@ class SignalGenerator:
                 "sl_pct": round(sl_pct * 100, 2)
             },
             "decoupling_score": round(decoupling_score, 3) if decoupling_score > 0 else None,
-            "highest_roi": 0.0,
-            "partial_tp_hit": False,
-            "trailing_stop_active": False
+            "trailing_stop_active": False,
+            "mtf_confluence": best_signal.get("mtf_confluence")
         }
         
         # === ML PREDICTION INTEGRATION ===
@@ -636,6 +646,9 @@ class SignalGenerator:
                     llm_validation = self.llm_brain.validate_signal_context(signal, market_context)
                     signal["llm_validation"] = llm_validation
                     
+                    # Store for UI (AI Page Audit)
+                    self.last_council_debate = llm_validation
+                    
                     if llm_validation.get("approved"):
                         print(f"[LLM] [OK] {symbol} aprovado (conf: {llm_validation.get('confidence', 0):.0%})", flush=True)
                     else:
@@ -670,7 +683,63 @@ class SignalGenerator:
                     print(f"[LLM ERROR] TP optimization failed for {symbol}: {e}", flush=True)
                     signal["llm_tp_suggestion"] = None
         
+        # === EAGLE ELITE TAGGING ===
+        # If signal has high score and MTF confluence, tag it as Eagle Elite
+        mtf_data = signal.get("mtf_confluence", {})
+        mtf_score = mtf_data.get("total_score", 0)
+        
+        if signal["score"] >= 70:
+            print(f"[MTF] {symbol} Confluence Score: {mtf_score}/3", flush=True)
+
+        if signal["score"] >= 65 and mtf_score >= 1:
+            signal["is_eagle_elite"] = True
+            print(f"[EAGLE ELITE] 🦅 {symbol} identified with high MTF confluence!", flush=True)
+        else:
+            signal["is_eagle_elite"] = False
+
         return signal
+
+    def _check_mtf_confluence(self, symbol: str, trend_4h: str) -> Dict:
+        """
+        Análise Cirúrgica de Múltiplos Timeframes (4H, 2H, 1H, 30M)
+        Busca alinhamento total para 'surfar' grandes movimentos de 6%+.
+        """
+        try:
+            # Fetch additional klines
+            klines_2h = self.client.get_klines(symbol, "120", 50)
+            klines_1h = self.client.get_klines(symbol, "60", 50)
+            
+            if not klines_2h or not klines_1h:
+                return {"total_score": 0, "details": "Insufficient data"}
+
+            # Analyze 2H Structure
+            # Simplified structure check: SMA 20 vs SMA 50 equivalent
+            close_2h = [c["close"] for c in klines_2h]
+            sma20_2h = sum(close_2h[-20:]) / 20
+            sma50_2h = sum(close_2h[-50:]) / 50
+            trend_2h = "UPTREND" if sma20_2h > sma50_2h else "DOWNTREND"
+
+            # Analyze 1H Structure (Looking for actual breakout)
+            close_1h = [c["close"] for c in klines_1h]
+            sma20_1h = sum(close_1h[-20:]) / 20
+            # Check for "Engulfing" or strength in the last 2 candles
+            recent_strength = close_1h[-1] > close_1h[-2] if trend_4h == "UPTREND" else close_1h[-1] < close_1h[-2]
+
+            score = 0
+            if trend_2h == trend_4h: score += 1
+            if (trend_4h == "UPTREND" and close_1h[-1] > sma20_1h) or (trend_4h == "DOWNTREND" and close_1h[-1] < sma20_1h):
+                score += 1
+            if recent_strength: score += 1
+
+            return {
+                "total_score": score, # Max 3
+                "trend_2h": trend_2h,
+                "trend_1h_aligned": (trend_4h == "UPTREND" and close_1h[-1] > sma20_1h) or (trend_4h == "DOWNTREND" and close_1h[-1] < sma20_1h),
+                "recent_strength": recent_strength
+            }
+        except Exception as e:
+            print(f"[MTF ERROR] {symbol}: {e}", flush=True)
+            return {"total_score": 0, "error": str(e)}
     def _update_active_signals_prices(self):
 
         """
@@ -749,8 +818,22 @@ class SignalGenerator:
             
             # Volatilidade Relativa
             current_price = analysis.get("current_price", 0)
-            atr = analysis["pivot_trend"]["details"].get("atr", 0)
+            pivot_data = analysis.get("pivot_trend", {})
+            atr = pivot_data.get("details", {}).get("atr", 0)
             volatility = (atr / current_price) if current_price > 0 else 0
+            
+            # Encode BTC Regime for ML
+            # 1 = RANGING, 2 = TRENDING, 3 = BREAKOUT
+            regime_map = {"RANGING": 1, "TRENDING": 2, "BREAKOUT": 3}
+            regime_val = regime_map.get(self.current_btc_regime, 2)  # Default to TRENDING
+
+            # 1. Base indicators
+            rsi_bb = analysis.get("rsi_bb", {})
+            rsi_val = rsi_bb.get("current_value", 50)
+            
+            # 2. Institutional
+            inst = analysis.get("institutional", {})
+            cvd = inst.get("cvd", 0)
             
             # Encode BTC Regime for ML
             # 1 = RANGING, 2 = TRENDING, 3 = BREAKOUT
@@ -760,12 +843,12 @@ class SignalGenerator:
             return {
                 "oi_change_pct": round(oi_change * 100, 4),
                 "lsr_change_pct": round(lsr_change * 100, 4),
-                "cvd_delta": analysis["institutional"].get("cvd", 0),
+                "cvd_delta": cvd,
                 "rs_score": best_signal.get("rs_score", 0),
                 "volatility_idx": round(volatility * 100, 4),
                 "master_score": best_signal.get("score", 0),
                 "trend_aligned": 1 if best_signal.get("trend_4h_aligned") else 0,
-                "rsi_value": analysis["rsi_bb"].get("current_value", 50),
+                "rsi_value": rsi_val,
                 "btc_regime_val": regime_val,
                 "decoupling_score": decoupling_score
             }
@@ -916,10 +999,6 @@ class SignalGenerator:
                 # Periodic cleanup of history (every scan)
                 self.cleanup_history()
                 
-                # Update Bankroll Positions (Simulation)
-                if self.bankroll_manager:
-                    # We pass empty dict for now, allowing manager to fetch what it needs
-                    self.bankroll_manager.update_positions({})
 
                 # === 5. STRATEGIST REFLECTION ===
                 # Every 20 scans or if history is fresh, run strategist
@@ -937,13 +1016,25 @@ class SignalGenerator:
                 time.sleep(0.1)
                 
             except Exception as e:
+                import traceback
                 print(f"[SCAN ERROR] {symbol}: {e}", flush=True)
+                traceback.print_exc()
                 continue
         
         # === BATCH PRICE UPDATE ===
         # Update prices for all active signals (both new and old)
         # This ensures get_active_signals is fast (no network calls)
         self._update_active_signals_prices()
+
+        # === UPDATE BANKROLL POSITIONS (Optimized) ===
+        if self.bankroll_manager:
+            # Re-use price_map from _update_active_signals_prices if possible or build from ticker_map
+            # Actually, _update_active_signals_prices doesn't return the map, so we use ticker_map if it was built
+            # But ticker_map is local to monitor_active_signals. Let's build a quick one here if needed.
+            # Actually, let's just use what's available.
+            tickers = self.client.get_all_tickers()
+            price_map = {t["symbol"]: float(t["lastPrice"]) for t in tickers if "symbol" in t and "lastPrice" in t}
+            self.bankroll_manager.update_positions(price_map)
         
         # Summary after scan
         active_count = len(self.active_signals)

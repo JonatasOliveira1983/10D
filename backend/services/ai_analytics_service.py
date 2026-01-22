@@ -1,4 +1,4 @@
-import pandas as pd
+# import pandas as pd # REMOVED to avoid heavy dependency and numpy conflicts
 from typing import List, Dict
 from datetime import datetime
 
@@ -11,20 +11,20 @@ class AIAnalyticsService:
     def get_market_correlations(self) -> Dict:
         """
         Analisa a correlação entre as features de mercado e o sucesso (Gain/Loss).
-        Retorna estatísticas para o frontend.
+        Retorna estatísticas para o frontend. (Lightweight version without pandas)
         """
         history = self.db.get_signal_history(limit=500)
         
         if not history:
             return {"status": "NO_DATA", "message": "Sem dados históricos suficientes para análise. Continue operando!"}
 
-        # Converter para DataFrame para facilitar análise
-        df_list = []
+        # Process data manually without pandas
+        processed_data = []
         for sig in history:
             features = sig.get("ai_features", {})
             if not features: continue
             
-            # Label: 1 para Gain (TP_HIT), 0 para Loss (SL_HIT), ignore outros status (EXPIRED)
+            # Label processing
             status = sig.get("status")
             if status == "TP_HIT": label = 1
             elif status == "SL_HIT": label = 0
@@ -33,44 +33,69 @@ class AIAnalyticsService:
             row = {
                 **features,
                 "label": label,
-                "symbol": sig.get("symbol"),
-                "signal_type": sig.get("signal_type")
+                "symbol": sig.get("symbol", "N/A"),
+                "signal_type": sig.get("signal_type", "UNKNOWN")
             }
-            df_list.append(row)
+            processed_data.append(row)
             
-        if not df_list:
+        if not processed_data:
             return {"status": "NO_LABELS", "message": "Dados coletados, aguardando finalização dos trades (Gain/Loss)."}
 
-        df = pd.DataFrame(df_list)
+        # Calculate statistics manually
+        total_samples = len(processed_data)
+        wins = [d for d in processed_data if d["label"] == 1]
+        losses = [d for d in processed_data if d["label"] == 0]
         
-        # Estatísticas Básicas
+        win_rate = (len(wins) / total_samples * 100) if total_samples > 0 else 0
+        
+        # Helper to safely get mean
+        def safe_mean(data, key):
+            valid_vals = [d.get(key, 0) for d in data if d.get(key) is not None]
+            return sum(valid_vals) / len(valid_vals) if valid_vals else 0
+
         stats = {
-            "total_samples": len(df),
-            "win_rate": round(df["label"].mean() * 100, 2),
-            "avg_master_score_wins": round(df[df["label"] == 1]["master_score"].mean(), 2),
-            "avg_master_score_losses": round(df[df["label"] == 0]["master_score"].mean(), 2),
+            "total_samples": total_samples,
+            "win_rate": round(win_rate, 2),
+            "avg_master_score_wins": round(safe_mean(wins, "master_score"), 2),
+            "avg_master_score_losses": round(safe_mean(losses, "master_score"), 2),
         }
         
-        # Correlação com OI e LSR (Exemplo simples)
-        # Sinais onde OI subiu e deu Gain vs OI subiu e deu Loss
+        # Correlation stats
         stats["oi_impact"] = {
-            "avg_oi_change_wins": round(df[df["label"] == 1]["oi_change_pct"].mean(), 4),
-            "avg_oi_change_losses": round(df[df["label"] == 0]["oi_change_pct"].mean(), 4)
+            "avg_oi_change_wins": round(safe_mean(wins, "oi_change_pct"), 4),
+            "avg_oi_change_losses": round(safe_mean(losses, "oi_change_pct"), 4)
         }
         
-        # Desempenho por tipo de sinal
-        type_perf = df.groupby("signal_type")["label"].agg(['mean', 'count']).to_dict('index')
+        # Performance by type
+        type_stats = {}
+        for d in processed_data:
+            s_type = d.get("signal_type")
+            if s_type not in type_stats:
+                type_stats[s_type] = {"wins": 0, "count": 0}
+            type_stats[s_type]["count"] += 1
+            if d["label"] == 1:
+                type_stats[s_type]["wins"] += 1
+                
         stats["performance_by_type"] = {
-            t: {"win_rate": round(v['mean'] * 100, 2), "count": v['count']} 
-            for t, v in type_perf.items()
+            t: {
+                "win_rate": round((v["wins"] / v["count"] * 100), 2) if v["count"] > 0 else 0,
+                "count": v["count"]
+            }
+            for t, v in type_stats.items()
         }
 
-        # Sugestão de "Vantagem Estatística" (Heurística simples)
-        highest_win_rate_type = max(type_perf, key=lambda k: type_perf[k]['mean'])
-        stats["best_edge"] = {
-            "type": highest_win_rate_type,
-            "win_rate": round(type_perf[highest_win_rate_type]['mean'] * 100, 2)
-        }
+        # Best Edge
+        if type_stats:
+            best_type = max(type_stats.items(), key=lambda item: (item[1]["wins"] / item[1]["count"] if item[1]["count"] > 0 else 0))
+            best_type_name = best_type[0]
+            best_win_rate = (best_type[1]["wins"] / best_type[1]["count"] * 100) if best_type[1]["count"] > 0 else 0
+            
+            stats["best_edge"] = {
+                "type": best_type_name,
+                "win_rate": round(best_win_rate, 2)
+            }
+        else:
+             stats["best_edge"] = {"type": "N/A", "win_rate": 0}
 
         return {"status": "READY", "data": stats}
 

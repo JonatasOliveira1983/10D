@@ -1,8 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import SignalCard from './SignalCard';
 import { IconHistory } from './Icons';
 
 export default function Dashboard({ signals, pinnedSymbol, onPin, loading }) {
+    const [status, setStatus] = useState(null);
+    const [statusLoading, setStatusLoading] = useState(true);
+    useEffect(() => {
+        const fetchStatus = async () => {
+            try {
+                const res = await fetch('/api/bankroll/status');
+                if (res.ok) {
+                    const data = await res.json();
+                    setStatus(data);
+                }
+            } catch (e) {
+                console.error('Error fetching bankroll status:', e);
+            } finally {
+                setStatusLoading(false);
+            }
+        };
+        fetchStatus();
+        const interval = setInterval(fetchStatus, 5000);
+        return () => clearInterval(interval);
+    }, []);
+    const formatCurrency = (val) => {
+        const num = Number(val);
+        return isNaN(num) ? '$0.00' : `$${num.toFixed(2)}`;
+    };
+
     if (loading) {
         return (
             <div className="loading">

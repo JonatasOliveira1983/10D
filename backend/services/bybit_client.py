@@ -11,6 +11,7 @@ from typing import List, Dict, Optional
 import sys
 import os
 import io
+import threading
 
 # FORCE UTF-8 STDOUT/STDERR FOR WINDOWS
 try:
@@ -37,6 +38,7 @@ class BybitClient:
         self.api_secret = BYBIT_API_SECRET
         self.recv_window = "5000"
         self.session = requests.Session()
+        self.lock = threading.Lock()
         
         # Real browser User-Agent to avoid 403
         self.session.headers.update({
@@ -90,7 +92,9 @@ class BybitClient:
             else:
                 print(f"[API] Public GET {endpoint} params={params}", flush=True)
 
-            response = self.session.get(url, params=params, headers=headers, timeout=10)
+            print(f"[DEBUG] _make_request: About to call session.get for {url} (with lock)", flush=True)
+            with self.lock:
+                response = self.session.get(url, params=params, headers=headers, timeout=10)
             print(f"[API] {endpoint} -> HTTP {response.status_code}", flush=True)
             
             # If 403, log extra info
@@ -109,8 +113,10 @@ class BybitClient:
                 print(f"[API] ERROR {data.get('retCode')}: {data.get('retMsg')}", flush=True)
                 return None
                 
-        except requests.exceptions.RequestException as e:
-            print(f"[API] REQUEST FAILED: {e}", flush=True)
+        except Exception as e:
+            import traceback
+            print(f"[API ERROR] _make_request failed for {endpoint}: {e}", flush=True)
+            traceback.print_exc()
             return None
     
     def get_all_tickers(self, category: str = "linear") -> List[Dict]:

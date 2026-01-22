@@ -5,7 +5,7 @@ import Dashboard from './components/Dashboard';
 import OpeningPage from './components/OpeningPage';
 
 import TradesOrganizerPage from './components/TradesOrganizer/TradesOrganizerPage';
-import BancaPage from './components/Banca/BancaPage'; // New Import
+import BancaPage from './components/Banca/BancaPage'; // Restored the complete version
 import HistoryView from './components/HistoryView';
 import AIAnalytics from './components/AIAnalytics';
 import MLPerformance from './components/MLPerformance';
@@ -35,6 +35,17 @@ export default function App() {
     const [currentPage, setCurrentPage] = useState('dashboard');
     const [pinnedSymbol, setPinnedSymbol] = useState(null);
     const [btcRegime, setBtcRegime] = useState(null);
+
+    // Initial URL Routing
+    useEffect(() => {
+        const path = window.location.pathname;
+        if (path === '/btcanalises' || path === '/banca') {
+            setShowOpening(false);
+            setCurrentPage('banca');
+            // Optional: Clean URL to avoid confusion or reload loops
+            window.history.replaceState({}, document.title, "/");
+        }
+    }, []);
 
     // Toggle theme
     const toggleTheme = () => {

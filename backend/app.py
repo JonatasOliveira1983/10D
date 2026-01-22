@@ -4,7 +4,7 @@ REST API for frontend communication and serving static files
 """
 
 # VERSION STAMP - to verify which code is running
-BUILD_VERSION = "2026-01-21-v5.0-STABLE"
+BUILD_VERSION = "2026-01-22-v5.1-STABLE"
 
 
 
@@ -35,6 +35,7 @@ from flask_cors import CORS
 import threading
 import time
 import os
+import numpy as np
 
 print("[DEBUG] Basic imports OK", flush=True)
 
@@ -45,7 +46,6 @@ from config import API_HOST, API_PORT, DEBUG, UPDATE_INTERVAL_SECONDS, PAIR_LIMI
 print(f"[DEBUG] Config imported OK - PAIR_LIMIT={PAIR_LIMIT}", flush=True)
 
 print("[DEBUG] About to import SignalGenerator...", flush=True)
-from services.signal_generator import SignalGenerator
 from services.signal_generator import SignalGenerator
 from services.ai_analytics_service import AIAnalyticsService
 from services.news_service import news_service
@@ -65,23 +65,51 @@ analytics_service = AIAnalyticsService(generator.db)
 # Initialize Health Monitor
 health_monitor = HealthMonitor(generator)
 
+# === NEW: Push Notification Service ===
+from services.push_service import PushService
+push_service = PushService(generator.db)
+generator.set_push_service(push_service)
+
 # Background scanning flag
 scanning = False
 scan_thread = None
 
 def sanitize_for_json(obj):
-    """Recursively convert Decimal to float and handle other non-serializable types"""
-    if isinstance(obj, Decimal):
+    """Recursively convert Decimal, numpy types, and others to JSON-serializable types"""
+    # Base types that are safe
+    if obj is None:
+        return None
+    if isinstance(obj, (str, int, float, bool)) and not isinstance(obj, (np.generic, np.ndarray)):
+        return obj
+
+    # NumPy types
+    if isinstance(obj, (np.integer, np.int64, np.int32, np.uint64, np.uint32)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, np.float64, np.float32, np.float16)):
+        if np.isnan(obj) or np.isinf(obj):
+            return None
+        return float(obj)
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
+    elif isinstance(obj, np.ndarray):
+        return [sanitize_for_json(x) for x in obj.tolist()]
+    
+    # Complex types
+    elif isinstance(obj, Decimal):
         return float(obj)
     elif isinstance(obj, (datetime, date)):
         return obj.isoformat()
     elif isinstance(obj, uuid.UUID):
         return str(obj)
+        
+    # Recursive containers
     elif isinstance(obj, dict):
-        return {k: sanitize_for_json(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
+        return {str(k): sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple, set)):
         return [sanitize_for_json(v) for v in obj]
-    return obj
+        
+    # Fallback
+    return str(obj)
 
 
 def background_scanner():
@@ -184,6 +212,10 @@ def delayed_init():
 
         # === STEP 4: System Ready ===
         generator.set_system_ready(True)
+        
+        # Link Elite Agent to Strategist Agent data for display
+        generator.strategist_report["elite_learning"] = generator.bankroll_manager.elite_agent.get_status()
+        
         print("=" * 60, flush=True)
         print("[INIT] SYSTEM FULLY OPERATIONAL - Scanning Active", flush=True)
         print("=" * 60, flush=True)
@@ -272,11 +304,24 @@ def get_agents_status():
                 "role": "Contexto Macro (DXY/SP500)",
                 "context": generator.global_macro_context,
                 "last_action": "Definindo confiança global"
+            },
+            {
+                "id": "elite_manager",
+                "name": "Elite Manager Agent",
+                "status": "ATIVO",
+                "role": "Capitão da Banca & Sniper Executor",
+                "learning": generator.bankroll_manager.elite_agent.get_status(),
+                "last_action": "Gerindo slots de alta performance"
             }
         ]
+        
+        # Add Council Debate if available
+        council_data = getattr(generator, "last_council_debate", None)
+        
         return jsonify({
             "status": "OK",
             "agents": agents,
+            "council_debate": council_data,
             "system_readiness": generator.system_ready
         })
     except Exception as e:
@@ -382,8 +427,15 @@ def not_found(e):
 @app.route("/api/stats")
 def get_stats():
     """Get summary statistics"""
-    stats = generator.get_stats()
-    return jsonify(sanitize_for_json(stats))
+    try:
+        print("[DEBUG] Entered get_stats request handler", flush=True)
+        stats = generator.get_stats()
+        return jsonify(sanitize_for_json(stats))
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"[API ERROR] /api/stats failed: {e}", flush=True)
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/scan", methods=["POST"])
@@ -441,6 +493,25 @@ def analyze_symbol(symbol):
         "found": False,
         "message": f"No signal for {symbol} at this time"
     })
+
+
+@app.route("/api/chart/klines/<symbol>")
+def get_klines_data(symbol):
+    """Get candlestick data for a symbol (v2 robust route)"""
+    try:
+        interval = request.args.get("interval", "30")
+        limit = request.args.get("limit", 150, type=int)
+        
+        candles = generator.client.get_klines(symbol.upper(), interval, limit)
+        return jsonify(sanitize_for_json({
+            "symbol": symbol.upper(),
+            "interval": interval,
+            "candles": candles,
+            "count": len(candles)
+        }))
+    except Exception as e:
+        print(f"[CHART API ERROR] {e}", flush=True)
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/btc/regime")
@@ -851,7 +922,48 @@ def get_bankroll_status():
               return jsonify({"status": "DISABLED", "message": "Bankroll Manager disabled"}), 503
         
         status = generator.bankroll_manager.get_status()
+        if status:
+            # Compatibility fix for UI (initial_balance/total_pnl)
+            status['initial_balance'] = status.get('base_balance', 1000.0)
+            status['total_pnl'] = status.get('current_balance', 1000.0) - status.get('initial_balance', 1000.0)
+            status['roi_percentage'] = status.get('win_rate', 0.0)
+            
         return jsonify(sanitize_for_json(status if status else {}))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# === NEW: Push Notification Routes ===
+
+@app.route("/api/push/vapid-public-key")
+def get_vapid_public_key():
+    """Get the VAPID public key for subscription"""
+    key = os.environ.get("VAPID_PUBLIC_KEY")
+    if not key:
+        return jsonify({"error": "VAPID key not configured"}), 503
+    return jsonify({"publicKey": key})
+
+@app.route("/api/push/subscribe", methods=["POST"])
+def subscribe_push():
+    """Register a new PWA push subscription"""
+    try:
+        data = request.json
+        subscription = data.get("subscription")
+        user_id = data.get("userId", "default_user")
+        
+        if not subscription:
+            return jsonify({"error": "No subscription provided"}), 400
+            
+        success = push_service.save_subscription(user_id, subscription)
+        if success:
+            # Send an immediate confirmation push
+            push_service.send_notification(
+                user_id, 
+                "🦅 10D Conectado!", 
+                "Pronto. Agora o Capitão te avisará de cada GAIN no seu celular."
+            )
+            return jsonify({"success": True}), 201
+        else:
+            return jsonify({"error": "Failed to save subscription"}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -859,31 +971,70 @@ def get_bankroll_status():
 def get_bankroll_trades():
     """Get bankroll trades history"""
     try:
+        print("[DEBUG] /api/bankroll/trades: Entered", flush=True)
         limit = request.args.get("limit", 50, type=int)
         # Fetch directly from DB via manager's connection for simplicity
         res = generator.db.client.table("bankroll_trades").select("*").order("opened_at", desc=True).limit(limit).execute()
-        return jsonify(sanitize_for_json(res.data))
+        trades = res.data
+        print(f"[DEBUG] /api/bankroll/trades: Fetched {len(trades)} trades", flush=True)
+        
+        # Inject live prices for OPEN trades
+        open_trades = [t for t in trades if t["status"] == "OPEN"]
+        if open_trades:
+            print(f"[DEBUG] /api/bankroll/trades: Fetching tickers for {len(open_trades)} open trades", flush=True)
+            tickers = generator.client.get_all_tickers()
+            ticker_map = {t["symbol"]: float(t["lastPrice"]) for t in tickers if "symbol" in t and "lastPrice" in t}
+            
+            for trade in open_trades:
+                symbol = trade["symbol"]
+                if symbol in ticker_map:
+                    current_price = ticker_map[symbol]
+                    entry_price = trade["entry_price"]
+                    direction = trade.get("direction", "SHORT")
+                    
+                    # Calculate ROI
+                    pnl_pct = (current_price - entry_price) / entry_price if direction == "LONG" else (entry_price - current_price) / entry_price
+                    roi = pnl_pct * 50 # Default leverage 50x
+                    
+                    # Inject for frontend
+                    trade["live_price"] = current_price
+                    trade["live_roi"] = round(roi * 100, 2)
+                    # If DB is missing these, we provide them as fallbacks
+                    if not trade.get("current_price"): trade["current_price"] = current_price
+                    if not trade.get("current_roi"): trade["current_roi"] = trade["live_roi"]
+        
+        print("[DEBUG] /api/bankroll/trades: Sanitizing and returning", flush=True)
+        return jsonify(sanitize_for_json(trades))
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"[ERROR] /api/bankroll/trades: {e}", flush=True)
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/bankroll/reset", methods=["POST"])
 def reset_bankroll():
-    """Reset simulation (Dev tool)"""
+    """Reset simulation (Dev tool) - New Schema V2"""
     try:
-        # Reset bankroll_status to default
+        # Reset bankroll_status to $20
         generator.db.client.table("bankroll_status").update({
             "current_balance": 20.0,
-            "active_slots_used": 0,
-            "trade_count_cycle": 0
-        }).eq("id", 1).execute()
+            "base_balance": 20.0,
+            "entry_size_usd": 1.0,
+            "trades_in_cycle": 0,
+            "total_trades": 0,
+            "cycle_number": 1,
+            "wins": 0,
+            "losses": 0,
+            "win_rate": 0.0
+        }).eq("id", "elite_bankroll").execute()
         
-        # Clear trades (Simulated wipe)
+        # Clear trades
         try:
-             generator.db.client.table("bankroll_trades").delete().neq("symbol", "XYZ_PROTECT").execute()
+             generator.db.client.table("bankroll_trades").delete().neq("symbol", "WIPE").execute()
         except:
              pass 
         
-        return jsonify({"message": "Bankroll reset to $20.0"})
+        return jsonify({"message": "Bankroll reset to $20.0 (Cycle 1)"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

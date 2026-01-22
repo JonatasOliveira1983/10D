@@ -77,8 +77,8 @@ TRAILING_STOP_TRIGGER = 0.03 # 3% (Activate Trailing Stop)
 TRAILING_STOP_DISTANCE = 0.01 # 1% (SL follows price at 1% distance)
 TARGET_SNIPER_6 = 0.06       # 6% Super Target
 SNIPER_FORCE_TARGET = 0.06   # Force 6% target in sniper mode
-SNIPER_DECOUPLING_THRESHOLD = 0.45 # Minimum decoupling for ranging sniper (Lowered from 0.6)
-SNIPER_BEST_SCORE_THRESHOLD = 80  # Minimum score for trending sniper (Lowered from 85)
+SNIPER_DECOUPLING_THRESHOLD = 0.40 # Minimum decoupling for ranging sniper
+SNIPER_BEST_SCORE_THRESHOLD = 70  # Lowered for demo (Standard: 85)
 
 # Signal Freshness Settings
 SIGNAL_TTL_MINUTES = 120     # 120 minutes for cleanup (2 hours)
@@ -115,7 +115,7 @@ SCORE_LSR_CLEANUP = 10
 SCORE_ABSORPTION_CONFIRMED = 20
 SCORE_RSI_CROSSOVER_BTC = 25    # ALT RSI crosses above BTC RSI (decoupling)
 SCORE_LIQUIDITY_ALIGNED = 30    # Signal aligns with predicted liquidity hunt direction
-MIN_SCORE_TO_SAVE = 70          # Minimum score to save signal (Relaxed to 70 for Training)
+MIN_SCORE_TO_SAVE = 65          # Minimum score to save signal
 
 # =============================================================================
 # API SETTINGS
