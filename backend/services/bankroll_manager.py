@@ -1,7 +1,7 @@
-
 import logging
 from datetime import datetime
 import json
+from typing import List, Dict, Tuple, Optional
 from services.llm_agents.elite_manager_agent import EliteManagerAgent
 
 class BankrollManager:
