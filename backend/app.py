@@ -66,9 +66,13 @@ analytics_service = AIAnalyticsService(generator.db)
 health_monitor = HealthMonitor(generator)
 
 # === NEW: Push Notification Service ===
-from services.push_service import PushService
-push_service = PushService(generator.db)
-generator.set_push_service(push_service)
+try:
+    from services.push_service import PushService
+    push_service = PushService(generator.db)
+    generator.set_push_service(push_service)
+except Exception as e:
+    print(f"[BOOT] [WARN] PushService initialization failed (Check VAPID keys): {e}", flush=True)
+    push_service = None
 
 # Background scanning flag
 scanning = False

@@ -176,11 +176,6 @@ class SignalGenerator:
         # Initialize Bankroll Manager (The Elite Simulator)
         self.bankroll_manager = BankrollManager(self.db, self.client)
         
-    def set_push_service(self, push_service):
-        """Inject push service into relevant managers"""
-        self.bankroll_manager.push_service = push_service
-        print("[SG] PushService injected into BankrollManager", flush=True)
-        
         # State for Intelligence
         self.global_macro_context = {"confidence_multiplier": 1.0, "global_sentiment": "NEUTRAL"}
         self.strategist_report = {}
@@ -208,6 +203,11 @@ class SignalGenerator:
         self.system_ready = False # Flag for Async Initialization
         
         self.load_state()
+
+    def set_push_service(self, push_service):
+        """Inject push service into relevant managers"""
+        self.bankroll_manager.push_service = push_service
+        print("[SG] PushService injected into BankrollManager", flush=True)
 
     def _update_market_sentiment(self):
         """Update market sentiment from news if interval passed"""

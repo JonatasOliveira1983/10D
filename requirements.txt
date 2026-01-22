@@ -13,3 +13,5 @@ psutil
 schedule
 pytz
 colorama
+pywebpush==2.2.0
+cryptography>=42.0.0
