@@ -97,11 +97,18 @@ const TradingStatusCard = ({ status }) => (
             <div className="space-y-1.5 sm:space-y-2">
                 <div className="flex justify-between text-[8px] sm:text-[10px] text-gray-400">
                     <span>Performance Sniper (Slots)</span>
-                    <span className="text-violet-400">{status?.active_slots_used || 0} / 2 ATIVOS</span>
+                    <span className="text-violet-400">{status?.active_slots_used || 0} / 10 ATIVOS</span>
                 </div>
-                <div className="h-1 sm:h-1.5 bg-gray-800/50 rounded-full overflow-hidden flex gap-1">
-                    <div className={`h-full flex-1 rounded-full ${status?.active_slots_used >= 1 ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-gray-700'}`}></div>
-                    <div className={`h-full flex-1 rounded-full ${status?.active_slots_used >= 2 ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-gray-700'}`}></div>
+                <div className="h-1 sm:h-1.5 bg-gray-800/50 rounded-full overflow-hidden flex gap-0.5">
+                    {[...Array(10)].map((_, i) => (
+                        <div
+                            key={i}
+                            className={`h-full flex-1 rounded-full ${(status?.active_slots_used || 0) > i
+                                ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]'
+                                : 'bg-gray-700/50'
+                                }`}
+                        />
+                    ))}
                 </div>
             </div>
         </div>
