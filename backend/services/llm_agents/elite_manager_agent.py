@@ -7,7 +7,7 @@ class EliteManagerAgent(BaseAgent):
     """
     The Bankroll Captain.
     Responsible for executing Elite signals and learning from performance.
-    Controls the strict 2-slot limit for the Sniper Bankroll.
+    Controls the strict limits/slots for the Sniper Bankroll.
     """
     
     def __init__(self, db_manager=None):
@@ -41,12 +41,13 @@ class EliteManagerAgent(BaseAgent):
                 "metadata": {}
             }
         
-        if score < 70:
+        # Adjusted Threshold: 65% is acceptable IF it is Eagle Elite (MTF confirmed)
+        if score < 65:
             return {
                 "agent": self.name,
                 "score": score,
                 "verdict": "NEUTRAL",
-                "reasoning": "Score Eagle Elite detectado, mas abaixo do limiar de confiança de 70%",
+                "reasoning": "Score Eagle Elite detectado, mas abaixo do limiar absoluto de 65%",
                 "metadata": {}
             }
 
