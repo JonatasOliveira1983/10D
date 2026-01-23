@@ -227,14 +227,34 @@
 /* CONNECTION BEAMS (Simulated Lines towards Center) */
 .connection-beam {
     position: absolute;
-    top: -20px;
+    bottom: 100%;
     left: 50%;
     width: 2px;
-    height: 20px;
-    background: linear-gradient(to top, rgba(255, 255, 255, 0.1), transparent);
-    /* In a real SVG setup, these would be diagonal lines to the center */
-    display: none;
-    /* Hidden for now, simplified visual */
+    height: 0;
+    opacity: 0;
+    transition: all 0.3s ease-out;
+    background: linear-gradient(to top, #8b5cf6, transparent);
+    box-shadow: 0 0 10px #8b5cf6;
+    z-index: -1;
+}
+
+.connection-beam.firing {
+    height: 100px;
+    /* Shoot beam upwards */
+    opacity: 1;
+}
+
+/* Active Uplink State (When agent is "talking") */
+.active-uplink {
+    border-color: #2dd4bf !important;
+    box-shadow: 0 0 20px rgba(45, 212, 191, 0.4) !important;
+    background: rgba(30, 41, 59, 1) !important;
+    transform: scale(1.05);
+}
+
+.brain-core.active-uplink {
+    border-color: #facc15 !important;
+    box-shadow: 0 0 40px rgba(250, 204, 21, 0.6) !important;
 }
 
 /* RIGHT: WAR ROOM TERMINAL */

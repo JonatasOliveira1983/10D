@@ -1610,30 +1610,59 @@ class SignalGenerator:
 
     def get_stats(self) -> Dict:
         """Get summary statistics"""
-        active = self.get_active_signals()
-        
-        long_count = sum(1 for s in active if s["direction"] == "LONG")
-        short_count = sum(1 for s in active if s["direction"] == "SHORT")
-        avg_score = sum(s["score"] for s in active) / len(active) if active else 0
-        
-        # Count by signal type
-        type_counts = {}
-        for s in active:
-            sig_type = s.get("signal_type", "UNKNOWN")
-            type_counts[sig_type] = type_counts.get(sig_type, 0) + 1
-        
-        return {
-            "monitored_pairs": len(self.monitored_pairs),
-            "active_signals": len(active),
-            "long_signals": long_count,
-            "short_signals": short_count,
-            "average_score": round(avg_score, 1),
-            "total_historical": len(self.signal_history),
-            "signal_types": type_counts,
-            "db_connected": self.db.is_connected(),
-            "db_connecting": self.db.is_connecting(),
-            "system_ready": self.system_ready
-        }
+        try:
+            active = self.get_active_signals()
+            
+            long_count = sum(1 for s in active if s.get("direction") == "LONG")
+            short_count = sum(1 for s in active if s.get("direction") == "SHORT")
+            
+            # Safe avg score calculation
+            scores = []
+            for s in active:
+                score = s.get("score")
+                if score is not None:
+                    try:
+                        scores.append(float(score))
+                    except (ValueError, TypeError):
+                        pass
+            
+            avg_score = sum(scores) / len(scores) if scores else 0
+            
+            # Count by signal type (ensure keys are strings for JSON)
+            type_counts = {}
+            for s in active:
+                raw_type = s.get("signal_type", "UNKNOWN")
+                # Handle None or non-string types
+                sig_type = str(raw_type) if raw_type is not None else "UNKNOWN"
+                type_counts[sig_type] = type_counts.get(sig_type, 0) + 1
+            
+            return {
+                "monitored_pairs": len(self.monitored_pairs),
+                "active_signals": len(active),
+                "long_signals": long_count,
+                "short_signals": short_count,
+                "average_score": round(avg_score, 1),
+                "total_historical": len(self.signal_history),
+                "signal_types": type_counts,
+                "db_connected": self.db.is_connected(),
+                "db_connecting": self.db.is_connecting(),
+                "system_ready": self.system_ready
+            }
+        except Exception as e:
+            print(f"[STATS ERROR] Failed to calculate stats: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            return {
+                "monitored_pairs": len(self.monitored_pairs),
+                "active_signals": 0,
+                "long_signals": 0,
+                "short_signals": 0,
+                "average_score": 0,
+                "total_historical": len(self.signal_history),
+                "signal_types": {},
+                "db_connected": self.db.is_connected(),
+                "error": str(e)
+            }
 
     def _generate_decision_report(self, signal: Dict, outcome: Dict) -> Dict:
         """

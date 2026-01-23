@@ -7,12 +7,11 @@ export default function AgentsView() {
     const [llmStatus, setLlmStatus] = useState(null);
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [activeAgent, setActiveAgent] = useState(null); // Track who is "speaking"
     const logsEndRef = useRef(null);
 
-    // Mock logs generator for "War Room" feel (until backend is fully event-driven)
-    const generateMockLog = (agentList) => {
-        if (!agentList || agentList.length === 0) return null;
-
+    // Mock logs generator for "War Room" feel
+    const generateMockLog = () => {
         const actions = [
             { agent: 'scout', msg: '👁️ Varredura de 30 pares concluída. Padrão bullish em SOL.' },
             { agent: 'sentinel', msg: '🛡️ Volume institucional detectado em BTC. Absorção confirmada.' },
@@ -63,9 +62,13 @@ export default function AgentsView() {
 
         // Simulate Live Logs
         const logInterval = setInterval(() => {
-            const newLog = generateMockLog(agents);
+            const newLog = generateMockLog();
             if (newLog) {
                 setLogs(prev => [...prev.slice(-50), newLog]); // Keep last 50 logs
+
+                // Trigger Visual Interaction
+                setActiveAgent(newLog.agent);
+                setTimeout(() => setActiveAgent(null), 2000); // Glow for 2 seconds
             }
         }, 3500);
 
@@ -111,7 +114,7 @@ export default function AgentsView() {
                 <div className="agents-network">
                     {/* CENTRAL BRAIN (GEMINI) */}
                     <div className="central-node">
-                        <div className="brain-core pulse-glow">
+                        <div className={`brain-core ${activeAgent === 'gemini' ? 'active-uplink' : 'pulse-glow'}`}>
                             {getIcon('gemini')}
                         </div>
                         <div className="brain-label">GEMINI 1.5 CORTEX</div>
@@ -126,10 +129,11 @@ export default function AgentsView() {
                     {/* SATELLITE AGENTS */}
                     <div className="satellite-grid">
                         {agents.map(agent => (
-                            <div key={agent.id} className={`agent-node ${agent.id}`}>
+                            <div key={agent.id} className={`agent-node ${agent.id} ${activeAgent === agent.id ? 'active-uplink' : ''}`}>
                                 <div className="node-icon-wrapper">
                                     {getIcon(agent.id)}
-                                    <div className="connection-beam"></div>
+                                    {/* Beam activates when agent is active */}
+                                    <div className={`connection-beam ${activeAgent === agent.id ? 'firing' : ''}`}></div>
                                 </div>
                                 <div className="node-info">
                                     <h3>{agent.name}</h3>

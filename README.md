@@ -10,6 +10,7 @@
 ## 🖥️ Neural Interface (Premium)
 O sistema foi consolidado para usar exclusivamente a interface **Premium**:
 - **Sala de Situação Tática**: Localizada na aba **Banca**, permite monitoramento profissional.
+- **Neural Command Center**: Nova visualização de Agentes com estilo Cyberpunk, logs "War Room" em tempo real e interação visual dinâmica (Uplink).
 - **Gráficos Multi-Timeframe**: Suporte a 1M, 5M, 15M, 30M, 1H, 2H, 4H e 1D.
 - **Elite Bankroll Captain V3 (Intelligent)**: IA autônoma e supervisionada:
     - **Conselho de Guerra**: Decisões debatidas entre Agentes (Técnico, Sentinela, Fundamental).
