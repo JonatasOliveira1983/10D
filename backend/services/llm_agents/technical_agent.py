@@ -1,6 +1,7 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 from .base_agent import BaseAgent
 import json
+import numpy as np
 from services.rag_memory import RAGMemory
 
 class TechnicalAgent(BaseAgent):
@@ -87,3 +88,26 @@ class TechnicalAgent(BaseAgent):
             "verdict": final_verdict,
             "reasoning": "; ".join(reasoning)
         }
+
+    def check_volatility(self, candles: list) -> str:
+        """
+        Analyzes recent candles to determine volatility state.
+        Returns: LOW, MEDIUM, HIGH
+        """
+        if not candles or len(candles) < 10:
+            return "MEDIUM"
+            
+        try:
+            # Calculate simple average range
+            ranges = [abs(float(c['high']) - float(c['low'])) for c in candles[-10:]]
+            avg_range = np.mean(ranges)
+            last_range = abs(float(candles[-1]['high']) - float(candles[-1]['low']))
+            
+            if last_range > avg_range * 1.5:
+                return "HIGH"
+            elif last_range < avg_range * 0.7:
+                return "LOW"
+            return "MEDIUM"
+        except Exception as e:
+            print(f"[TECHNICAL AGENT] Error checking volatility: {e}")
+            return "MEDIUM"

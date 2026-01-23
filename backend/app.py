@@ -979,8 +979,8 @@ def get_bankroll_trades():
         limit = request.args.get("limit", 50, type=int)
         # Fetch directly from DB via manager's connection for simplicity
         res = generator.db.client.table("bankroll_trades").select("*").order("opened_at", desc=True).limit(limit).execute()
-        trades = res.data
-        print(f"[DEBUG] /api/bankroll/trades: Fetched {len(trades)} trades", flush=True)
+        trades = [dict(t) for t in res.data]
+        print(f"[DEBUG] /api/bankroll/trades: Fetched {len(trades)} trades (converted to dicts)", flush=True)
         
         # Inject live prices for OPEN trades
         open_trades = [t for t in trades if t["status"] == "OPEN"]
@@ -1000,12 +1000,36 @@ def get_bankroll_trades():
                     pnl_pct = (current_price - entry_price) / entry_price if direction == "LONG" else (entry_price - current_price) / entry_price
                     roi = pnl_pct * 50 # Default leverage 50x
                     
-                    # Inject for frontend
+                # Inject for frontend
                     trade["live_price"] = current_price
                     trade["live_roi"] = round(roi * 100, 2)
+                    
                     # If DB is missing these, we provide them as fallbacks
                     if not trade.get("current_price"): trade["current_price"] = current_price
                     if not trade.get("current_roi"): trade["current_roi"] = trade["live_roi"]
+
+        # --- UNIVERSAL PASS: Inject SL/TP for ALL trades ---
+        for trade in trades:
+            entry_price = trade["entry_price"]
+            direction = trade.get("direction", "SHORT")
+            
+            # Fetch Signal Data for SL/TP if missing (always missing in v1 schema)
+            if not trade.get("stop_loss") or not trade.get("take_profit"):
+                 try:
+                     sig = generator.db.client.table("signals").select("id, stop_loss, take_profit").eq("id", trade["signal_id"]).single().execute()
+                     if sig and sig.data:
+                         trade["stop_loss"] = float(sig.data.get("stop_loss", 0))
+                         trade["take_profit"] = float(sig.data.get("take_profit", 0))
+                 except:
+                     pass
+            
+            # Fallback defaults if still missing (1% SL / 2% TP)
+            if not trade.get("stop_loss"):
+                trade["stop_loss"] = entry_price * 1.01 if direction == "SHORT" else entry_price * 0.99
+                print(f"[DEBUG] Calculated Fallback SL for {trade['symbol']}: {trade['stop_loss']}", flush=True)
+            if not trade.get("take_profit"):
+                trade["take_profit"] = entry_price * 0.98 if direction == "SHORT" else entry_price * 1.02
+                print(f"[DEBUG] Calculated Fallback TP for {trade['symbol']}: {trade['take_profit']}", flush=True)
         
         print("[DEBUG] /api/bankroll/trades: Sanitizing and returning", flush=True)
         return jsonify(sanitize_for_json(trades))

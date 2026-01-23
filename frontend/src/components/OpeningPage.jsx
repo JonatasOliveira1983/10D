@@ -27,10 +27,11 @@ const OpeningPage = ({ onEnter }) => {
                     "Onde há foco, há coerência vibracional"
                 </p>
 
-                <button className="btn-enter" onClick={handleEnter}>
-                    Entrar
-                </button>
             </div>
+
+            <button className="btn-enter" onClick={handleEnter}>
+                Entrar
+            </button>
         </div>
     );
 };

@@ -41,9 +41,20 @@ const SignalChart = ({ symbol, entryPrice, stopLoss, takeProfit, direction, open
                     timeVisible: true,
                     secondsVisible: false,
                     borderColor: 'rgba(255, 255, 255, 0.1)',
+                    rightOffset: 5, // Space for latest candle
                 },
                 rightPriceScale: {
                     borderColor: 'rgba(255, 255, 255, 0.1)',
+                    visible: true,
+                    scaleMargins: {
+                        top: 0.2, // Leave space for HUD
+                        bottom: 0.2,
+                    },
+                },
+                crosshair: {
+                    vertLine: {
+                        labelVisible: false,
+                    },
                 }
             });
 
@@ -64,6 +75,17 @@ const SignalChart = ({ symbol, entryPrice, stopLoss, takeProfit, direction, open
                 // Clear existing lines
                 priceLinesRef.current.forEach(line => candlestickSeries.removePriceLine(line));
                 priceLinesRef.current = [];
+
+                // Fallback Calculation if props are missing (1% SL, 2% TP default)
+                let finalSL = stopLoss;
+                let finalTP = takeProfit;
+
+                if ((!finalSL || Number(finalSL) === 0) && entryPrice) {
+                    finalSL = direction === 'LONG' ? entryPrice * 0.99 : entryPrice * 1.01;
+                }
+                if ((!finalTP || Number(finalTP) === 0) && entryPrice) {
+                    finalTP = direction === 'LONG' ? entryPrice * 1.02 : entryPrice * 0.98;
+                }
 
                 const addLine = (price, color, title, style = 2) => {
                     const numericPrice = Number(price);
@@ -88,10 +110,10 @@ const SignalChart = ({ symbol, entryPrice, stopLoss, takeProfit, direction, open
                 addLine(entryPrice, '#6366f1', 'ENTRY', 2);
 
                 // Stop Loss (Solid Red)
-                addLine(stopLoss, '#f43f5e', 'STOP LOSS', 0);
+                addLine(finalSL, '#f43f5e', 'STOP LOSS', 0);
 
                 // Take Profit (Solid Emerald)
-                addLine(takeProfit, '#10b981', 'TAKE PROFIT', 0);
+                addLine(finalTP, '#10b981', 'TAKE PROFIT', 0);
 
                 // Current Price (Dynamic Tactical Line)
                 if (currentPrice) {
@@ -145,7 +167,8 @@ const SignalChart = ({ symbol, entryPrice, stopLoss, takeProfit, direction, open
                                     }
                                 }
 
-                                if (candlestickSeries.data().length <= 150) {
+                                if (candlestickSeries.data().length > 0) {
+                                    // Always fit content on initial load or interval change
                                     chart.timeScale().fitContent();
                                 }
                             }
@@ -195,12 +218,12 @@ const SignalChart = ({ symbol, entryPrice, stopLoss, takeProfit, direction, open
 
             {/* AGENT HUD OVERLAY - Compact on Mobile */}
             <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 pointer-events-none">
-                <div className="bg-black/80 sm:bg-black/60 backdrop-blur-md border border-white/10 p-2 sm:p-3 rounded-lg max-w-[150px] sm:max-w-[280px] shadow-2xl transition-all duration-500 group-hover:bg-black/80">
+                <div className="bg-black/80 sm:bg-black/60 backdrop-blur-md border border-white/10 p-2 sm:p-3 rounded-lg max-w-[200px] sm:max-w-[320px] shadow-2xl transition-all duration-500 group-hover:bg-black/90">
                     <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
                         <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                        <span className="text-[8px] sm:text-[10px] font-bold text-emerald-400 uppercase tracking-widest whitespace-nowrap">Elite Agent Live</span>
+                        <span className="text-[10px] sm:text-xs font-bold text-emerald-400 uppercase tracking-widest whitespace-nowrap">Elite Agent Live</span>
                     </div>
-                    <p className="text-[9px] sm:text-xs text-blue-100/90 leading-tight sm:leading-relaxed italic line-clamp-2 sm:line-clamp-none">
+                    <p className="text-xs sm:text-sm md:text-base text-blue-100/90 leading-tight sm:leading-relaxed italic font-medium">
                         "{telemetry || 'Analisando vetores de preço...'}"
                     </p>
                 </div>

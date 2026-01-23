@@ -1,4 +1,4 @@
-# 10D Trading System v5.1 (Eagle Elite)
+# 10D Trading System v5.2 (Intelligent Agent Core)
 
 **10D** is an advanced automated trading system powered by AI/ML and Large Language Models (LLM) to identify high-probability crypto setups.
 
@@ -11,15 +11,19 @@
 O sistema foi consolidado para usar exclusivamente a interface **Premium**:
 - **Sala de Situação Tática**: Localizada na aba **Banca**, permite monitoramento profissional.
 - **Gráficos Multi-Timeframe**: Suporte a 1M, 5M, 15M, 30M, 1H, 2H, 4H e 1D.
-- **Elite Bankroll Captain V2**: IA dedicada com gestão persistente (Supabase):
-    - **Ciclo de 20 Trades**: Gestão de juros compostos por estágios (lote fixo por ciclo).
-    - **Memória de Aprendizado**: Tabela `agent_learning` para persistência de lições táticas.
-    - **Performance Sniper**: Alvos dinâmicos de até 6% (300% ROI com alavancagem 50x).
+- **Elite Bankroll Captain V3 (Intelligent)**: IA autônoma e supervisionada:
+    - **Conselho de Guerra**: Decisões debatidas entre Agentes (Técnico, Sentinela, Fundamental).
+    - **Modo Surf 🏄**: Se >2% ROI e Volatilidade/Sentiment favoráveis -> Segura a posição para alvos maiores.
+    - **Iron Shield 🛡️**: Proteção imediata (BE) ao atingir 1% ROI.
+    - **Fallback de Segurança**: Frontend calcula SL/TP se a API falhar (garantia visual).
 - **PWA Push Notifications**: Alertas em tempo real no celular mesmo com o App fechado.
     - Notificações de Gain/Loss.
     - Resumos de conclusão de Ciclo.
     - Gatilho "Real Money Ready" (70% Win Rate).
-- **Agent HUD**: Telemetria em tempo real sobre o gráfico com o "pensamento" da IA.
+- **Agent HUD & Mobile Mastery**:
+    - **Visual Limpo**: Sem "badgets" flutuantes, foco total no Price Action.
+    - **Auto-Zoom Inteligente**: Gráfico se adapta automaticamente ao mudar TF/Par.
+    - **Telemetria Expandida**: O Capitão "fala" o que está pensando em fonte legível.
 - **Dark Glassmorphism**: Estética premium com fundos escuros e acentos neon.
 - **Responsividade Ótima**: Ajustado para Desktop e Mobile.
 
@@ -59,4 +63,4 @@ Se o Vite tentar abrir na porta 3002, significa que há um processo "zumbi" na 3
 - **Windows (PowerShell):** `Get-NetTCPConnection -LocalPort 3001 | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }`
 
 ---
-*Atualizado em: 22/01/2026 (Eagle Elite Update)*
+*Atualizado em: 23/01/2026 (Intelligent Core Update)*

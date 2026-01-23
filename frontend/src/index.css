@@ -1856,7 +1856,7 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-image: url('/SoHoje.png');
+  background-image: url('/SoHoje1.png');
   background-size: cover;
   background-position: center;
   z-index: 1000;
@@ -1939,7 +1939,7 @@ body {
 .opening-footer-quote {
   margin-top: var(--space-xl);
   font-size: 1rem;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 1);
   letter-spacing: 1px;
 }
 
@@ -1948,6 +1948,10 @@ body {
   padding: 6px 24px;
   background: var(--accent-gradient);
   border: none;
+  position: relative;
+  /* Ensure z-index works */
+  z-index: 10;
+  /* Bring above background overlay */
   border-radius: var(--radius-full);
   color: white;
   font-size: 0.8rem;
@@ -1975,6 +1979,57 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Opening Page Mobile Responsiveness */
+@media (max-width: 768px) {
+  .opening-content {
+    width: 90%;
+    padding: var(--space-md);
+    gap: var(--space-lg);
+    margin-top: -15vh;
+    /* Lift container higher */
+    /* Subtle Border & Glass Effect */
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.2);
+    /* Slight dark overlay */
+    backdrop-filter: blur(4px);
+    /* Subtle blur */
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  }
+
+  .opening-main-title {
+    font-size: 2rem;
+    letter-spacing: 4px;
+    margin-bottom: var(--space-md);
+  }
+
+  .opening-quote {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  .opening-author {
+    font-size: 0.9rem;
+    margin-top: calc(-1 * var(--space-sm));
+  }
+
+  .affirmation-text {
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+  }
+
+  .opening-footer-quote {
+    font-size: 0.85rem;
+    margin-top: var(--space-lg);
+  }
+
+  .btn-enter {
+    margin-top: var(--space-lg);
+    padding: 8px 32px;
+    /* Larger touch target */
   }
 }
 

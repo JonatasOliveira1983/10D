@@ -198,20 +198,18 @@ const BancaPage = () => {
                         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 sm:gap-6">
                             {/* Logo & Title */}
                             <div className="flex items-center gap-2 sm:gap-4">
-                                <div className="relative">
-                                    <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 flex items-center justify-center shadow-2xl shadow-emerald-500/25">
-                                        <span className="material-symbols-outlined text-white text-lg sm:text-2xl md:text-3xl">token</span>
-                                    </div>
-                                    <div className="absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-4 h-4 sm:w-5 sm:h-5 rounded-md sm:rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center border-2 border-[#06080a]">
-                                        <span className="material-symbols-outlined text-white text-[8px] sm:text-xs">bolt</span>
-                                    </div>
-                                </div>
+                                <img
+                                    src="/Robo.png"
+                                    alt="Robot Logo"
+                                    className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain drop-shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+                                />
                                 <div>
-                                    <h1 className="text-xl sm:text-3xl md:text-4xl font-black tracking-tight">
-                                        <span className="text-white">10D</span>
-                                        <span className="text-gray-600 font-light ml-1 sm:ml-2">BANCA</span>
-                                    </h1>
-                                    <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1.5">
+                                    <img
+                                        src="/logobanca.png"
+                                        alt="10D Banca"
+                                        className="h-8 sm:h-10 md:h-12 object-contain"
+                                    />
+                                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1">
                                         <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5">
                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                             <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500"></span>
@@ -538,6 +536,15 @@ const BancaPage = () => {
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+
+                    {/* FOOTER BRANDING */}
+                    <div className="mt-8 sm:mt-12 mb-4 sm:mb-8 flex justify-center opacity-40 hover:opacity-80 transition-opacity duration-500">
+                        <img
+                            src="/logomarca1Ccolor.png"
+                            alt="10D Futures Branding"
+                            className="h-12 sm:h-16 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                        />
                     </div>
 
                 </div>
