@@ -13,6 +13,7 @@ import pytz
 import sys
 import os
 import io
+import threading
 
 # FORCE UTF-8 STDOUT/STDERR FOR WINDOWS
 try:
@@ -119,6 +120,8 @@ class SignalGenerator:
     def __init__(self):
         self.client = BybitClient()
         self.db = DatabaseManager()
+        self._lock = threading.Lock()
+        self.last_scan_heartbeat = time.time()
         self.active_signals: Dict[str, Dict] = {}
         self.signal_history: List[Dict] = []
         self.monitored_pairs: List[str] = []
@@ -858,6 +861,7 @@ class SignalGenerator:
 
     def scan_all_pairs(self) -> List[Dict]:
         """Core engine: Scans all monitored pairs and generates signals"""
+        self.last_scan_heartbeat = time.time()
         if not self.system_ready:
             print("[SCAN] System not ready. Skipping.", flush=True)
             return []
@@ -983,7 +987,8 @@ class SignalGenerator:
                                 # LLM disapproved but with good confidence - this is a warning
                                 print(f"[LLM WARNING] {symbol} - LLM nao aprovou mas seguindo com sinal (conf: {llm_conf:.0%})", flush=True)
                         
-                        self.active_signals[symbol] = signal
+                        with self._lock:
+                            self.active_signals[symbol] = signal
                         new_signals.append(signal)
                         sig_type = signal['signal_type'].replace('_', ' ')
                         ml_info = f" | ML: {signal['ml_probability']:.2%}" if signal.get('ml_probability') else ""
@@ -1063,7 +1068,10 @@ class SignalGenerator:
         to_remove = []  # Collect symbols to remove
         
         # Iterate over a COPY to avoid issues if other thread modifies
-        for symbol, signal in list(self.active_signals.items()):
+        with self._lock:
+            snapshot_items = list(self.active_signals.items())
+
+        for symbol, signal in snapshot_items:
             # 1. Freshness Check (Expire older than TTL)
             minutes_active = (current_time - signal["timestamp"]) / (1000 * 60)
             if minutes_active > SIGNAL_TTL_MINUTES:
@@ -1092,13 +1100,15 @@ class SignalGenerator:
                 to_remove.append(symbol)
         
         # Remove expired or non-sniper
-        for sym in to_remove:
-            sig = self.active_signals.get(sym)
-            if sig:
-                sig["status"] = "DISCARDED"
-                sig["exit_timestamp"] = current_time
-                self.save_signal_to_db(sig)
-            self.active_signals.pop(sym, None)
+        if to_remove:
+            with self._lock:
+                for sym in to_remove:
+                    sig = self.active_signals.get(sym)
+                    if sig:
+                        sig["status"] = "DISCARDED"
+                        sig["exit_timestamp"] = current_time
+                        self.save_signal_to_db(sig)
+                    self.active_signals.pop(sym, None)
             
         # Custom sort: Entry Zone Priority (IDEAL > WAIT > NEAR > LATE) then by Score
         def sort_priority(sig):
@@ -1129,8 +1139,9 @@ class SignalGenerator:
     
     def clear_signal(self, symbol: str):
         """Remove a signal from active signals"""
-        if symbol in self.active_signals:
-            del self.active_signals[symbol]
+        with self._lock:
+            if symbol in self.active_signals:
+                del self.active_signals[symbol]
     
     def cleanup_history(self):
         """Remove signals from history older than HISTORY_RETENTION_HOURS"""
@@ -1227,10 +1238,15 @@ class SignalGenerator:
 
     def monitor_active_signals(self):
         """Monitor active signals for TP, SL, or Volume Climax hits"""
-        if not self.active_signals:
-            return []
-            
-        print(f"[MONITOR] Checking {len(self.active_signals)} active signals...", flush=True)
+        self.last_scan_heartbeat = time.time()
+        
+        # Use lock to get snapshot
+        with self._lock:
+            if not self.active_signals:
+                return []
+            snapshot_items = list(self.active_signals.items())
+
+        print(f"[MONITOR] Checking {len(snapshot_items)} active signals...", flush=True)
         
         # Get all tickers in one call for efficiency
         tickers = self.client.get_all_tickers()
@@ -1242,7 +1258,7 @@ class SignalGenerator:
         finalized = []
         current_time = int(time.time() * 1000)
         
-        for symbol, signal in list(self.active_signals.items()):
+        for symbol, signal in snapshot_items:
             ticker = ticker_map.get(symbol)
             if not ticker:
                 continue
@@ -1260,7 +1276,10 @@ class SignalGenerator:
                 signal["status"] = "DISCARDED" # Permanent status for DB
                 signal["exit_timestamp"] = current_time
                 self.save_signal_to_db(signal)
-                del self.active_signals[symbol]
+                
+                with self._lock:
+                    if symbol in self.active_signals:
+                        del self.active_signals[symbol]
                 continue
             
             # Initialize hit flag for this iteration

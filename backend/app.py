@@ -150,84 +150,107 @@ def delayed_init():
     # Wait a few seconds for server to bind
     time.sleep(2)
     
-    # === NEW: Wait for DB connection (Max 30s) ===
+    # === NEW: Wait for DB connection (Max 60s with soft fail) ===
     print("[INIT] Waiting for Database connection...", flush=True)
     wait_start = time.time()
-    while not generator.db.is_connected() and time.time() - wait_start < 30:
-        if not generator.db.is_connecting() and not generator.db.is_connected():
+    db_connected = False
+    
+    # Loop for up to 60 seconds
+    while time.time() - wait_start < 60:
+        if generator.db.is_connected():
+            db_connected = True
+            break
+            
+        if not generator.db.is_connecting():
+            # Trigger connection if not in progress
             generator.db.start_background_connection()
+            
         time.sleep(1)
     
-    if generator.db.is_connected():
-        print("[INIT] Database connected successfully!", flush=True)
+    if db_connected:
+        print(f"[INIT] Database connected successfully in {int(time.time() - wait_start)}s!", flush=True)
     else:
-        print("[INIT] [WARN] Database connection timeout - proceed with caution", flush=True)
+        print("[INIT] [WARN] Database connection timeout (60s) - Starting in OFFLINE/MEMORY ONLY mode", flush=True)
 
+    # === STEP 1: Initialize pairs (FAST) ===
     try:
-        # === STEP 1: Initialize pairs (FAST) ===
         print(f"[INIT] Calling generator.initialize({PAIR_LIMIT})...", flush=True)
         pairs = generator.initialize(pair_limit=PAIR_LIMIT)
         print(f"[INIT] SUCCESS - Loaded {len(pairs)} pairs", flush=True)
+    except Exception as e:
+        print(f"[INIT] [CRITICAL] Failed to initialize pairs (API Error?): {e}", flush=True)
+        print("[INIT] Using fallback pair list...", flush=True)
+        # Fallback to a few majors if API fails
+        generator.monitored_pairs = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT"]
 
-        # === STEP 2: Start background scanner (WARM-UP) ===
+    # === STEP 2: Start background scanner (CRITICAL) ===
+    # We allow scanner to start even if DB or Init failed partially
+    try:
         print("[SCANNER] Starting background thread...", flush=True)
         scanning = True
         scan_thread = threading.Thread(target=background_scanner, daemon=True)
         scan_thread.start()
         print(f"[SCANNER] Started (interval: {UPDATE_INTERVAL_SECONDS}s)", flush=True)
+    except Exception as e:
+         print(f"[INIT] [FATAL] Could not start scanner thread: {e}", flush=True)
 
-        # === NEW: Start System Health Monitor ===
+    # === STEP 3: Start System Health Monitor ===
+    try:
         health_monitor.start()
+    except Exception as e:
+        print(f"[INIT] Failed to start HealthMonitor: {e}", flush=True)
 
-        # === STEP 3: Train ML model (SLOW/HEAVY) ===
-        if ML_ENABLED and generator.ml_predictor:
-            print("=" * 60, flush=True)
-            print("[ML STARTUP] Verificando modelo ML (Training in background)...", flush=True)
-            print("=" * 60, flush=True)
+    # === STEP 4: Train ML model (SLOW/HEAVY) ===
+    if ML_ENABLED and generator.ml_predictor and db_connected:
+        print("=" * 60, flush=True)
+        print("[ML STARTUP] Verificando modelo ML (Training in background)...", flush=True)
+        print("=" * 60, flush=True)
+        
+        # Always try to train/retrain at startup
+        try:
+            # Get current labeled signals count for progress reporting
+            stats = generator.db.count_labeled_signals()
+            total_samples = stats.get("total", 0)
+            print(f"[ML STARTUP] Amostras rotuladas encontradas: {total_samples}/{ML_MIN_SAMPLES}", flush=True)
+
+            if not generator.ml_predictor.model:
+                print("[ML STARTUP] Nenhum modelo carregado. Iniciando treinamento...", flush=True)
+            else:
+                print("[ML STARTUP] Modelo existente encontrado. Retreinando...", flush=True)
             
-            # Always try to train/retrain at startup
-            try:
-                # Get current labeled signals count for progress reporting
-                stats = generator.db.count_labeled_signals()
-                total_samples = stats.get("total", 0)
-                print(f"[ML STARTUP] Amostras rotuladas encontradas: {total_samples}/{ML_MIN_SAMPLES}", flush=True)
+            # Train the model
+            train_result = generator.ml_predictor.train_model(min_samples=ML_MIN_SAMPLES)
+            
+            if train_result.get("status") == "SUCCESS":
+                accuracy = train_result.get("metrics", {}).get("accuracy", 0)
+                print(f"============================================================", flush=True)
+                print(f"[ML STARTUP] [OK] Modelo treinado com sucesso! Acc: {accuracy:.2%}", flush=True)
+                print(f"============================================================", flush=True)
+            elif train_result.get("status") == "INSUFFICIENT_DATA":
+                print(f"[ML STARTUP] [WARN] Dados insuficientes ({total_samples}/{ML_MIN_SAMPLES}). Sistema em modo FALLBACK.", flush=True)
+            else:
+                print(f"[ML STARTUP] [ERROR] Erro no treinamento: {train_result}", flush=True)
+        except Exception as e:
+            print(f"[ML STARTUP] [CRITICAL] Falha no treinamento: {e}", flush=True)
+            # Even if ML fails, we might want to let system pass if we allow fallback? 
+            # Currently generator checks for ML before using it, so it's safe to proceed.
+    else:
+        if not db_connected:
+             print("[ML STARTUP] Skipped - Database not connected", flush=True)
 
-                if not generator.ml_predictor.model:
-                    print("[ML STARTUP] Nenhum modelo carregado. Iniciando treinamento...", flush=True)
-                else:
-                    print("[ML STARTUP] Modelo existente encontrado. Retreinando...", flush=True)
-                
-                # Train the model
-                train_result = generator.ml_predictor.train_model(min_samples=ML_MIN_SAMPLES)
-                
-                if train_result.get("status") == "SUCCESS":
-                    accuracy = train_result.get("metrics", {}).get("accuracy", 0)
-                    print(f"============================================================", flush=True)
-                    print(f"[ML STARTUP] [OK] Modelo treinado com sucesso! Acc: {accuracy:.2%}", flush=True)
-                    print(f"============================================================", flush=True)
-                elif train_result.get("status") == "INSUFFICIENT_DATA":
-                    print(f"[ML STARTUP] [WARN] Dados insuficientes ({total_samples}/{ML_MIN_SAMPLES}). Sistema em modo FALLBACK.", flush=True)
-                else:
-                    print(f"[ML STARTUP] [ERROR] Erro no treinamento: {train_result}", flush=True)
-            except Exception as e:
-                print(f"[ML STARTUP] [CRITICAL] Falha no treinamento: {e}", flush=True)
-                # Even if ML fails, we might want to let system pass if we allow fallback? 
-                # Currently generator checks for ML before using it, so it's safe to proceed.
-
-        # === STEP 4: System Ready ===
+    # === STEP 5: System Ready ===
+    try:
         generator.set_system_ready(True)
         
         # Link Elite Agent to Strategist Agent data for display
-        generator.strategist_report["elite_learning"] = generator.bankroll_manager.elite_agent.get_status()
+        if hasattr(generator, 'bankroll_manager') and generator.bankroll_manager:
+            generator.strategist_report["elite_learning"] = generator.bankroll_manager.elite_agent.get_status()
         
         print("=" * 60, flush=True)
         print("[INIT] SYSTEM FULLY OPERATIONAL - Scanning Active", flush=True)
         print("=" * 60, flush=True)
-        
     except Exception as e:
-        print(f"[INIT] ERROR during initialization: {e}", flush=True)
-        import traceback
-        traceback.print_exc()
+         print(f"[INIT] Error setting system ready: {e}", flush=True)
 
 # Start delayed initialization thread
 print("[BOOT] Launching delayed init thread...", flush=True)
