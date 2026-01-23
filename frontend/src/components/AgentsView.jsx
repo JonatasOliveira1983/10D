@@ -1,181 +1,168 @@
-import React, { useState, useEffect } from 'react';
-import { Shield, Target, Cpu, MessageSquare, Zap, Activity, Globe, Compass } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Shield, Target, Cpu, MessageSquare, Zap, Activity, Globe, Compass, Brain, Terminal } from 'lucide-react';
 import './AgentsView.css';
 
 export default function AgentsView() {
     const [agents, setAgents] = useState([]);
-    const [councilDebate, setCouncilDebate] = useState(null);
+    const [llmStatus, setLlmStatus] = useState(null);
+    const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [lastUpdate, setLastUpdate] = useState(null);
+    const logsEndRef = useRef(null);
 
-    const fetchAgents = async () => {
+    // Mock logs generator for "War Room" feel (until backend is fully event-driven)
+    const generateMockLog = (agentList) => {
+        if (!agentList || agentList.length === 0) return null;
+
+        const actions = [
+            { agent: 'scout', msg: '👁️ Varredura de 30 pares concluída. Padrão bullish em SOL.' },
+            { agent: 'sentinel', msg: '🛡️ Volume institucional detectado em BTC. Absorção confirmada.' },
+            { agent: 'strategist', msg: '🧠 Correlação BTC/ETH estável (0.85). Cenário favorável.' },
+            { agent: 'governor', msg: '⚖️ Risco da banca em 12%. Autorizando novos slots.' },
+            { agent: 'anchor', msg: '⚓ SP500 abrindo em alta. Contexto macro: RISK-ON.' },
+            { agent: 'elite_manager', msg: '🦅 Monitorando 2 posições abertas. Trailing stop ativo.' },
+            { agent: 'gemini', msg: '💡 CORTEX: Validando sinal com 89% de confiança. Proceder.' }
+        ];
+
+        const randomAction = actions[Math.floor(Math.random() * actions.length)];
+        return {
+            id: Date.now(),
+            timestamp: new Date().toLocaleTimeString(),
+            agent: randomAction.agent,
+            message: randomAction.msg
+        };
+    };
+
+    const fetchSystemState = async () => {
         try {
-            const response = await fetch('/api/system/agents');
-            const data = await response.json();
-            if (data.status === 'OK') {
-                setAgents(data.agents);
-                setCouncilDebate(data.council_debate);
-                setLastUpdate(new Date().toLocaleTimeString());
+            // Fetch Agents
+            const agentsRes = await fetch('/api/system/agents');
+            const agentsData = await agentsRes.json();
+
+            // Fetch LLM Status
+            const llmRes = await fetch('/api/llm/status');
+            const llmData = await llmRes.json();
+
+            if (agentsData.status === 'OK') {
+                setAgents(agentsData.agents);
             }
+            if (llmData.status === 'OK') {
+                setLlmStatus(llmData);
+            }
+
             setLoading(false);
+
         } catch (error) {
-            console.error('Error fetching agents:', error);
+            console.error('Error fetching system state:', error);
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchAgents();
-        const interval = setInterval(fetchAgents, 10000); // Poll every 10s
-        return () => clearInterval(interval);
+        fetchSystemState();
+        const interval = setInterval(fetchSystemState, 5000);
+
+        // Simulate Live Logs
+        const logInterval = setInterval(() => {
+            const newLog = generateMockLog(agents);
+            if (newLog) {
+                setLogs(prev => [...prev.slice(-50), newLog]); // Keep last 50 logs
+            }
+        }, 3500);
+
+        return () => {
+            clearInterval(interval);
+            clearInterval(logInterval);
+        };
     }, []);
+
+    // Auto-scroll logs
+    useEffect(() => {
+        logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [logs]);
 
     const getIcon = (id) => {
         switch (id) {
-            case 'health_monitor': return <Shield size={24} />;
-            case 'scout': return <Target size={24} />;
-            case 'sentinel': return <Compass size={24} />;
-            case 'strategist': return <Cpu size={24} />;
-            case 'governor': return <Shield size={24} className="text-warning" />;
-            case 'anchor': return <Globe size={24} />;
-            case 'elite_manager': return <Zap size={24} className="text-emerald-400" />;
-            default: return <Activity size={24} />;
+            case 'health_monitor': return <Activity size={20} />;
+            case 'scout': return <Target size={20} />;
+            case 'sentinel': return <Compass size={20} />;
+            case 'strategist': return <Cpu size={20} />;
+            case 'governor': return <Shield size={20} className="text-warning" />;
+            case 'anchor': return <Globe size={20} />;
+            case 'elite_manager': return <Zap size={20} className="text-emerald-400" />;
+            case 'gemini': return <Brain size={32} className="text-violet-400" />;
+            default: return <Activity size={20} />;
         }
     };
 
     return (
-        <div className="agents-view fade-in">
-            <div className="agents-header">
-                <div className="title-group">
-                    <h1>Rede Neural de Agentes</h1>
-                    <p className="subtitle">Monitoramento em tempo real do ecossistema de inteligência 10D</p>
+        <div className="agents-view-v2 fade-in">
+            <header className="neural-header">
+                <div className="header-content">
+                    <h1>NEURAL COMMAND CENTER</h1>
+                    <div className="live-indicator">
+                        <span className="blink">●</span> SYSTEM ONLINE
+                    </div>
                 </div>
-                <div className="status-badge">
-                    <span className="pulse"></span>
-                    Última Reflexão: {lastUpdate}
-                </div>
-            </div>
+            </header>
 
-            {loading ? (
-                <div className="loading-container">
-                    <Zap size={48} className="spin" />
-                    <p>Sincronizando Rede Neural...</p>
-                </div>
-            ) : (
-                <div className="agents-grid">
-                    {agents.map(agent => (
-                        <div key={agent.id} className="agent-card">
-                            <div className="agent-card-header">
-                                <div className="agent-icon">{getIcon(agent.id)}</div>
-                                <div className="agent-info">
+            <div className="neural-grid-container">
+
+                {/* LEFT: THE AGENTS GRID */}
+                <div className="agents-network">
+                    {/* CENTRAL BRAIN (GEMINI) */}
+                    <div className="central-node">
+                        <div className="brain-core pulse-glow">
+                            {getIcon('gemini')}
+                        </div>
+                        <div className="brain-label">GEMINI 1.5 CORTEX</div>
+                        <div className="brain-status">
+                            {llmStatus?.llm_enabled ? 'CONNECTED' : 'OFFLINE'}
+                        </div>
+
+                        {/* CONNECTION LINES (SVG OVERLAY WOULD GO HERE, SIMULATED VIA CSS FOR NOW) */}
+                        <div className="connection-lines"></div>
+                    </div>
+
+                    {/* SATELLITE AGENTS */}
+                    <div className="satellite-grid">
+                        {agents.map(agent => (
+                            <div key={agent.id} className={`agent-node ${agent.id}`}>
+                                <div className="node-icon-wrapper">
+                                    {getIcon(agent.id)}
+                                    <div className="connection-beam"></div>
+                                </div>
+                                <div className="node-info">
                                     <h3>{agent.name}</h3>
-                                    <span className={`status-tag ${agent.status.toLowerCase()}`}>
-                                        {agent.status}
-                                    </span>
+                                    <p className="role">{agent.role}</p>
+                                    <div className="mini-status">{agent.last_action}</div>
                                 </div>
                             </div>
-
-                            <div className="agent-role">
-                                <label>Missão:</label>
-                                <p>{agent.role}</p>
-                            </div>
-
-                            <div className="agent-last-action">
-                                <label>Atividade Recente:</label>
-                                <p>{agent.last_action}</p>
-                            </div>
-
-                            {agent.id === 'strategist' && agent.report && (
-                                <div className="agent-thought">
-                                    <div className="thought-header">
-                                        <MessageSquare size={16} />
-                                        <span>Último Post-Mortem</span>
-                                    </div>
-                                    <p>{agent.report.advice || "Analisando histórico de performance..."}</p>
-                                    {agent.report.performance_grade && (
-                                        <div className="grade-badge">Nota: {agent.report.performance_grade}</div>
-                                    )}
-                                </div>
-                            )}
-
-                            {agent.id === 'anchor' && agent.context && (
-                                <div className="agent-thought macro">
-                                    <div className="thought-header">
-                                        <Globe size={16} />
-                                        <span>Sentimento Global</span>
-                                    </div>
-                                    <div className="macro-stats">
-                                        <span>{agent.context.global_sentiment}</span>
-                                        <span className="multiplier">Conf: x{agent.context.confidence_multiplier}</span>
-                                    </div>
-                                    <p className="macro-summary">{agent.context.summary}</p>
-                                </div>
-                            )}
-
-                            {agent.id === 'elite_manager' && agent.learning && (
-                                <div className="agent-thought elite">
-                                    <div className="thought-header">
-                                        <Zap size={16} />
-                                        <span>Status de Sniper</span>
-                                    </div>
-                                    <div className="elite-stats">
-                                        <div className="stat-row">
-                                            <span>XP: {agent.learning.experience_points}</span>
-                                            <span className="strategy">{agent.learning.current_strategy}</span>
-                                        </div>
-                                        <div className="xp-bar">
-                                            <div className="xp-fill" style={{ width: `${(agent.learning.experience_points % 100)}%` }}></div>
-                                        </div>
-                                    </div>
-                                    <p className="elite-reflection">{agent.learning.last_reflection}</p>
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* COUNCIL DEBATE AUDIT SECTION */}
-            {councilDebate && (
-                <div className="council-audit-section fade-in">
-                    <div className="audit-header">
-                        <MessageSquare size={24} className="text-violet-400" />
-                        <h2>Última Deliberação do Conselho</h2>
-                        <span className="audit-badge">Auditoria em Tempo Real</span>
-                    </div>
-
-                    <div className="debate-grid">
-                        <div className="debate-transcript">
-                            <div className="transcript-header">Razão da Decisão: {councilDebate.approved ? '✅ Aprovado' : '❌ Rejeitado'}</div>
-                            <p className="reasoning-text">"{councilDebate.reasoning}"</p>
-                            <div className="confidence-meter">
-                                <span>Confiança do Conselho</span>
-                                <div className="meter-bar">
-                                    <div className="meter-fill" style={{ width: `${councilDebate.confidence * 100}%` }}></div>
-                                </div>
-                                <span className="conf-pct">{(councilDebate.confidence * 100).toFixed(0)}%</span>
-                            </div>
-                        </div>
-
-                        <div className="votes-summary">
-                            <h3>Votos Individuais</h3>
-                            <div className="votes-list">
-                                {councilDebate.vote_breakdown && Object.entries(councilDebate.vote_breakdown).map(([agent, verdict]) => (
-                                    <div key={agent} className="agent-vote">
-                                        <span className="agent-name">{agent.toUpperCase()}</span>
-                                        <span className={`vote-tag ${verdict === 'APPROVED' ? 'approved' : 'rejected'}`}>
-                                            {verdict === 'APPROVED' ? 'Sim' : 'Não'}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                        ))}
                     </div>
                 </div>
-            )}
 
-            <div className="agents-footer">
-                <p>Os agentes utilizam LLM Gemini para processamento de linguagem natural e ajustes estratégicos constantes.</p>
+                {/* RIGHT: THE WAR ROOM (LOGS) */}
+                <div className="war-room-terminal">
+                    <div className="terminal-header">
+                        <Terminal size={16} />
+                        <span>NEURAL_STREAM_LOGS // v.3.0</span>
+                    </div>
+                    <div className="terminal-body">
+                        {logs.map(log => (
+                            <div key={log.id} className="log-entry">
+                                <span className="log-time">[{log.timestamp}]</span>
+                                <span className={`log-agent ${log.agent}`}>{log.agent.toUpperCase()}:</span>
+                                <span className="log-msg">{log.message}</span>
+                            </div>
+                        ))}
+                        <div ref={logsEndRef} />
+                    </div>
+                    <div className="terminal-input">
+                        <span className="prompt">{'>'}</span>
+                        <span className="cursor">_</span>
+                    </div>
+                </div>
+
             </div>
         </div>
     );

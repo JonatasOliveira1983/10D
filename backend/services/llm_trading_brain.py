@@ -254,8 +254,8 @@ class LLMTradingBrain:
             oldest_key = min(self.cache.keys(), key=lambda k: self.cache[k]["timestamp"])
             del self.cache[oldest_key]
     
-    def _call_gemini(self, prompt: str, max_tokens: int = 500) -> Optional[str]:
-        """Call Gemini API with rate limiting and error handling"""
+    def call_gemini(self, prompt: str, max_tokens: int = 500) -> Optional[str]:
+        """Call Gemini API with rate limiting and error handling (Public)"""
         if not self.model:
             return None
         
@@ -332,7 +332,7 @@ class LLMTradingBrain:
         
         # Define the LLM callback
         def llm_callback(prompt: str) -> str:
-            return self._call_gemini(prompt, max_tokens=600)
+            return self.call_gemini(prompt, max_tokens=600)
 
         # Run The Council
         print(f"[COUNCIL] Convening The Council for {signal.get('symbol')}...", flush=True)
@@ -414,7 +414,7 @@ RESPOND IN JSON FORMAT ONLY:
   "should_adjust": true/false
 }}"""
 
-        response = self._call_gemini(prompt, max_tokens=200)
+        response = self.call_gemini(prompt, max_tokens=200)
         result = self._parse_json_response(response)
         
         if result:
@@ -502,7 +502,7 @@ RESPOND IN JSON FORMAT ONLY:
   "reasoning": "Brief explanation citing history (max 30 words)"
 }}"""
 
-        response = self._call_gemini(prompt, max_tokens=150)
+        response = self.call_gemini(prompt, max_tokens=150)
         result = self._parse_json_response(response)
         
         if result:
@@ -573,7 +573,7 @@ RESPOND IN JSON FORMAT ONLY:
   "summary": "Resumo em Português"
 }}"""
 
-        response = self._call_gemini(prompt, max_tokens=150)
+        response = self.call_gemini(prompt, max_tokens=150)
         result = self._parse_json_response(response)
         
         if result:

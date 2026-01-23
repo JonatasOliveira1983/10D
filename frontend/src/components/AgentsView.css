@@ -1,617 +1,401 @@
-.agents-view {
-    padding: 2rem;
-    color: white;
-}
+/* AgentsView.css - Neural Grid & War Room Edition */
 
-.agents-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 1.5rem;
-}
-
-.agents-header h1 {
-    font-size: 2rem;
-    background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 0.5rem;
-}
-
-.subtitle {
-    color: #8892b0;
-    font-size: 0.9rem;
-}
-
-.status-badge {
-    background: rgba(0, 210, 255, 0.1);
-    border: 1px solid rgba(0, 210, 255, 0.2);
-    padding: 0.5rem 1rem;
-    border-radius: 2rem;
-    font-size: 0.8rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    white-space: nowrap;
-}
-
-.pulse {
-    width: 8px;
-    height: 8px;
-    background: #00d2ff;
-    border-radius: 50%;
-    box-shadow: 0 0 10px #00d2ff;
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% {
-        transform: scale(0.95);
-        opacity: 0.5;
-    }
-
-    50% {
-        transform: scale(1.1);
-        opacity: 1;
-    }
-
-    100% {
-        transform: scale(0.95);
-        opacity: 0.5;
-    }
-}
-
-.agents-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.5rem;
-}
-
-.agent-card {
-    background: rgba(17, 25, 40, 0.75);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.125);
-    border-radius: 1rem;
-    padding: 1.5rem;
-    transition: transform 0.3s ease, border-color 0.3s ease;
-}
-
-.agent-card:hover {
-    transform: translateY(-5px);
-    border-color: rgba(0, 210, 255, 0.4);
-}
-
-.agent-card-header {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    align-items: center;
-}
-
-.agent-icon {
-    width: 48px;
-    height: 48px;
-    min-width: 48px;
-    background: rgba(0, 210, 255, 0.1);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #00d2ff;
-}
-
-.agent-info h3 {
-    font-size: 1.1rem;
-    margin-bottom: 0.2rem;
-}
-
-.status-tag {
-    font-size: 0.7rem;
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    text-transform: uppercase;
-    font-weight: bold;
-}
-
-.status-tag.healthy,
-.status-tag.active {
-    background: rgba(0, 255, 127, 0.1);
-    color: #00ff7f;
-}
-
-.agent-role,
-.agent-last-action {
-    margin-bottom: 1rem;
-}
-
-.agent-role label,
-.agent-last-action label {
-    font-size: 0.75rem;
-    color: #64ffda;
-    display: block;
-    margin-bottom: 0.3rem;
-    text-transform: uppercase;
-}
-
-.agent-role p,
-.agent-last-action p {
-    font-size: 0.9rem;
-    color: #ccd6f6;
-}
-
-.agent-thought {
-    margin-top: 1.5rem;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    padding: 1rem;
-    border-left: 3px solid #64ffda;
-}
-
-.thought-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8rem;
-    color: #64ffda;
-    margin-bottom: 0.5rem;
-}
-
-.agent-thought p {
-    font-size: 0.85rem;
-    line-height: 1.4;
-    font-style: italic;
-    color: #a8b2d1;
-}
-
-.grade-badge {
-    margin-top: 0.5rem;
-    display: inline-block;
-    padding: 0.2rem 0.6rem;
-    background: #64ffda;
-    color: #0a192f;
-    border-radius: 4px;
-    font-weight: bold;
-    font-size: 0.75rem;
-}
-
-.macro-stats {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-    font-weight: bold;
-}
-
-.multiplier {
-    color: #00d2ff;
-}
-
-.macro-summary {
-    margin-top: 0.5rem;
-}
-
-.agents-footer {
-    margin-top: 3rem;
-    text-align: center;
-    color: #8892b0;
-    font-size: 0.8rem;
-}
-
-.loading-container {
+.agents-view-v2 {
+    height: 100vh;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 40vh;
-    gap: 1rem;
+    overflow: hidden;
+    background: radial-gradient(circle at center, #1a1f35 0%, #0f1320 100%);
+    color: #e2e8f0;
 }
 
-.spin {
-    animation: rotate 2s linear infinite;
-    color: #00d2ff;
-}
-
-@keyframes rotate {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* Mobile Responsiveness */
-@media (max-width: 768px) {
-    .agents-view {
-        padding: 1rem;
-        padding-bottom: 100px;
-        /* Space for bottom nav */
-    }
-
-    .agents-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-
-    .agents-header h1 {
-        font-size: 1.5rem;
-    }
-
-    .status-badge {
-        align-self: flex-start;
-    }
-
-    .agents-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .agent-card {
-        padding: 1.25rem;
-    }
-}
-
-/* Small phones */
-@media (max-width: 480px) {
-    .agents-view {
-        padding: 0.75rem;
-        padding-bottom: 90px;
-    }
-
-    .agents-header {
-        gap: 0.75rem;
-        margin-bottom: 1.25rem;
-        padding-bottom: 1rem;
-    }
-
-    .agents-header h1 {
-        font-size: 1.25rem;
-    }
-
-    .subtitle {
-        font-size: 0.75rem;
-    }
-
-    .status-badge {
-        padding: 0.35rem 0.75rem;
-        font-size: 0.7rem;
-    }
-
-    .pulse {
-        width: 6px;
-        height: 6px;
-    }
-
-    .agents-grid {
-        gap: 1rem;
-    }
-
-    .agent-card {
-        padding: 1rem;
-        border-radius: 0.75rem;
-    }
-
-    .agent-card-header {
-        gap: 0.75rem;
-        margin-bottom: 1rem;
-    }
-
-    .agent-icon {
-        width: 40px;
-        height: 40px;
-        min-width: 40px;
-        border-radius: 10px;
-    }
-
-    .agent-icon svg {
-        width: 20px;
-        height: 20px;
-    }
-
-    .agent-info h3 {
-        font-size: 0.95rem;
-    }
-
-    .status-tag {
-        font-size: 0.6rem;
-        padding: 0.15rem 0.4rem;
-    }
-
-    .agent-role label,
-    .agent-last-action label {
-        font-size: 0.65rem;
-    }
-
-    .agent-role p,
-    .agent-last-action p {
-        font-size: 0.8rem;
-    }
-
-    .agent-role,
-    .agent-last-action {
-        margin-bottom: 0.75rem;
-    }
-
-    .agent-thought {
-        margin-top: 1rem;
-        padding: 0.75rem;
-    }
-
-    .thought-header {
-        font-size: 0.7rem;
-        gap: 0.35rem;
-    }
-
-    .thought-header svg {
-        width: 14px;
-        height: 14px;
-    }
-
-    .agent-thought p {
-        font-size: 0.75rem;
-        line-height: 1.35;
-    }
-
-    .grade-badge {
-        padding: 0.15rem 0.5rem;
-        font-size: 0.65rem;
-    }
-
-    .macro-stats {
-        font-size: 0.85rem;
-    }
-
-    .multiplier {
-        font-size: 0.8rem;
-    }
-
-    .macro-summary {
-        font-size: 0.75rem !important;
-    }
-
-    .agents-footer {
-        margin-top: 2rem;
-        font-size: 0.7rem;
-    }
-
-    .loading-container {
-        height: 30vh;
-    }
-
-    .loading-container svg {
-        width: 36px;
-        height: 36px;
-    }
-
-    .loading-container p {
-        font-size: 0.85rem;
-    }
-}
-
-/* Extra small phones */
-@media (max-width: 380px) {
-    .agents-view {
-        padding: 0.5rem;
-        padding-bottom: 95px;
-    }
-
-    .agents-header h1 {
-        font-size: 1.1rem;
-    }
-
-    .subtitle {
-        font-size: 0.7rem;
-        display: none;
-    }
-
-    .status-badge {
-        font-size: 0.65rem;
-        padding: 0.3rem 0.6rem;
-    }
-
-    .agent-card {
-        padding: 0.875rem;
-    }
-
-    .agent-icon {
-        width: 36px;
-        height: 36px;
-        min-width: 36px;
-    }
-
-    .agent-info h3 {
-        font-size: 0.85rem;
-    }
-
-    .agent-role p,
-    .agent-last-action p {
-        font-size: 0.75rem;
-    }
-
-    .agent-thought {
-        padding: 0.6rem;
-    }
-
-    .agent-thought p {
-        font-size: 0.7rem;
-    }
-}
-
-/* NEW: Council Audit Section */
-.council-audit-section {
-    margin-top: 4rem;
-    background: rgba(43, 30, 70, 0.2);
-    border: 1px solid rgba(139, 92, 246, 0.3);
-    border-radius: 1.5rem;
-    padding: 2rem;
-    backdrop-filter: blur(20px);
-}
-
-.audit-header {
+/* HEADER */
+.neural-header {
+    flex: 0 0 auto;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 1rem;
-    margin-bottom: 2rem;
 }
 
-.audit-header h2 {
+.neural-header h1 {
     font-size: 1.5rem;
-    color: #f8f9fa;
+    font-weight: 800;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #a78bfa, #2dd4bf);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     margin: 0;
 }
 
-.audit-badge {
-    background: rgba(139, 92, 246, 0.2);
-    color: #a78bfa;
-    padding: 0.3rem 0.8rem;
-    border-radius: 2rem;
-    font-size: 0.75rem;
+.live-indicator {
+    font-size: 0.8rem;
     font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    color: #2dd4bf;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
-.debate-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
+.blink {
+    animation: blink 2s infinite;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+}
+
+/* MAIN LAYOUT */
+.neural-grid-container {
+    flex: 1;
+    display: flex;
+    padding: 2rem;
     gap: 2rem;
+    overflow: hidden;
 }
 
-.debate-transcript {
-    background: rgba(0, 0, 0, 0.2);
-    padding: 1.5rem;
+/* LEFT: AGENTS NETWORK */
+.agents-network {
+    flex: 2;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    /* Optional: BG grid pattern */
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
     border-radius: 1rem;
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.transcript-header {
-    font-weight: bold;
-    color: #64ffda;
+/* CENTRAL BRAIN (GEMINI) */
+.central-node {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 3rem;
+}
+
+.brain-core {
+    width: 100px;
+    height: 100px;
+    background: rgba(139, 92, 246, 0.1);
+    border: 2px solid #8b5cf6;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
     margin-bottom: 1rem;
-    font-size: 1.1rem;
+    transition: all 0.3s ease;
 }
 
-.reasoning-text {
-    line-height: 1.6;
-    color: #ccd6f6;
-    margin-bottom: 1.5rem;
-    font-style: italic;
+.pulse-glow {
+    animation: brainPulse 3s infinite;
 }
 
-.confidence-meter {
+@keyframes brainPulse {
+    0% {
+        box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+        border-color: #8b5cf6;
+    }
+
+    50% {
+        box-shadow: 0 0 50px rgba(139, 92, 246, 0.6);
+        border-color: #d8b4fe;
+    }
+
+    100% {
+        box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+        border-color: #8b5cf6;
+    }
+}
+
+.brain-label {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #a78bfa;
+    letter-spacing: 1px;
+}
+
+.brain-status {
+    font-size: 0.8rem;
+    color: #2dd4bf;
+    background: rgba(45, 212, 191, 0.1);
+    padding: 0.2rem 0.6rem;
+    border-radius: 1rem;
+    margin-top: 0.5rem;
+}
+
+/* SATELLITE AGENTS GRID */
+.satellite-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    /* 3 pairs of 2 agents approx */
+    gap: 3rem;
+    width: 100%;
+    max-width: 900px;
+    margin-top: 2rem;
+}
+
+/* Individual Agent Node */
+.agent-node {
     display: flex;
     align-items: center;
     gap: 1rem;
-    font-size: 0.9rem;
-    color: #a8b2d1;
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1rem;
+    border-radius: 0.8rem;
+    transition: all 0.3s ease;
+    cursor: default;
+    position: relative;
 }
 
-.meter-bar {
-    flex: 1;
-    height: 8px;
+.agent-node:hover {
+    transform: translateY(-5px);
+    background: rgba(30, 41, 59, 0.9);
+    border-color: rgba(139, 92, 246, 0.4);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.node-icon-wrapper {
+    position: relative;
+    width: 48px;
+    height: 48px;
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.meter-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #8b5cf6, #d946ef);
-    box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
-}
-
-.conf-pct {
-    font-weight: bold;
-    color: #8b5cf6;
-}
-
-.votes-summary h3 {
-    font-size: 1rem;
-    margin-bottom: 1rem;
-    color: #8892b0;
-}
-
-.agent-vote {
+    border-radius: 10px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 0.75rem;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 8px;
-    margin-bottom: 0.5rem;
+    justify-content: center;
+    color: #94a3b8;
 }
 
-.agent-name {
-    font-size: 0.8rem;
-    font-weight: bold;
-    color: #8892b0;
+/* Specific Agent Colors */
+.agent-node.elite_manager .node-icon-wrapper {
+    color: #facc15;
+    border: 1px solid rgba(250, 204, 21, 0.3);
 }
 
-.vote-tag {
+.agent-node.scout .node-icon-wrapper {
+    color: #38bdf8;
+}
+
+.agent-node.sentinel .node-icon-wrapper {
+    color: #f472b6;
+}
+
+.agent-node.strategist .node-icon-wrapper {
+    color: #a78bfa;
+}
+
+.node-info h3 {
+    font-size: 1rem;
+    margin: 0;
+    color: #f1f5f9;
+}
+
+.node-info .role {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin: 0;
+}
+
+.mini-status {
     font-size: 0.7rem;
-    font-weight: bold;
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
+    color: #2dd4bf;
+    margin-top: 0.3rem;
+    opacity: 0.8;
 }
 
-.vote-tag.approved {
-    background: rgba(16, 185, 129, 0.1);
-    color: #10b981;
+/* CONNECTION BEAMS (Simulated Lines towards Center) */
+.connection-beam {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    width: 2px;
+    height: 20px;
+    background: linear-gradient(to top, rgba(255, 255, 255, 0.1), transparent);
+    /* In a real SVG setup, these would be diagonal lines to the center */
+    display: none;
+    /* Hidden for now, simplified visual */
 }
 
-.vote-tag.rejected {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
-}
-
-/* Elite Agent Specific */
-.agent-thought.elite {
-    border-left-color: #10b981;
-    background: rgba(16, 185, 129, 0.05);
-}
-
-.elite-stats {
-    margin-bottom: 1rem;
-}
-
-.stat-row {
+/* RIGHT: WAR ROOM TERMINAL */
+.war-room-terminal {
+    flex: 1;
+    min-width: 350px;
+    max-width: 500px;
+    background: #0f1117;
+    border: 1px solid #334155;
+    border-radius: 0.8rem;
     display: flex;
-    justify-content: space-between;
-    font-size: 0.85rem;
-    font-weight: bold;
-    margin-bottom: 0.5rem;
+    flex-direction: column;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
-.strategy {
-    color: #10b981;
-    text-transform: uppercase;
+.terminal-header {
+    background: #1e293b;
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid #334155;
+    border-radius: 0.8rem 0.8rem 0 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    font-weight: bold;
+}
+
+.terminal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    font-size: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    /* Scrollbar styling */
+    scrollbar-width: thin;
+    scrollbar-color: #475569 #0f1117;
+}
+
+.terminal-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.terminal-body::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 3px;
+}
+
+.log-entry {
+    display: flex;
+    gap: 0.5rem;
+    line-height: 1.4;
+    animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.log-time {
+    color: #475569;
+    flex-shrink: 0;
     font-size: 0.75rem;
 }
 
-.xp-bar {
-    height: 6px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 3px;
-    overflow: hidden;
+.log-agent {
+    font-weight: bold;
+    flex-shrink: 0;
 }
 
-.xp-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #10b981, #34d399);
-    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+/* Agent Log Colors */
+.log-agent.scout {
+    color: #38bdf8;
 }
 
-.elite-reflection {
-    font-size: 0.8rem !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-    padding-top: 0.5rem;
+.log-agent.sentinel {
+    color: #f472b6;
+}
+
+.log-agent.strategist {
+    color: #a78bfa;
+}
+
+.log-agent.elite_manager {
+    color: #facc15;
+}
+
+.log-agent.gemini {
+    color: #d8b4fe;
+    text-shadow: 0 0 5px rgba(139, 92, 246, 0.5);
+}
+
+.log-agent.governor {
+    color: #fb923c;
+}
+
+.log-agent.anchor {
+    color: #94a3b8;
+}
+
+.log-msg {
+    color: #e2e8f0;
+    word-break: break-word;
+}
+
+.terminal-input {
+    padding: 0.8rem 1rem;
+    border-top: 1px solid #334155;
+    background: rgba(0, 0, 0, 0.3);
+    color: #94a3b8;
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.cursor {
+    animation: blink 1s step-end infinite;
+    color: #2dd4bf;
+    font-weight: bold;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1024px) {
+    .neural-grid-container {
+        flex-direction: column;
+    }
+
+    .agents-network {
+        min-height: 50vh;
+    }
+
+    .war-room-terminal {
+        height: 300px;
+        min-width: 100%;
+        max-width: 100%;
+    }
+
+    .satellite-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 @media (max-width: 768px) {
-    .debate-grid {
+    .agents-view-v2 {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+    }
+
+    .satellite-grid {
         grid-template-columns: 1fr;
     }
 }
