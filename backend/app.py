@@ -15,6 +15,8 @@ print(f"[DEBUG] ===== BUILD VERSION: {BUILD_VERSION} =====", flush=True)
 import os
 import io
 
+print(f"[BOOT] ===== 10D STARTING (BUILD: {BUILD_VERSION}) =====", flush=True)
+
 # Ensure UTF-8 output even if TextIOWrapper is already set (safe check)
 try:
     if os.name == 'nt' and (not hasattr(sys.stdout, 'encoding') or sys.stdout.encoding.lower() != 'utf-8'):
@@ -57,7 +59,28 @@ print("[DEBUG] SignalGenerator imported OK", flush=True)
 app = Flask(__name__, static_folder='../frontend/dist', static_url_path='/')
 CORS(app)
 
-# Initialize signal generator
+# === REAL-TIME LOG BUFFER ===
+# Stores the last 50 logs in memory for immediate UI feedback without DB delay
+from collections import deque
+RECENT_LOGS = deque(maxlen=50)
+
+def log_feed_callback(agent_id, type_id, message, details=None):
+    """Callback injected into SignalGenerator to capture real-time logs"""
+    try:
+        log_entry = {
+            "id": f"rt_{int(time.time()*1000)}",
+            "timestamp": datetime.now().strftime("%H:%M:%S"),
+            "agent": agent_id,
+            "message": f"🧠 {type_id.replace('COUNCIL_', '')}: {message}"
+        }
+        RECENT_LOGS.append(log_entry)
+        print(f"[CALLBACK] Log captured: {message}", flush=True)
+    except Exception as e:
+        print(f"[CALLBACK] Error: {e}")
+
+# Initialize signal generator with callback
+print("[INIT] Creating SignalGenerator with Log Channel...", flush=True)
+generator = SignalGenerator(limit=PAIR_LIMIT, log_callback=log_feed_callback)
 print("[DEBUG] Creating SignalGenerator instance...", flush=True)
 generator = SignalGenerator()
 # Initialize AI Analytics Service
@@ -133,6 +156,9 @@ def background_scanner():
             generator.monitor_active_signals()
             
             # 2. Scan for new signals
+            if self.log_callback and int(time.time()) % 60 < 5: # Log once per minute approx
+                self.log_callback("scout", "SCAN_PULSE", "🔭 Escaneando 109 pares na velocidade da luz...", None)
+                
             generator.scan_all_pairs()
             
             time.sleep(UPDATE_INTERVAL_SECONDS)
@@ -308,56 +334,46 @@ def get_agents_status():
         # Aggregate data from core agents
         agents = [
             {
-                "id": "health_monitor",
-                "name": "Monitor de Saúde",
-                "status": "SAUDÁVEL",
-                "role": "Vitais do Sistema & Diagnóstico IA",
-                "last_action": "Checando CPU/Memória/DB"
+                "id": "technical_agent",
+                "name": "Scout Técnico",
+                "status": "ATIVO",
+                "role": "Análise de Preço & MTF",
+                "last_action": "Monitorando Pivot/EMA"
             },
             {
-                "id": "scout",
-                "name": "Scout de Viés",
+                "id": "fundamental_agent",
+                "name": "Sentinela de Fluxo",
                 "status": "ATIVO",
-                "role": "Reação de Preço em Tempo Real",
-                "last_action": "Monitorando sinais ativos"
-            },
-            {
-                "id": "sentinel",
-                "name": "Sentinela de Liquidez",
-                "status": "ATIVO",
-                "role": "Fluxo de Ordens & Absorção",
+                "role": "Liquidez & Order Flow",
                 "last_action": "Analisando CVD/OI"
             },
             {
-                "id": "strategist",
-                "name": "Estrategista Global",
+                "id": "risk_agent",
+                "name": "Governador de Risco",
                 "status": "ATIVO",
-                "role": "Aprendizado & Post-Mortem",
-                "report": generator.strategist_report,
-                "last_action": "Refletindo sobre histórico"
+                "role": "Relação R:R & Proteção",
+                "last_action": "Validando Stop Loss"
             },
             {
-                "id": "governor",
-                "name": "Governador de Portfólio",
+                "id": "market_info_agent",
+                "name": "Âncora de Mercado",
                 "status": "ATIVO",
-                "role": "Correlação & Risco",
-                "last_action": "Autorizando novos sinais"
+                "role": "Notícias & Listagens",
+                "last_action": "Checando Bybit/RSS"
             },
             {
-                "id": "anchor",
-                "name": "Âncora Global",
+                "id": "ml_supervisor_agent",
+                "name": "Supervisor ML",
                 "status": "ATIVO",
-                "role": "Contexto Macro (DXY/SP500)",
-                "context": generator.global_macro_context,
-                "last_action": "Definindo confiança global"
+                "role": "Integridade do Modelo",
+                "last_action": "Verificando Precisão"
             },
             {
-                "id": "elite_manager",
-                "name": "Elite Manager Agent",
+                "id": "bankroll_captain_agent",
+                "name": "Capitão da Banca",
                 "status": "ATIVO",
-                "role": "Capitão da Banca & Sniper Executor",
-                "learning": generator.bankroll_manager.elite_agent.get_status(),
-                "last_action": "Gerindo slots de alta performance"
+                "role": "Sniper & Gestão 20%",
+                "last_action": "Monitorando Slots"
             }
         ]
         
@@ -380,10 +396,17 @@ def get_system_logs():
     try:
         logs = []
         
+        if not generator.db.is_connected() or not generator.db.client:
+             return jsonify({
+                "status": "BOOTING", 
+                "message": "System is initializing...", 
+                "logs": []
+             })
+
         # 1. Fetch recent trade telemetry (The "War Room" feed)
         recent_trades = generator.db.client.table("bankroll_trades")\
-            .select("symbol, telemetry, created_at, status")\
-            .order("created_at", desc=True)\
+            .select("symbol, telemetry, opened_at, status")\
+            .order("opened_at", desc=True)\
             .limit(10)\
             .execute()
             
@@ -391,27 +414,52 @@ def get_system_logs():
             for t in recent_trades.data:
                 msg = t.get("telemetry") or f"Trade {t['status']} on {t['symbol']}"
                 logs.append({
-                    "id": f"trade_{t['symbol']}_{t['created_at']}",
-                    "timestamp": datetime.fromisoformat(t['created_at']).strftime("%H:%M:%S"),
+                    "id": f"trade_{t['symbol']}_{t['opened_at']}",
+                    "timestamp": datetime.fromisoformat(t['opened_at']).strftime("%H:%M:%S"),
                     "agent": "elite_manager",
                     "message": f"🦅 {msg}"
                 })
 
+        # 2. Merge Real-Time Logs (Memory Buffer)
+        # Using memory buffer guarantees visibility even if DB write fails
+        logs.extend(list(RECENT_LOGS))
+
         # 2. Fetch recent learning/insights
-        learning = generator.db.client.table("agent_learning")\
-            .select("*")\
-            .order("created_at", desc=True)\
-            .limit(5)\
-            .execute()
-            
-        if learning.data:
-             for l in learning.data:
-                logs.append({
-                    "id": f"learn_{l['id']}",
-                    "timestamp": datetime.fromisoformat(l['created_at']).strftime("%H:%M:%S"),
-                    "agent": "strategist",
-                    "message": f"🧠 {l['insight_type']}: {l['lesson_learned']}"
-                })
+        try:
+            learning = generator.db.client.table("llm_insights")\
+                .select("*")\
+                .order("created_at", desc=True)\
+                .limit(5)\
+                .execute()
+                
+            if learning.data:
+                 for l in learning.data:
+                    # Parse combined type "agent_id|insight_type"
+                    raw_type = l.get('insight_type', 'strategist|INFO')
+                    parts = raw_type.split('|')
+                    
+                    if len(parts) > 1:
+                        agent_id = parts[0]
+                        insight = parts[1]
+                    else:
+                        agent_id = "strategist"
+                        insight = raw_type
+                    
+                    # Map to UI icon
+                    agent_name = agent_id
+                    
+                    # Message from content JSONB
+                    content = l.get('content') or {}
+                    msg = content.get('message') or insight
+                    
+                    logs.append({
+                        "id": f"learn_{l['id']}",
+                        "timestamp": datetime.fromisoformat(l['created_at']).strftime("%H:%M:%S"),
+                        "agent": agent_name,
+                        "message": f"🧠 {insight}: {msg}"
+                    })
+        except Exception as e:
+            print(f"[LOGS] Error fetching agent learning from llm_insights: {e}")
         
         # 3. Add current Risk Status log
         if hasattr(generator, 'bankroll_manager') and generator.bankroll_manager:
@@ -434,6 +482,28 @@ def get_system_logs():
         })
     except Exception as e:
         print(f"[LOGS ERROR] {e}")
+        return jsonify({"status": "ERROR", "message": str(e)}), 500
+
+@app.route("/api/test/log", methods=["POST"])
+def test_log_injection():
+    """Manually inject a log for testing UI visibility"""
+    try:
+        data = request.json or {}
+        message = data.get("message", "Test Log")
+        agent = data.get("agent", "gemini")
+        
+        # Inject into buffer
+        log_entry = {
+            "id": f"test_{int(time.time()*1000)}",
+            "timestamp": datetime.now().strftime("%H:%M:%S"),
+            "agent": agent,
+            "message": f"🧪 TEST: {message}"
+        }
+        RECENT_LOGS.append(log_entry)
+        print(f"[TEST] Injected log: {message}", flush=True)
+        
+        return jsonify({"status": "OK", "log": log_entry})
+    except Exception as e:
         return jsonify({"status": "ERROR", "message": str(e)}), 500
 
 

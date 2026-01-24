@@ -26,6 +26,7 @@
     font-weight: 800;
     letter-spacing: 2px;
     background: linear-gradient(90deg, #a78bfa, #2dd4bf);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     margin: 0;
@@ -59,7 +60,9 @@
 /* MAIN LAYOUT */
 .neural-grid-container {
     flex: 1;
-    display: flex;
+    display: flex !important;
+    flex-direction: row !important;
+    /* Force Side-by-Side */
     padding: 2rem;
     gap: 2rem;
     overflow: hidden;
@@ -69,8 +72,8 @@
 .agents-network {
     flex: 2;
     position: relative;
-    display: flex;
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
     justify-content: center;
     align-items: center;
     /* Optional: BG grid pattern */
@@ -86,69 +89,20 @@
 .central-node {
     position: relative;
     z-index: 10;
-    display: flex;
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
     align-items: center;
     margin-bottom: 3rem;
 }
 
-.brain-core {
-    width: 100px;
-    height: 100px;
-    background: rgba(139, 92, 246, 0.1);
-    border: 2px solid #8b5cf6;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
-    margin-bottom: 1rem;
-    transition: all 0.3s ease;
-}
-
-.pulse-glow {
-    animation: brainPulse 3s infinite;
-}
-
-@keyframes brainPulse {
-    0% {
-        box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
-        border-color: #8b5cf6;
-    }
-
-    50% {
-        box-shadow: 0 0 50px rgba(139, 92, 246, 0.6);
-        border-color: #d8b4fe;
-    }
-
-    100% {
-        box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
-        border-color: #8b5cf6;
-    }
-}
-
-.brain-label {
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: #a78bfa;
-    letter-spacing: 1px;
-}
-
-.brain-status {
-    font-size: 0.8rem;
-    color: #2dd4bf;
-    background: rgba(45, 212, 191, 0.1);
-    padding: 0.2rem 0.6rem;
-    border-radius: 1rem;
-    margin-top: 0.5rem;
-}
+/* ... existing brain styling ... */
 
 /* SATELLITE AGENTS GRID */
 .satellite-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
     /* 3 pairs of 2 agents approx */
-    gap: 3rem;
+    gap: 2rem !important;
     width: 100%;
     max-width: 900px;
     margin-top: 2rem;
@@ -188,21 +142,36 @@
 }
 
 /* Specific Agent Colors */
-.agent-node.elite_manager .node-icon-wrapper {
+.agent-node.elite_manager .node-icon-wrapper,
+.agent-node.bankroll_captain_agent .node-icon-wrapper {
     color: #facc15;
     border: 1px solid rgba(250, 204, 21, 0.3);
 }
 
-.agent-node.scout .node-icon-wrapper {
+.agent-node.scout .node-icon-wrapper,
+.agent-node.technical_agent .node-icon-wrapper {
     color: #38bdf8;
 }
 
-.agent-node.sentinel .node-icon-wrapper {
+.agent-node.sentinel .node-icon-wrapper,
+.agent-node.fundamental_agent .node-icon-wrapper {
     color: #f472b6;
 }
 
 .agent-node.strategist .node-icon-wrapper {
     color: #a78bfa;
+}
+
+.agent-node.risk_agent .node-icon-wrapper {
+    color: #fb923c;
+}
+
+.agent-node.market_info_agent .node-icon-wrapper {
+    color: #94a3b8;
+}
+
+.agent-node.ml_supervisor_agent .node-icon-wrapper {
+    color: #22d3ee;
 }
 
 .node-info h3 {
@@ -224,24 +193,92 @@
     opacity: 0.8;
 }
 
-/* CONNECTION BEAMS (Simulated Lines towards Center) */
+/* CONNECTION LINES (Static Network Web) */
+.connection-lines {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 400px;
+    background:
+        radial-gradient(circle at 50% 0%, transparent 40%, rgba(139, 92, 246, 0.1) 80%),
+        repeating-linear-gradient(135deg, transparent 0, transparent 40px, rgba(139, 92, 246, 0.05) 41px),
+        repeating-linear-gradient(-135deg, transparent 0, transparent 40px, rgba(139, 92, 246, 0.05) 41px);
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+/* CONNECTION BEAMS (Electric Current) */
 .connection-beam {
     position: absolute;
-    bottom: 100%;
+    bottom: 50%;
     left: 50%;
-    width: 2px;
+    width: 4px;
+    /* Thicker for lightning core */
     height: 0;
     opacity: 0;
-    transition: all 0.3s ease-out;
-    background: linear-gradient(to top, #8b5cf6, transparent);
-    box-shadow: 0 0 10px #8b5cf6;
-    z-index: -1;
+    transform: translateX(-50%);
+    z-index: 100;
+    /* Ensure it's above everything */
+    pointer-events: none;
+    /* Lightning Bolt effect via background */
+    background:
+        repeating-linear-gradient(90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0) 40%,
+            rgba(139, 92, 246, 0.9) 50%,
+            rgba(255, 255, 255, 0) 60%,
+            rgba(255, 255, 255, 0) 100%);
+    filter: drop-shadow(0 0 5px #8b5cf6) drop-shadow(0 0 10px #d8b4fe);
 }
 
 .connection-beam.firing {
-    height: 100px;
-    /* Shoot beam upwards */
+    height: 250px;
     opacity: 1;
+    /* Jitter animation for electricity */
+    animation: electricJitter 0.2s infinite alternate, flashBeam 0.5s ease-out;
+}
+
+@keyframes electricJitter {
+    0% {
+        transform: translateX(-52%) skewX(-2deg);
+    }
+
+    25% {
+        transform: translateX(-48%) skewX(2deg);
+    }
+
+    50% {
+        transform: translateX(-51%) skewX(-1deg);
+    }
+
+    75% {
+        transform: translateX(-49%) skewX(1deg);
+    }
+
+    100% {
+        transform: translateX(-50%) skewX(0deg);
+    }
+}
+
+@keyframes flashBeam {
+    0% {
+        opacity: 0;
+        height: 0;
+    }
+
+    10% {
+        opacity: 1;
+        height: 250px;
+        filter: brightness(2);
+    }
+
+    100% {
+        opacity: 1;
+        height: 250px;
+    }
 }
 
 /* Active Uplink State (When agent is "talking") */
@@ -337,11 +374,13 @@
 }
 
 /* Agent Log Colors */
-.log-agent.scout {
+.log-agent.scout,
+.log-agent.technical_agent {
     color: #38bdf8;
 }
 
-.log-agent.sentinel {
+.log-agent.sentinel,
+.log-agent.fundamental_agent {
     color: #f472b6;
 }
 
@@ -349,7 +388,8 @@
     color: #a78bfa;
 }
 
-.log-agent.elite_manager {
+.log-agent.elite_manager,
+.log-agent.bankroll_captain_agent {
     color: #facc15;
 }
 
@@ -358,12 +398,18 @@
     text-shadow: 0 0 5px rgba(139, 92, 246, 0.5);
 }
 
-.log-agent.governor {
+.log-agent.governor,
+.log-agent.risk_agent {
     color: #fb923c;
 }
 
-.log-agent.anchor {
+.log-agent.anchor,
+.log-agent.market_info_agent {
     color: #94a3b8;
+}
+
+.log-agent.ml_supervisor_agent {
+    color: #22d3ee;
 }
 
 .log-msg {

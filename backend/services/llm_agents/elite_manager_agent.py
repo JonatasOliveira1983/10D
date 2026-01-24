@@ -13,50 +13,83 @@ class EliteManagerAgent(BaseAgent):
     def __init__(self, db_manager=None):
         super().__init__(name="Elite Manager Agent", role="Bankroll Captain")
         self.db = db_manager
+        
+        # --- NEW RISK MANAGEMENT RULES (v4) ---
+        self.MAX_SLOTS_TOTAL = 10
+        self.RISK_CAP_PCT = 0.20
+        self.MIN_SCORE_ELITE = 65
+        
         self.learning_data = {
             "total_elite_trades": 0,
             "wins": 0,
             "losses": 0,
             "experience_points": 0,
             "current_strategy": "Cautious Sniper",
-            "last_reflection": "Initializing systems..."
+            "last_reflection": "Initializing systems...",
+            "active_slots_used": 0,
+            "current_exposure_pct": 0.0
         }
         self.load_learning_state()
 
     def analyze(self, signal: Dict[str, Any], market_context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Final decision before opening a bankroll trade.
-        Checks if it's an Eagle Elite signal and if we have slots.
+        Enforces slots and exposure limits.
         """
         is_eagle = signal.get("is_eagle_elite", False)
         score = signal.get("score", 0)
         
-        # Elite Manager is very picky
+        # 1. Basic Qualification
         if not is_eagle:
             return {
-                "agent": self.name,
                 "score": 0,
                 "verdict": "REJECTED",
                 "reasoning": "Sinal não qualificado como Eagle Elite (MTF faltando)",
                 "metadata": {}
             }
         
-        # Adjusted Threshold: 65% is acceptable IF it is Eagle Elite (MTF confirmed)
-        if score < 65:
+        if score < self.MIN_SCORE_ELITE:
             return {
-                "agent": self.name,
                 "score": score,
                 "verdict": "NEUTRAL",
-                "reasoning": "Score Eagle Elite detectado, mas abaixo do limiar absoluto de 65%",
+                "reasoning": f"Sinal Eagle Elite detectado, mas abaixo do limiar de {self.MIN_SCORE_ELITE}%",
                 "metadata": {}
             }
 
+        # 2. Risk Management Checks
+        active_trades = market_context.get("active_trades", [])
+        total_bankroll = market_context.get("total_bankroll", 0)
+        entry_amount = market_context.get("entry_amount", 0)
+        
+        # Slots Check
+        if len(active_trades) >= self.MAX_SLOTS_TOTAL:
+            return {
+                "score": score,
+                "verdict": "REJECTED",
+                "reasoning": f"Capacidade máxima de slots atingida ({self.MAX_SLOTS_TOTAL}/10)",
+                "metadata": {"slots_full": True}
+            }
+            
+        # Exposure Check
+        current_exposure = sum(t.get("entry_value", 0) for t in active_trades)
+        new_exposure_pct = (current_exposure + entry_amount) / total_bankroll if total_bankroll > 0 else 0
+        
+        if new_exposure_pct > self.RISK_CAP_PCT:
+             return {
+                "score": score,
+                "verdict": "REJECTED",
+                "reasoning": f"Risco de banca excederia o limite de {self.RISK_CAP_PCT*100:.0f}% (Atual: {new_exposure_pct*100:.1f}%)",
+                "metadata": {"high_exposure": True}
+            }
+
         return {
-            "agent": self.name,
             "score": score,
             "verdict": "APPROVED",
-            "reasoning": f"Sinal Elite confirmado! Confluência MTF e Score de {score}% garantem entrada sniper.",
-            "metadata": {"experience_bonus": 5}
+            "reasoning": f"Sinal Elite confirmado! Risco e slots OK. Score de {score}% garante entrada sniper.",
+            "metadata": {
+                "experience_bonus": 5,
+                "exposure_final": round(new_exposure_pct * 100, 2)
+            }
         }
 
     def reflect_on_performance(self, recent_trades: List[Dict]):
@@ -134,6 +167,33 @@ class EliteManagerAgent(BaseAgent):
         except Exception as e:
             print(f"[CAPTAIN] Sector heat check failed: {e}")
             return {"status": "NEUTRAL"}
+
+    def evaluate_break_even(self, trade: Dict, current_roi: float) -> bool:
+        """
+        Rule: Move Stop Loss to Break-Even if ROI >= 1%.
+        """
+        if current_roi >= 0.01:
+            entry_price = trade.get("entry_price")
+            stop_loss = trade.get("stop_loss")
+            direction = trade.get("direction", "LONG")
+            
+            # Check if it's already at break-even or better
+            if direction == "LONG" and stop_loss < entry_price:
+                return True
+            if direction == "SHORT" and stop_loss > entry_price:
+                return True
+        return False
+
+    def evaluate_surf_mode(self, current_roi: float, market_context: Dict) -> Dict:
+        """
+        Rule: ROI >= 2% and rising OI -> SURF MODE.
+        """
+        if current_roi >= 0.02:
+            # Simplified check: if OI is rising, stay in Surf Mode
+            oi_status = market_context.get("oi_status", "NEUTRAL")
+            if oi_status == "RISING":
+                return {"active": True, "reason": "MODO SURF 🏄: Tendência forte (OI subindo). Buscando 6%..."}
+        return {"active": False}
 
     def check_inertia(self, opened_at_str: str, current_price: float, entry_price: float) -> bool:
         """

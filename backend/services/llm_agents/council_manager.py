@@ -3,12 +3,15 @@ import json
 from .risk_agent import RiskAgent
 from .technical_agent import TechnicalAgent
 from .fundamental_agent import FundamentalAgent
+from .market_info_agent import MarketInfoAgent
+from .ml_supervisor_agent import MLSupervisorAgent
+from .bankroll_captain_agent import BankrollCaptainAgent
 
 class CouncilManager:
     """
     The Coordinator.
     Manages the Multi-Agent Council.
-    1. Runs individual agents (Risk, Technical, Fundamental).
+    1. Runs individual agents (Risk, Technical, Fundamental, Market, ML).
     2. Aggregates their verdicts.
     3. Formats a 'Debate Prompt' for the LLM to synthesize the final decision.
     """
@@ -17,7 +20,17 @@ class CouncilManager:
         self.risk_agent = RiskAgent()
         self.technical_agent = TechnicalAgent(rag_memory=rag_memory)
         self.fundamental_agent = FundamentalAgent()
-        self.agents = [self.risk_agent, self.technical_agent, self.fundamental_agent]
+        self.market_agent = MarketInfoAgent()
+        self.ml_supervisor = MLSupervisorAgent()
+        self.bankroll_captain = BankrollCaptainAgent()
+        self.agents = [
+            self.risk_agent, 
+            self.technical_agent, 
+            self.fundamental_agent,
+            self.market_agent,
+            self.ml_supervisor,
+            self.bankroll_captain
+        ]
 
     def conduct_debate(self, signal: Dict[str, Any], market_context: Dict[str, Any], llm_call_func: Callable[[str], str]) -> Dict[str, Any]:
         """
@@ -55,7 +68,7 @@ class CouncilManager:
         # Assuming market_context might have 'learning_context_str'
         
         prompt = f"""You are the High Judge of the Crypto Council.
-Three specialized agents have debated a potential trade. Your job is to synthesize their opinions and make the FINAL DECISION.
+Six specialized agents have debated a potential trade. Your job is to synthesize their opinions and make the FINAL DECISION.
 
 SIGNAL: {signal.get('symbol')} {signal.get('direction')} | Entry: {signal.get('entry_price')} | Score: {signal.get('score')}
 
@@ -65,20 +78,25 @@ SIGNAL: {signal.get('symbol')} {signal.get('direction')} | Entry: {signal.get('e
 
 INSTRUCTIONS:
 1. REVIEW the agents' arguments.
-2. DISSECT the 'Smart Money Hunger' (IHI 1-6 stars). High hunger means robots are aggressively seeking liquidity.
-3. The RISK AGENT's veto ("REJECTED") should be taken very seriously.
-4. The FUNDAMENTAL AGENT (Sentinel) protects against market crashes.
-5. DECIDE if the trade proceeds or not.
+2. DISSECT the 'Smart Money Hunger' (IHI 1-6 stars).
+3. The RISK AGENT's veto ("REJECTED") is critical.
+4. The ML SUPERVISOR protects against model performance decay.
+5. The MARKET INFO AGENT provides context on new listing and news volatility.
+6. The BANKROLL CAPTAIN ensures we don't exceed the 20% risk cap or the 10-slot capacity.
+7. DECIDE if the trade proceeds or not.
 
 RESPOND IN JSON FORMAT ONLY:
 {{
   "approved": true/false,
   "confidence": 0.0-1.0,
-  "reasoning": "Synthesize the debate. Why did you reach this verdict? (Max 50 words)",
+  "reasoning": "Synthesize the debate. (Max 50 words)",
   "vote_breakdown": {{
-     "technical": "{agent_outputs['Technical Agent']['verdict']}",
-     "fundamental": "{agent_outputs['Fundamental Agent']['verdict']}",
-     "risk": "{agent_outputs['Risk Agent']['verdict']}"
+     "technical": "{agent_outputs.get('Technical Agent', {}).get('verdict')}",
+     "fundamental": "{agent_outputs.get('Fundamental Agent', {}).get('verdict')}",
+     "risk": "{agent_outputs.get('Risk Agent', {}).get('verdict')}",
+     "market": "{agent_outputs.get('market_info_agent', {}).get('verdict')}",
+     "ml": "{agent_outputs.get('ml_supervisor_agent', {}).get('verdict')}",
+     "bankroll": "{agent_outputs.get('bankroll_captain_agent', {}).get('verdict')}"
   }}
 }}
 """

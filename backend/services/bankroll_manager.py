@@ -14,10 +14,12 @@ class BankrollManager:
     - Fixed Compounding Cycle (every 20 trades)
     """
     
-    def __init__(self, db_manager, bybit_client=None, push_service=None):
+    def __init__(self, db_manager, bybit_client=None, push_service=None, log_callback=None, llm_brain=None):
         self.db = db_manager
         self.client = bybit_client # For fetching real-time prices if needed
         self.push_service = push_service # For mobile alerts
+        self.log_callback = log_callback # For Real-Time UI Logs (The HUD)
+        self.llm_brain = llm_brain # For "Brain" consultation
         
         # --- NEW RISK MANAGEMENT RULES (v3) ---
         self.MAX_SLOTS_TOTAL = 10         # Absolute max orders
@@ -74,17 +76,13 @@ class BankrollManager:
             res = self.db.client.table("bankroll_trades").select("*").eq("status", "OPEN").execute()
             open_trades = res.data or []
             
-            # 1. Hard Cap Check
-            if len(open_trades) >= self.MAX_SLOTS_TOTAL:
-                return False, f"Banca cheia ({self.MAX_SLOTS_TOTAL} slots ocupados)"
-            
-            # 2. Risk Exposure Check
-            # Identify "Risk-Free" trades
+            # 1. Count Active Risky Trades
+            risky_trades_count = 0
             risky_exposure = 0.0
             
             for trade in open_trades:
                 entry_price = float(trade.get("entry_price", 0))
-                stop_loss = float(trade.get("stop_loss", -1)) # Needs DB column V3
+                stop_loss = float(trade.get("stop_loss", -1))
                 direction = trade.get("direction", "SHORT")
                 entry_size = float(trade.get("entry_size_usd", 0))
                 
@@ -96,22 +94,42 @@ class BankrollManager:
                         is_risk_free = True
                 
                 if not is_risk_free:
+                    risky_trades_count += 1
                     risky_exposure += entry_size
-                    
-            # Check if adding one more trade exceeds cap
+
+            # 2. Dynamic Slot Check (Only limit RISKY trades)
+            # If a trade is Risk-Free, it doesn't consume a "Risk Slot".
+            # We still keep a hard ceiling (e.g. 20) to prevent system overload, 
+            # but MAX_SLOTS_TOTAL (10) now applies to RISKY trades only.
+            if risky_trades_count >= self.MAX_SLOTS_TOTAL:
+                return False, f"Slots de Risco cheios ({risky_trades_count}/{self.MAX_SLOTS_TOTAL}). Aguarde blindagem."
+            
+            # Hard system cap
+            if len(open_trades) >= 20: 
+                return False, "Capacidade máxima do sistema atingida (20 ordens)."
+
+            # 3. Risk Exposure Check (Financial)
+            # v3 Fix: Use Integer-Based Slot System.
+            
             new_trade_size = status.get("entry_size_usd", 0)
             current_balance = status.get("current_balance", 0)
-            risk_cap_amount = current_balance * self.RISK_CAP_PCT
+            max_risky_slots = int(self.RISK_CAP_PCT / self.ENTRY_PERCENT) # 0.20 / 0.05 = 4
             
-            # Allow at least 1 trade if bankroll is super small, else strict check
-            if (risky_exposure + new_trade_size) > risk_cap_amount:
-                # Unless we have 0 active trades, we block.
-                # But waiting for users logic: "20%... 4 entries... wait for risk free"
-                # If we have 4 trades ($4), exposure is $4. Limit is $4.
-                # 4 + 1 = 5 > 4 -> BLOCKED. Correct.
-                return False, f"Limite de Risco Atingido (${risky_exposure:.2f} / ${risk_cap_amount:.2f})"
+            if risky_trades_count < max_risky_slots:
+                # We have open risky slots. Allow entry.
                 
-            return True, "OK"
+                # Check physical margin availability (Leverage helps here, $1 controls $50).
+                used_margin = sum([float(t.get("entry_size_usd", 0)) for t in open_trades])
+                available_margin = current_balance - used_margin
+                
+                if available_margin < (new_trade_size * 0.9): # 10% buffer
+                     return False, f"Saldo insuficiente para margem (Livre: ${available_margin:.2f})"
+                
+                return True, "OK"
+
+            # If we are here, Risky Slots are full (e.g. 4/4).
+            # We can ONLY open if one trade becomes Risk Free.
+            return False, f"Slots de Risco cheios ({risky_trades_count}/{max_risky_slots}). Aguarde blindagem (Stop no Entry)."
             
         except Exception as e:
             print(f"[BANKROLL] Risk check failed: {e}", flush=True)
@@ -137,7 +155,18 @@ class BankrollManager:
             return False
 
         # 4. Captain Verdict
-        verdict = self.elite_agent.analyze(signal, {"active_slots": status.get("active_slots_used", 0)})
+        open_trades = []
+        try:
+            res = self.db.client.table("bankroll_trades").select("*").eq("status", "OPEN").execute()
+            open_trades = res.data or []
+        except:
+            pass
+
+        verdict = self.elite_agent.analyze(signal, {
+            "active_trades": open_trades,
+            "total_bankroll": status.get("current_balance", 0),
+            "entry_amount": status.get("entry_size_usd", 0)
+        })
         if verdict["verdict"] != "APPROVED":
             return False
 
@@ -178,7 +207,13 @@ class BankrollManager:
             
             self.db.client.table("bankroll_trades").insert(new_trade).execute()
             
-            print(f"[BANKROLL] ELITE TRADE OPENED: {symbol} | Risk: ${entry_size:.2f}", flush=True)
+            self.db.client.table("bankroll_trades").insert(new_trade).execute()
+            
+            msg = f"TRADE INICIADO: {symbol} | Risco: ${entry_size:.2f} | Alvo: 6% (Sniper)"
+            print(f"[BANKROLL] {msg}", flush=True)
+            if self.log_callback:
+                self.log_callback("bankroll_captain_agent", "TRADE_OPEN", f"🦅 {msg}", new_trade)
+            
             self.status_cache = None
             return True
             
@@ -370,7 +405,7 @@ class BankrollManager:
                 
                 # Update DB
                 update_data = {
-                    "current_price": current_price,
+                    # "current_price": current_price, # Column missing in DB
                     "current_roi": round(roi * 100, 2),
                     "telemetry": telemetry
                 }
@@ -412,7 +447,10 @@ class BankrollManager:
     def _close_trade(self, trade, exit_price, pnl_usd, roi, status_label, bankroll_status):
         """Finalizes the trade and updates the compounding cycle"""
         try:
-            print(f"[BANKROLL] Closing {trade['symbol']} ({status_label}) PnL: ${pnl_usd:.2f} ({roi*100:.1f}%)", flush=True)
+            msg = f"Fechando {trade['symbol']} ({status_label}) PnL: ${pnl_usd:.2f} ({roi*100:.1f}%)"
+            print(f"[BANKROLL] {msg}", flush=True)
+            if self.log_callback:
+                self.log_callback("bankroll_captain_agent", "TRADE_CLOSE", f"🏁 {msg}", {"pnl": pnl_usd, "roi": roi})
             
             # 1. Update Trade Table
             self.db.client.table("bankroll_trades").update({

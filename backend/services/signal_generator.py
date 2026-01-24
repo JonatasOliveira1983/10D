@@ -117,10 +117,20 @@ def round_step(price: float, step: float) -> float:
 class SignalGenerator:
     """Main signal generation engine with multiple signal types"""
     
-    def __init__(self):
+    def __init__(self, limit: int = 100, log_callback=None):
+        """
+        Initialize the Signal Generator
+        :param limit: Number of pairs to monitor
+        :param log_callback: Optional function(agent_id, insight_type, message, details) for real-time logging
+        """
         self.client = BybitClient()
         self.db = DatabaseManager()
         self._lock = threading.Lock()
+        self.server_ready = False
+        self.log_callback = log_callback # Callback for real-time UI logs
+        
+        # Load configuration
+        self.limit = limit
         self.last_scan_heartbeat = time.time()
         self.active_signals: Dict[str, Dict] = {}
         self.signal_history: List[Dict] = []
@@ -152,6 +162,7 @@ class SignalGenerator:
         # Initialize BTC Regime Tracker
         self.btc_tracker = BTCRegimeTracker()
         self.current_btc_regime = "TRENDING"
+        self.current_btc_candles = [] # Stores recent BTC 30m candles
         self.current_regime_details = {}
         print("[BTC REGIME] [OK] Tracker inicializado", flush=True)
         
@@ -185,25 +196,36 @@ class SignalGenerator:
         
         print("[AGENTS] [OK] Intelligence Neural Layer inicializada", flush=True)
 
-        # Initialize LLM Trading Brain (Gemini)
-        if LLM_ENABLED:
-            llm_config = {
+        # Initialize subsystems
+        try:
+            print("[SG] Initializing LLM Trading Brain...", flush=True)
+            self.brain = LLMTradingBrain(config={
+                "LLM_ENABLED": LLM_ENABLED,
                 "LLM_MODEL": LLM_MODEL,
                 "LLM_CACHE_TTL_SECONDS": LLM_CACHE_TTL_SECONDS,
                 "LLM_MIN_CONFIDENCE": LLM_MIN_CONFIDENCE
-            }
-            # Inject RAG Memory into LLM Brain (Shared Instance)
-            self.llm_brain = LLMTradingBrain(llm_config, rag_memory=self.rag_memory)
-            if self.llm_brain.is_enabled():
-                self.llm_brain.set_database_manager(self.db) 
-                print("[LLM] [OK] LLM Trading Brain inicializado com Gemini", flush=True)
+            }, rag_memory=self.rag_memory, log_callback=self.log_callback)
+            
+            if self.brain.is_enabled():
+                self.brain.set_database_manager(self.db) 
+                print("[SG] LLM Trading Brain initialized", flush=True)
             else:
-                print("[LLM] [WARN] LLM habilitado mas Gemini nao disponivel - usando fallback", flush=True)
-        else:
-            self.llm_brain = None
-            print("[LLM] [INFO] LLM Trading Brain desabilitado", flush=True)
+                print("[SG] LLM Trading Brain initialized (Disabled Mode)", flush=True)
+                
+        except Exception as e:
+            print(f"[SG] Failed to initialize LLM Brain: {e}", flush=True)
+            self.brain = None
+            
+        # Wire up Bankroll Manager with Brain and Logs
+        if self.bankroll_manager:
+            self.bankroll_manager.log_callback = self.log_callback
+            self.bankroll_manager.llm_brain = self.brain
+            print("[SG] Bankroll Manager wired to LLM Brain and Logs", flush=True)
+            
+        # Old self.llm_brain reference for backwards compatibility if needed
+        self.llm_brain = self.brain
         
-        self.system_ready = False # Flag for Async Initialization
+        self.system_ready = True # Flag for Async Initialization (Default True to allow immediate scanning)
         
         self.load_state()
 
@@ -273,15 +295,19 @@ class SignalGenerator:
         # Use existing btc_candles if available (should be passed or stored)
         btc_candles = getattr(self, "current_btc_candles", None)
         
-        analysis = analyze_candles(
-            candles_30m, 
-            candles_4h, 
-            recent_trades=trades,
-            oi_data=oi_data,
-            lsr_data=lsr_data,
-            btc_candles=btc_candles
-        )
-        
+        try:
+            analysis = analyze_candles(
+                candles_30m, 
+                candles_4h, 
+                recent_trades=trades,
+                oi_data=oi_data,
+                lsr_data=lsr_data,
+                btc_candles=btc_candles
+            )
+        except Exception as e:
+            print(f"[ERROR] Error in analyze_candles for {symbol}: {e}", flush=True)
+            return None
+
         # 4H Trend Filter Logic
         trend_4h = analysis["trend_4h"]["direction"] # "UPTREND" or "DOWNTREND"
         
@@ -483,8 +509,11 @@ class SignalGenerator:
         
         # === NEW: MULTI-TIMEFRAME (MTF) CONFLUENCE ===
         # For Elite Banca signals, we monitor higher timeframes to capture real rompimentos
-        mtf_confluence = self._check_mtf_confluence(symbol, trend_4h)
-        best_signal["mtf_confluence"] = mtf_confluence
+        try:
+            mtf_confluence = self._check_mtf_confluence(symbol, trend_4h)
+            best_signal["mtf_confluence"] = mtf_confluence
+        except Exception as e:
+             best_signal["mtf_confluence"] = {"total_score": 0, "error": str(e)}
         
         # Calculate SL and TP DYNAMICALLY based on BTC regime
         tp_pct, sl_pct = self.btc_tracker.get_dynamic_targets(self.current_btc_regime)
@@ -635,12 +664,19 @@ class SignalGenerator:
         
         # === LLM INTELLIGENCE LAYER ===
         if self.llm_brain and LLM_ENABLED:
+            # Prepare enriched market context for The Council
+            ml_metrics = self.ml_predictor.get_metrics() if self.ml_predictor else {}
+            bankroll_status = self.bankroll_manager.get_status() if self.bankroll_manager else {}
+            
             market_context = {
                 "btc_regime": self.current_btc_regime,
                 "decoupling_score": decoupling_score,
                 "regime_details": self.current_regime_details,
                 "sentiment_score": self.market_sentiment.get("score", 50),
-                "sentiment_summary": self.market_sentiment.get("summary", "Neutral")
+                "sentiment_summary": self.market_sentiment.get("summary", "Neutral"),
+                "ml_metrics": ml_metrics.get("metrics", {}) if ml_metrics else {},
+                "total_bankroll": bankroll_status.get("current_balance", 0),
+                "active_slots_used": bankroll_status.get("active_slots_used", 0)
             }
             
             # 1. Validate signal context with LLM

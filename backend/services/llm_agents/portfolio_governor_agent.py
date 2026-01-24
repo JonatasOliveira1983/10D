@@ -30,8 +30,8 @@ NEW SIGNAL: {candidate_signal.get('symbol')} {candidate_signal.get('direction')}
 CURRENT PORTFOLIO: {json.dumps(exposure_summary)}
 
 RULES:
-1. MAX EXPOSURE: Do not allow more than 5 active trades.
-2. CORRELATION: If we already have 3 LONGs in Alts, being cautious about the 4th if they move together.
+1. MAX EXPOSURE: Do not allow more than 10 active trades.
+2. CORRELATION: If we already have 5 LONGs in Alts, being cautious about the 6th if they move together.
 3. CONVICTION: Only allow the trade if it doesn't create a "One-Way Bettor" scenario.
 
 RESPOND IN JSON FORMAT ONLY. ALL TEXT FIELDS MUST BE IN PORTUGUESE (PT-BR):

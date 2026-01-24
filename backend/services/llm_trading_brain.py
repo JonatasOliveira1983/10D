@@ -11,20 +11,16 @@ from datetime import datetime
 import hashlib
 from services.llm_agents.council_manager import CouncilManager
 
-# Google Generative AI
-try:
-    import google.generativeai as genai
-    GENAI_AVAILABLE = True
-except ImportError:
-    GENAI_AVAILABLE = False
-    print("[LLM] [WARN] google-generativeai not installed. LLM features disabled.", flush=True)
-
+# Google Generative AI - Lazy Import
+GENAI_AVAILABLE = False # Default until checked
+genai = None # Placeholder
 
 class LLMTradingBrain:
     """Gemini-powered trading intelligence layer"""
     
-    def __init__(self, config: Dict = None, rag_memory = None):
+    def __init__(self, config: Dict = None, rag_memory = None, log_callback = None):
         self.config = config or {}
+        self.log_callback = log_callback # Main system log callback
         self.model = None
         self.db_manager = None  # Reference to DatabaseManager for learning
         self.cache: Dict[str, Dict] = {}  # Simple in-memory cache
@@ -55,7 +51,8 @@ class LLMTradingBrain:
             "learning_context_refreshes": 0
         }
         
-        self._initialize_model()
+        # Lazy init to prevent startup blocking
+        # self._initialize_model()
     
     def set_database_manager(self, db_manager):
         """Set database manager for historical data access"""
@@ -193,10 +190,17 @@ class LLMTradingBrain:
     
     def _initialize_model(self):
         """Initialize Gemini model with API key"""
-        if not GENAI_AVAILABLE:
-            print("[LLM] [ERROR] Cannot initialize - google-generativeai not available", flush=True)
-            return
-            
+        global genai, GENAI_AVAILABLE
+        
+        if not GENAI_AVAILABLE or not genai:
+            try:
+                import google.generativeai as genai
+                GENAI_AVAILABLE = True
+            except ImportError:
+                print("[LLM] [WARN] google-generativeai not installed. LLM disabled.", flush=True)
+                GENAI_AVAILABLE = False
+                return
+
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             print("[LLM] [ERROR] GEMINI_API_KEY not found in environment", flush=True)
@@ -256,6 +260,10 @@ class LLMTradingBrain:
     
     def call_gemini(self, prompt: str, max_tokens: int = 500) -> Optional[str]:
         """Call Gemini API with rate limiting and error handling (Public)"""
+        # Lazy initialization
+        if not self.model:
+            self._initialize_model()
+            
         if not self.model:
             return None
         
@@ -297,6 +305,9 @@ class LLMTradingBrain:
     
     def test_connection(self) -> Dict:
         """Test Gemini connection"""
+        if not self.model:
+            self._initialize_model()
+            
         if not self.model:
             return {"status": "ERROR", "message": "Model not initialized"}
         
@@ -345,9 +356,53 @@ class LLMTradingBrain:
             if result["approved"]:
                 self.stats["validations_approved"] += 1
                 print(f"[COUNCIL] [OK] APPROVED: {result.get('reasoning')}", flush=True)
+                
+                # Log to DB (Compatibility Mode)
+                if self.db_manager:
+                    self.db_manager.log_agent_insight(
+                        "gemini", 
+                        "COUNCIL_APPROVE", 
+                        f"✅ APPROVED {signal.get('symbol')}: {result.get('reasoning')}",
+                        result
+                    )
+                
+                # Real-time Callback (UI Feedback)
+                if self.log_callback:
+                    # 1. Log individual agent verdicts
+                    agent_outputs = result.get("council_outputs", {})
+                    for agent_name, out in agent_outputs.items():
+                        # Map agent name to ID for the frontend icon logic
+                        agent_id = agent_name.lower().replace(" ", "_")
+                        emoji = "✅" if out.get("verdict") == "APPROVED" else "❌" if out.get("verdict") == "REJECTED" else "⚖️"
+                        self.log_callback(agent_id, f"OPINION", f"{emoji} {out.get('reasoning')[:100]}", out)
+
+                    # 2. Log final decision
+                    self.log_callback("gemini", "COUNCIL_APPROVE", f"✅ FINAL DECISION: {result.get('reasoning')}", result)
+
             else:
                 self.stats["validations_rejected"] += 1
                 print(f"[COUNCIL] [X] REJECTED: {result.get('reasoning')}", flush=True)
+                
+                # Log to DB (Compatibility Mode)
+                if self.db_manager:
+                    self.db_manager.log_agent_insight(
+                        "gemini", 
+                        "COUNCIL_REJECT", 
+                        f"❌ REJECTED {signal.get('symbol')}: {result.get('reasoning')}",
+                        result
+                    )
+                
+                # Real-time Callback (UI Feedback)
+                if self.log_callback:
+                    # 1. Log individual agent verdicts
+                    agent_outputs = result.get("council_outputs", {})
+                    for agent_name, out in agent_outputs.items():
+                        agent_id = agent_name.lower().replace(" ", "_")
+                        emoji = "✅" if out.get("verdict") == "APPROVED" else "❌" if out.get("verdict") == "REJECTED" else "⚖️"
+                        self.log_callback(agent_id, f"OPINION", f"{emoji} {out.get('reasoning')[:100]}", out)
+
+                    # 2. Log final rejection
+                    self.log_callback("gemini", "COUNCIL_REJECT", f"❌ FINAL DECISION: {result.get('reasoning')}", result)
             
             self._save_to_cache(cache_key, result)
             return result
@@ -608,4 +663,11 @@ RESPOND IN JSON FORMAT ONLY:
     
     def is_enabled(self) -> bool:
         """Check if LLM is properly initialized and enabled"""
-        return self.model is not None
+        if self.model is not None:
+            return True
+        
+        # Check if it SHOULD be enabled (config + environment)
+        enabled_in_config = self.config.get("LLM_ENABLED", False)
+        api_key_present = bool(os.environ.get("GEMINI_API_KEY"))
+        
+        return enabled_in_config and api_key_present

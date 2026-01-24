@@ -120,6 +120,7 @@ const BancaPage = () => {
     const [trades, setTrades] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedTrade, setSelectedTrade] = useState(null);
+    const [viewMode, setViewMode] = useState('active'); // 'active' | 'history'
 
     useEffect(() => {
         fetchData();
@@ -168,6 +169,10 @@ const BancaPage = () => {
         const num = Number(val);
         return isNaN(num) ? '$0.00' : `$${num.toFixed(2)}`;
     };
+
+    const activeTrades = trades.filter(t => t.status === 'OPEN');
+    const historyTrades = trades.filter(t => t.status !== 'OPEN');
+    const displayedTrades = viewMode === 'active' ? activeTrades : historyTrades;
 
     if (loading && !status) {
         return (
@@ -431,16 +436,34 @@ const BancaPage = () => {
 
                     {/* BOTTOM: HISTORY TABLE */}
                     <div className="bg-gray-900/40 backdrop-blur-xl rounded-xl sm:rounded-3xl border border-gray-800/50 overflow-hidden shadow-2xl">
-                        {/* Table Header */}
+                        {/* Table Header with Tabs */}
                         <div className="px-3 py-3 sm:px-6 sm:py-5 border-b border-gray-800/50 bg-gray-900/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-4">
-                            <div className="flex items-center gap-2 sm:gap-3">
-                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-gray-700/50 to-gray-800/50 flex items-center justify-center border border-gray-700/50">
-                                    <span className="material-symbols-outlined text-gray-400 text-sm sm:text-base">history</span>
-                                </div>
-                                <div>
-                                    <h2 className="text-sm sm:text-lg font-bold text-white">Histórico</h2>
-                                    <p className="text-gray-500 text-[10px] sm:text-xs">{trades.length} operações</p>
-                                </div>
+                            <div className="flex items-center gap-4">
+                                {/* TAB: ACTIVE */}
+                                <button
+                                    onClick={() => setViewMode('active')}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${viewMode === 'active'
+                                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-500/10'
+                                            : 'hover:bg-gray-800/50 text-gray-400'
+                                        }`}
+                                >
+                                    <div className={`w-2 h-2 rounded-full ${viewMode === 'active' ? 'bg-emerald-400 animate-pulse' : 'bg-gray-600'}`} />
+                                    <span className="font-bold text-sm">Abertas</span>
+                                    <span className="text-xs opacity-60 bg-black/20 px-1.5 rounded">{activeTrades.length}</span>
+                                </button>
+
+                                {/* TAB: HISTORY */}
+                                <button
+                                    onClick={() => setViewMode('history')}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${viewMode === 'history'
+                                            ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                            : 'hover:bg-gray-800/50 text-gray-400'
+                                        }`}
+                                >
+                                    <span className="material-symbols-outlined text-sm">history</span>
+                                    <span className="font-bold text-sm">Concluídas</span>
+                                    <span className="text-xs opacity-60 bg-black/20 px-1.5 rounded">{historyTrades.length}</span>
+                                </button>
                             </div>
                         </div>
 
@@ -459,7 +482,7 @@ const BancaPage = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="text-xs sm:text-sm">
-                                    {trades.length > 0 ? trades.map((trade, index) => (
+                                    {displayedTrades.length > 0 ? displayedTrades.map((trade, index) => (
                                         <tr
                                             key={trade.id}
                                             onClick={() => {

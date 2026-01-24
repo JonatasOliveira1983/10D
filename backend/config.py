@@ -1,6 +1,11 @@
 """
 CryptoFastSignals - Configuration v4.0.0
 """
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # =============================================================================
 # INDICATOR SETTINGS
@@ -115,7 +120,7 @@ SCORE_LSR_CLEANUP = 10
 SCORE_ABSORPTION_CONFIRMED = 20
 SCORE_RSI_CROSSOVER_BTC = 25    # ALT RSI crosses above BTC RSI (decoupling)
 SCORE_LIQUIDITY_ALIGNED = 30    # Signal aligns with predicted liquidity hunt direction
-MIN_SCORE_TO_SAVE = 65          # Minimum score to save signal
+MIN_SCORE_TO_SAVE = 60          # Minimum score to save signal (Lowered for visibility)
 
 # =============================================================================
 # API SETTINGS
@@ -139,7 +144,7 @@ CANDLES_DAILY = 30
 # =============================================================================
 
 API_HOST = "0.0.0.0"
-API_PORT = 5001
+API_PORT = 5002
 DEBUG = False  # Disabled to prevent auto-restart and state loss
 
 # =============================================================================

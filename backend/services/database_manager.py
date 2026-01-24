@@ -2,6 +2,7 @@ import os
 import json
 import time
 from typing import List, Dict, Optional
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -279,6 +280,27 @@ class DatabaseManager:
         except Exception as e:
             print(f"[DB ERROR] Erro ao recuperar sinais com features: {e}", flush=True)
             return []
+
+    def log_agent_insight(self, agent_id: str, insight_type: str, message: str, details: Dict = None):
+        """Salva logs de insights dos agentes para o frontend"""
+        if not self._ensure_client(): return
+        
+        try:
+            # Table: llm_insights (id, symbol, insight_type, content, confidence, outcome, created_at)
+            # We map message to content for UI display
+            payload = {
+                "insight_type": f"{agent_id}|{insight_type}",
+                "content": {
+                    "message": message,
+                    "details": details or {}
+                },
+                "confidence": details.get("confidence") if details else 0.5,
+                "created_at": datetime.now().isoformat()
+            }
+            self.client.table("llm_insights").insert(payload).execute()
+        except Exception as e:
+            # Silent fail to not block main thread
+            print(f"[DB LOG ERROR] Failed to log insight to llm_insights: {e}", flush=True)
 
     # --- Métodos para Trading Plan ---
 

@@ -1,67 +1,58 @@
-# 10D Trading System v5.2 (Intelligent Agent Core)
+# 10D Trading System v6.0 (The Council Update)
 
-**10D** is an advanced automated trading system powered by AI/ML and Large Language Models (LLM) to identify high-probability crypto setups.
+**10D** is an advanced automated trading system powered by Hybrid Intelligence (Rule-Based Scanners + Multi-Agent LLM Council) to identify high-probability crypto setups and manage capital with institutional-grade precision.
 
 ## 🚀 Status: OPERATIONAL
 - **Frontend**: "Neural Interface" Dashboard (React + Tailwind) - **PORT 3001**
-- **Backend**: Flask API + Python + Supabase - **PORT 5001**
-- **AI Core**: Active (Scout, Sentinel, Strategist Agents)
+- **Backend**: Flask API + Python + Supabase - **PORT 5002**
+- **AI Core**: Council of Agents (Gemini 1.5 Cortex)
 
-## 🖥️ Neural Interface (Premium)
-O sistema foi consolidado para usar exclusivamente a interface **Premium**:
-- **Sala de Situação Tática**: Localizada na aba **Banca**, permite monitoramento profissional.
-- **Neural Command Center**: Nova visualização de Agentes com estilo Cyberpunk, logs "War Room" em tempo real e interação visual dinâmica (Uplink).
-- **Gráficos Multi-Timeframe**: Suporte a 1M, 5M, 15M, 30M, 1H, 2H, 4H e 1D.
-- **Elite Bankroll Captain V3 (Intelligent)**: IA autônoma e supervisionada:
-    - **Conselho de Guerra**: Decisões debatidas entre Agentes (Técnico, Sentinela, Fundamental).
-    - **Modo Surf 🏄**: Se >2% ROI e Volatilidade/Sentiment favoráveis -> Segura a posição para alvos maiores.
-    - **Iron Shield 🛡️**: Proteção imediata (BE) ao atingir 1% ROI.
-    - **Fallback de Segurança**: Frontend calcula SL/TP se a API falhar (garantia visual).
-- **PWA Push Notifications**: Alertas em tempo real no celular mesmo com o App fechado.
-    - Notificações de Gain/Loss.
-    - Resumos de conclusão de Ciclo.
-    - Gatilho "Real Money Ready" (70% Win Rate).
-- **Agent HUD & Mobile Mastery**:
-    - **Visual Limpo**: Sem "badgets" flutuantes, foco total no Price Action.
-    - **Auto-Zoom Inteligente**: Gráfico se adapta automaticamente ao mudar TF/Par.
-    - **Telemetria Expandida**: O Capitão "fala" o que está pensando em fonte legível.
-- **Dark Glassmorphism**: Estética premium com fundos escuros e acentos neon.
-- **Responsividade Ótima**: Ajustado para Desktop e Mobile.
+## 🧠 Inteligência Híbrida: O Conselho de Agentes
+O sistema evoluiu de uma estrutura linear para um **Conselho Deliberativo**, onde múltiplos agentes especializados colaboram:
+
+1.  **Market Info Agent**: Monitora notícias globais, listagens em exchanges e sentimento macro para fornecer contexto fundamental.
+2.  **ML Supervisor Agent**: Monitora a performance dos modelos de Machine Learning em tempo real, ajustando pesos ou alertando sobre anomalias.
+3.  **Bankroll Captain (General)**: O tomador de decisão final. Ele recebe os dossiês dos outros agentes e executa a gestão de risco estrita.
+4.  **Soldados (Scout & Sentinel)**: Scanners matemáticos de alta velocidade que filtram 200+ pares para o Conselho analisar.
+
+## 💎 Funcionalidades Premium (v6.0)
+
+### 1. Gestão de Banca 10-Slot (Escala Dinâmica)
+A lógica de risco foi aprimorada para maximizar o ROI sem expor o capital excessivamente:
+- **Limite de Risco**: Máximo de 20% da banca total em risco simultâneo.
+- **Configuração de Slots**: Dividido em até **10 slots simultâneos**.
+- **Entradas Inteligentes**: Cada entrada ocupa 2% a 5% da banca, dependendo da confiança do Conselho.
+- **Reciclagem de Capital**: Assim que um trade atinge o "Risk-Free" (Break Even), o slot é liberado para novas operações.
+
+### 2. M.L Máquina de Aprendizado (Nova Interface)
+- **Dashboard Dedicado**: Visualização clara de métricas de treinamento, acurácia e logs técnicos do Supervisor de ML.
+- **Remoção de Ruído**: As páginas de ML agora focam puramente em performance preditiva, separando dados operacionais de dados técnicos.
+
+### 3. Neural Interface & HUD Tático
+- **Agent HUD**: Visualização em tempo real do "pensamento" dos agentes durante a análise de sinais.
+- **Tactical Charts**: Linhas de Stop-Loss e Take-Profit dinâmicas integradas ao gráfico da "Banca".
+- **Mobile First**: Interface otimizada para monitoramento via smartphone.
 
 ## 🛠️ Execução do Sistema
 
 ### 1. Backend (Python/Flask)
 ```bash
-# O Backend DEVE rodar na porta 5001
 python backend/app.py
 ```
-*Configurado via `backend/config.py` (`API_PORT = 5001`).*
 
 ### 2. Frontend (React/Vite)
 ```bash
 cd frontend
-# O Frontend DEVE rodar na porta 3001
 npm run dev
 ```
-*Configurado via `vite.config.js` (`port: 3001`).*
 
-> [!IMPORTANT]
-> **Padrão de Portas:**
-> - Frontend: http://localhost:3001
-> - Backend: http://localhost:5001
-> 
-> Qualquer outra porta (3002, 3003, 5000) é residual e deve ser ignorada ou o processo deve ser encerrado.
+## ⚠️ Troubleshooting
 
-## ⚠️ Troubleshooting (Problemas Comuns)
+### "Logs não aparecem"
+Verifique a conectividade com o Supabase e se o Buffer de Memória está ativo na porta 5002.
 
-### "Interface Antiga ou Incompleta aparecendo"
-Se ao acessar a porta 3001 você vir uma versão sem a Banca ou com design antigo:
-1. Pressione **Ctrl + F5** (ou **Ctrl + Shift + R**) para forçar o recarregamento total do cache.
-2. O sistema de Cache (PWA) foi desativado no `vite.config.js` para evitar esse conflito.
-
-### "Porta 3001 em uso"
-Se o Vite tentar abrir na porta 3002, significa que há um processo "zumbi" na 3001.
-- **Windows (PowerShell):** `Get-NetTCPConnection -LocalPort 3001 | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }`
+### "Interface Antiga"
+O sistema utiliza Service Workers para performance. Se necessário, force a limpeza de cache com **Ctrl + F5**.
 
 ---
-*Atualizado em: 23/01/2026 (Intelligent Core Update)*
+*Atualizado em: 24/01/2026 - Versão 6.0 (The Council Update)*
