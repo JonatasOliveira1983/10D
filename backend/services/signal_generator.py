@@ -87,7 +87,7 @@ from services.llm_agents.adaptive_bias_agent import AdaptiveBiasAgent
 from services.llm_agents.liquidity_sentinel_agent import LiquiditySentinelAgent
 from services.llm_agents.strategist_agent import StrategistAgent
 from services.llm_agents.portfolio_governor_agent import PortfolioGovernorAgent
-from services.llm_agents.portfolio_governor_agent import PortfolioGovernorAgent
+from services.llm_agents.ml_supervisor_agent import MLSupervisorAgent
 from services.llm_agents.global_anchor_agent import GlobalAnchorAgent
 from services.bankroll_manager import BankrollManager
 
@@ -180,12 +180,11 @@ class SignalGenerator:
         self.scout_agent = AdaptiveBiasAgent()
         self.sentinel_agent = LiquiditySentinelAgent()
         
-        # Initialize Intelligence Agents (Strategist, Governor, Anchor)
-        self.strategist_agent = StrategistAgent()
-        self.governor_agent = PortfolioGovernorAgent()
+        # Initialize Intelligence Agents (Strategist, Governor, Anchor, Supervisor)
         self.strategist_agent = StrategistAgent()
         self.governor_agent = PortfolioGovernorAgent()
         self.anchor_agent = GlobalAnchorAgent()
+        self.ml_supervisor_agent = MLSupervisorAgent()
         
         # Initialize Bankroll Manager (The Elite Simulator)
         self.bankroll_manager = BankrollManager(self.db, self.client)

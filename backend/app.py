@@ -157,8 +157,8 @@ def background_scanner():
             generator.monitor_active_signals()
             
             # 2. Scan for new signals
-            if self.log_callback and int(time.time()) % 60 < 5: # Log once per minute approx
-                self.log_callback("scout", "SCAN_PULSE", "🔭 Escaneando 109 pares na velocidade da luz...", None)
+            if generator.log_callback and int(time.time()) % 60 < 5: # Log once per minute approx
+                generator.log_callback("scout", "SCAN_PULSE", "🔭 Escaneando 109 pares na velocidade da luz...", None)
                 
             generator.scan_all_pairs()
             

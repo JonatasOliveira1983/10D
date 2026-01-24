@@ -771,6 +771,7 @@ def detect_judas_swing(
                                 "deviation_atr": round(desvio, 2),
                                 "reclaim_candles": reclaim_index - i,
                                 "wick_percent": round((wick/total)*100, 2)
+                            }
     return None, {}
 
 

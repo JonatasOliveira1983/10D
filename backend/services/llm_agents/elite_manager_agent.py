@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple, Optional
 from .base_agent import BaseAgent
 import json
 from datetime import datetime
@@ -30,6 +30,29 @@ class EliteManagerAgent(BaseAgent):
             "current_exposure_pct": 0.0
         }
         self.load_learning_state()
+
+    def load_learning_state(self):
+        """Loads learning data from a local JSON file."""
+        try:
+            import os
+            file_path = "learning_state_elite.json"
+            if os.path.exists(file_path):
+                with open(file_path, "r") as f:
+                    data = json.load(f)
+                    self.learning_data.update(data)
+                print(f"[CAPTAIN] Learning state loaded from {file_path}", flush=True)
+        except Exception as e:
+            print(f"[CAPTAIN] Failed to load learning state: {e}", flush=True)
+
+    def save_learning_state(self):
+        """Saves current learning data to a local JSON file."""
+        try:
+            file_path = "learning_state_elite.json"
+            with open(file_path, "w") as f:
+                json.dump(self.learning_data, f, indent=4)
+            # print(f"[CAPTAIN] Learning state saved to {file_path}", flush=True)
+        except Exception as e:
+            print(f"[CAPTAIN] Failed to save learning state: {e}", flush=True)
 
     def analyze(self, signal: Dict[str, Any], market_context: Dict[str, Any]) -> Dict[str, Any]:
         """

@@ -1,36 +1,36 @@
 {
   "status": "SUCCESS",
-  "timestamp": 1769185115970,
-  "timestamp_readable": "2026-01-23 13:18:35",
+  "timestamp": 1769281790613,
+  "timestamp_readable": "2026-01-24 16:09:50",
   "samples": {
-    "total": 144,
-    "train": 115,
-    "test": 29,
-    "wins": 22,
-    "losses": 122
+    "total": 232,
+    "train": 185,
+    "test": 47,
+    "wins": 21,
+    "losses": 211
   },
   "metrics": {
-    "accuracy": 0.8966,
+    "accuracy": 0.8936,
     "precision": 0.0,
     "recall": 0.0,
     "f1_score": 0.0
   },
   "confusion_matrix": {
-    "true_negative": 26,
-    "false_positive": 2,
-    "false_negative": 1,
+    "true_negative": 42,
+    "false_positive": 0,
+    "false_negative": 5,
     "true_positive": 0
   },
   "feature_importance": {
-    "rsi_value": 0.2853,
-    "cvd_delta": 0.1654,
-    "oi_change_pct": 0.1316,
-    "volatility_idx": 0.1034,
-    "decoupling_score": 0.1007,
-    "lsr_change_pct": 0.0901,
-    "rs_score": 0.0697,
-    "btc_regime_val": 0.0285,
-    "master_score": 0.025,
-    "trend_aligned": 0.0004
+    "volatility_idx": 0.2546,
+    "rsi_value": 0.2441,
+    "lsr_change_pct": 0.1252,
+    "rs_score": 0.1201,
+    "decoupling_score": 0.0816,
+    "oi_change_pct": 0.0794,
+    "cvd_delta": 0.068,
+    "trend_aligned": 0.0122,
+    "master_score": 0.0115,
+    "btc_regime_val": 0.0033
   }
 }
