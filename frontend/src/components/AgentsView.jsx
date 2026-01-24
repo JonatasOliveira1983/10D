@@ -8,6 +8,7 @@ export default function AgentsView() {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeAgent, setActiveAgent] = useState(null); // Track who is "speaking"
+    const [selectedAgent, setSelectedAgent] = useState(null); // Clicked agent for info card
     const logsEndRef = useRef(null);
 
     // Fetches real logs from the new endpoint
@@ -87,6 +88,12 @@ export default function AgentsView() {
         return () => clearTimeout(timer);
     }, []);
 
+    // Helper to close card
+    const closeCard = (e) => {
+        if (e) e.stopPropagation();
+        setSelectedAgent(null);
+    };
+
     const getIcon = (id) => {
         switch (id) {
             case 'health_monitor': return <Activity size={20} />;
@@ -108,7 +115,7 @@ export default function AgentsView() {
     };
 
     return (
-        <div className="agents-view-v2 fade-in">
+        <div className="agents-view-v2 fade-in" onClick={closeCard}>
             {/* INJECTED STYLES TO BYPASS CACHE ISSUES */}
             <style>{`
                 /* CORE LAYOUT */
@@ -223,6 +230,7 @@ export default function AgentsView() {
                     padding: 1rem;
                     border-radius: 0.8rem;
                     position: relative;
+                    cursor: pointer !important;
                 }
                 
                 .node-icon-wrapper {
@@ -279,6 +287,86 @@ export default function AgentsView() {
                     transform: scale(1.05);
                     transition: all 0.3s ease;
                 }
+                
+                .agent-info-card {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 400px;
+                    background: #1e293b;
+                    border: 2px solid #8b5cf6;
+                    border-radius: 1rem;
+                    padding: 1.5rem;
+                    box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(139, 92, 246, 0.2);
+                    z-index: 1100;
+                    animation: cardPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                }
+                
+                @keyframes cardPop {
+                    from { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+                    to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+                }
+                
+                .card-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 1rem;
+                    border-bottom: 1px solid rgba(255,255,255,0.1);
+                    padding-bottom: 0.5rem;
+                }
+                
+                .card-header h2 {
+                    margin: 0;
+                    font-size: 1.2rem;
+                    color: #fff;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+                
+                .card-body {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1rem;
+                }
+                
+                .card-stat {
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 0.9rem;
+                }
+                
+                .stat-label { color: #94a3b8; }
+                .stat-value { color: #2dd4bf; font-weight: bold; }
+                
+                .card-details {
+                    font-size: 0.85rem;
+                    line-height: 1.5;
+                    color: #cbd5e1;
+                    background: rgba(0,0,0,0.2);
+                    padding: 0.8rem;
+                    border-radius: 0.5rem;
+                }
+                
+                .comm-badge {
+                    padding: 0.2rem 0.5rem;
+                    border-radius: 4px;
+                    font-size: 0.7rem;
+                    font-weight: bold;
+                }
+                .comm-online { background: rgba(45, 212, 191, 0.2); color: #2dd4bf; }
+                .comm-offline { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+                
+                .close-btn {
+                    background: none;
+                    border: none;
+                    color: #64748b;
+                    cursor: pointer;
+                    padding: 5px;
+                }
+                .close-btn:hover { color: #fff; }
                 
                 /* WAR ROOM LOGS */
                 .war-room-terminal {
@@ -363,13 +451,23 @@ export default function AgentsView() {
                 {/* LEFT: THE AGENTS GRID */}
                 <div className="agents-network">
                     {/* CENTRAL BRAIN (GEMINI) */}
-                    <div className="central-node">
+                    <div className="central-node" onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedAgent({
+                            id: 'gemini',
+                            name: 'Gemini 2.0 Flash',
+                            role: 'Córtex Neural Central',
+                            status: llmStatus?.llm_enabled ? 'ATIVO' : 'OFFLINE',
+                            details: 'O motor de inteligência central que coordena todos os agentes especializados. Processa o debate do conselho e toma a decisão final de sinalização.',
+                            comm_status: llmStatus?.llm_enabled ? 'ONLINE' : 'OFFLINE'
+                        });
+                    }}>
                         <div className={`brain-core ${!llmStatus?.llm_enabled ? 'brain-offline' :
                             activeAgent === 'gemini' ? 'active-uplink' : 'pulse-glow'
                             }`}>
                             {getIcon('gemini')}
                         </div>
-                        <div className="brain-label">GEMINI 1.5 CORTEX</div>
+                        <div className="brain-label">GEMINI 2.0 CORTEX</div>
                         <div className="brain-status">
                             {llmStatus?.llm_enabled ? 'CONNECTED' : 'OFFLINE'}
                         </div>
@@ -381,7 +479,14 @@ export default function AgentsView() {
                     {/* SATELLITE AGENTS */}
                     <div className="satellite-grid">
                         {agents.map(agent => (
-                            <div key={agent.id} className={`agent-node ${agent.id} ${activeAgent === agent.id ? 'active-uplink' : ''}`}>
+                            <div
+                                key={agent.id}
+                                className={`agent-node ${agent.id} ${activeAgent === agent.id ? 'active-uplink' : ''}`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedAgent(agent);
+                                }}
+                            >
                                 <div className="node-icon-wrapper">
                                     {getIcon(agent.id)}
                                     {/* Beam activates when agent is active */}
@@ -395,6 +500,41 @@ export default function AgentsView() {
                             </div>
                         ))}
                     </div>
+
+                    {/* AGENT INFO CARD (MODAL) */}
+                    {selectedAgent && (
+                        <div className="agent-info-card" onClick={e => e.stopPropagation()}>
+                            <div className="card-header">
+                                <h2>{getIcon(selectedAgent.id)} {selectedAgent.name}</h2>
+                                <button className="close-btn" onClick={closeCard}>✕</button>
+                            </div>
+                            <div className="card-body">
+                                <div className="card-stat">
+                                    <span className="stat-label">Função:</span>
+                                    <span className="stat-value">{selectedAgent.role}</span>
+                                </div>
+                                <div className="card-stat">
+                                    <span className="stat-label">Status:</span>
+                                    <span className={`stat-value ${selectedAgent.status === 'ATIVO' ? '' : 'text-warning'}`}>
+                                        {selectedAgent.status}
+                                    </span>
+                                </div>
+                                <div className="card-stat">
+                                    <span className="stat-label">Comunicação:</span>
+                                    <span className={`comm-badge ${selectedAgent.comm_status === 'ONLINE' ? 'comm-online' : 'comm-offline'}`}>
+                                        {selectedAgent.comm_status}
+                                    </span>
+                                </div>
+                                <div className="card-details">
+                                    {selectedAgent.details || "Aguardando telemetria detalhada..."}
+                                </div>
+                                <div className="card-stat">
+                                    <span className="stat-label">Última Ação:</span>
+                                    <span className="stat-value" style={{ fontSize: '0.8rem' }}>{selectedAgent.last_action}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* RIGHT: THE WAR ROOM (LOGS) */}

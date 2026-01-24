@@ -1,37 +1,39 @@
-# 10D Trading System v6.0 (The Council Update)
+# 10D Trading System v6.5 (The Autonomous Update)
 
 **10D** is an advanced automated trading system powered by Hybrid Intelligence (Rule-Based Scanners + Multi-Agent LLM Council) to identify high-probability crypto setups and manage capital with institutional-grade precision.
 
 ## 🚀 Status: OPERATIONAL
 - **Frontend**: "Neural Interface" Dashboard (React + Tailwind) - **PORT 3001**
 - **Backend**: Flask API + Python + Supabase - **PORT 5002**
-- **AI Core**: Council of Agents (Gemini 1.5 Cortex)
+- **AI Core**: Council of Agents (Gemini 2.0 Cortex)
+- **ML Core**: Autonomous Model Care (Random Forest)
 
 ## 🧠 Inteligência Híbrida: O Conselho de Agentes
-O sistema evoluiu de uma estrutura linear para um **Conselho Deliberativo**, onde múltiplos agentes especializados colaboram:
+O sistema evoluiu para uma estrutura de **Autonomia Total**, onde os agentes não apenas sugerem, mas gerenciam ativamente o ciclo de vida do capital e dos modelos:
 
-1.  **Market Info Agent**: Monitora notícias globais, listagens em exchanges e sentimento macro para fornecer contexto fundamental.
-2.  **ML Supervisor Agent**: Monitora a performance dos modelos de Machine Learning em tempo real, ajustando pesos ou alertando sobre anomalias.
-3.  **Bankroll Captain (General)**: O tomador de decisão final. Ele recebe os dossiês dos outros agentes e executa a gestão de risco estrita.
-4.  **Soldados (Scout & Sentinel)**: Scanners matemáticos de alta velocidade que filtram 200+ pares para o Conselho analisar.
+1.  **Bankroll Captain (General)**: O mestre tático. Gerencia os 10 slots de elite, executa saídas por Fibonacci, confirma reversões com Price Action e realiza "Smart Flips".
+2.  **ML Supervisor Agent (Model Care)**: Gerente autônomo do Machine Learning. Coleta dados "Journey" em tempo real e dispara retreinos em background assim que o limite de amostras é atingido.
+3.  **Market Info Agent**: Monitora notícias em tempo real (Bybit/RSS) e fornece o contexto macro para o conselho.
+4.  **Soldados (Scout & Sentinel)**: Monitoramento especializado de tendências MTF e caça de liquidez (CVD/LSR).
 
-## 💎 Funcionalidades Premium (v6.0)
+## 💎 Funcionalidades de Elite (v6.5)
 
-### 1. Gestão de Banca 10-Slot (Escala Dinâmica)
-A lógica de risco foi aprimorada para maximizar o ROI sem expor o capital excessivamente:
-- **Limite de Risco**: Máximo de 20% da banca total em risco simultâneo.
-- **Configuração de Slots**: Dividido em até **10 slots simultâneos**.
-- **Entradas Inteligentes**: Cada entrada ocupa 2% a 5% da banca, dependendo da confiança do Conselho.
-- **Reciclagem de Capital**: Assim que um trade atinge o "Risk-Free" (Break Even), o slot é liberado para novas operações.
+### 1. Tática Fibonacci & Smart Flip
+- **Fib Exit**: Saída automática em níveis de retração de 50% (0.5 Fib) para proteger lucros explosivos (>100% ROI).
+- **Price Action Confirmation**: Saídas validadas por padrões de candle (Hammer, Shooting Star, Engulfing).
+- **Smart Reversal**: Inversão de mão tática no nível 0.5 para lucrar na correção e na continuação do movimento.
 
-### 2. M.L Máquina de Aprendizado (Nova Interface)
-- **Dashboard Dedicado**: Visualização clara de métricas de treinamento, acurácia e logs técnicos do Supervisor de ML.
-- **Remoção de Ruído**: As páginas de ML agora focam puramente em performance preditiva, separando dados operacionais de dados técnicos.
+### 2. Gestão de slots e Inércia
+- **Otimização de Slots**: Liberação automática de slots para moedas em estagnação (100-300% ROI há mais de 6h).
+- **Escudo BTC & Pânico**: Proteção global da banca em caso de quedas bruscas do mercado.
 
-### 3. Neural Interface & HUD Tático
-- **Agent HUD**: Visualização em tempo real do "pensamento" dos agentes durante a análise de sinais.
-- **Tactical Charts**: Linhas de Stop-Loss e Take-Profit dinâmicas integradas ao gráfico da "Banca".
-- **Mobile First**: Interface otimizada para monitoramento via smartphone.
+### 3. M.L Autônomo e Fluxo Não-Bloqueante
+- **Warmup Inteligente**: O gerador de sinais opera em modo fallback (Journey) enquanto o modelo ML está sendo treinado, garantindo que o sistema nunca fique parado.
+- **Model Care Heartbeat**: Monitoramento estatístico contínuo da acurácia e precisão do modelo.
+
+### 4. Neural Interface & HUD Tático
+- **Agent Detail Cards**: Clique nos agentes no HUD para ver telemetria detalhada e "pensamentos" em tempo real.
+- **Mobile Optimized**: Dashboard preparado para monitoramento e intervenção tática via celular.
 
 ## 🛠️ Execução do Sistema
 
@@ -46,13 +48,5 @@ cd frontend
 npm run dev
 ```
 
-## ⚠️ Troubleshooting
-
-### "Logs não aparecem"
-Verifique a conectividade com o Supabase e se o Buffer de Memória está ativo na porta 5002.
-
-### "Interface Antiga"
-O sistema utiliza Service Workers para performance. Se necessário, force a limpeza de cache com **Ctrl + F5**.
-
 ---
-*Atualizado em: 24/01/2026 - Versão 6.0 (The Council Update)*
+*Atualizado em: 24/01/2026 - Versão 6.5 (The Autonomous Update)*

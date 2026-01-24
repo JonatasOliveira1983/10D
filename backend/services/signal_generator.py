@@ -961,12 +961,17 @@ class SignalGenerator:
                         ml_approved = False
                         
                         if ML_ENABLED and self.ml_predictor and signal.get("ml_probability") is not None:
-                            # If ML probability is below threshold, log it but check Technical Score as fallback
+                            # ML-Based Filtering (Softened)
                             if signal["ml_probability"] < ML_PROBABILITY_THRESHOLD:
-                                print(f"[ML FILTER] {symbol} probability {signal['ml_probability']:.2%} < {ML_PROBABILITY_THRESHOLD:.0%}, bloqueado temporariamente", flush=True)
-                                # IMPORTANT: For training purposes, we might want to let high technical score signals pass even if ML is unsure?
-                                # For now, we respect the ML lock.
-                                continue
+                                # Check if model is actually ready/accurate
+                                stats = self.ml_predictor.get_status()
+                                if stats.get("model_loaded") and stats.get("last_accuracy", 0) > 0.60:
+                                    print(f"[ML FILTER] {symbol} probability {signal['ml_probability']:.2%} < {ML_PROBABILITY_THRESHOLD:.0%}, blocked (Model is Accurate)", flush=True)
+                                    continue
+                                else:
+                                    # Model not ready or low accuracy, allow signal as "Technical Only"
+                                    print(f"[ML WARMUP] {symbol} probability {signal['ml_probability']:.2%} is low, but allowing as Technical-Elite (Model Warming Up)", flush=True)
+                                    ml_approved = True
                             else:
                                 # ML Approves
                                 ml_approved = True
@@ -998,44 +1003,43 @@ class SignalGenerator:
                                 if gov_res.get("suggested_size_reduction", 0) > 0:
                                     print(f"[GOVERNOR] ⚠️ {symbol} size reduced by {gov_res.get('suggested_size_reduction')*100:.0f}%", flush=True)
 
-                        # [SNIPER FILTER] Enforce strict selection rules
-                        # [DATA COLLECTION] Use RAW Score for Sniper check too (allow signals with high Technical but low ML)
-                        sniper_check_score = raw_score # Use the calculated raw_score from above
+                        # [SNIPER FILTER] Determine if this qualifies for Elite or Journey
+                        sniper_check_score = raw_score
+                        is_elite = True
                         
                         if self.current_btc_regime == "RANGING":
-                            # Only decoupled alts in Ranging
                             if signal.get("decoupling_score", 0) < SNIPER_DECOUPLING_THRESHOLD:
-                                print(f"[SNIPER FILTER] {symbol} REJECTED: Decoupling Score ({signal.get('decoupling_score', 0)}) < {SNIPER_DECOUPLING_THRESHOLD} in RANGING market. (Strict Enforcement)", flush=True)
-                                continue
+                                is_elite = False
+                                print(f"[JOURNEY MODE] {symbol} Decoupling {signal.get('decoupling_score', 0):.2f} < {SNIPER_DECOUPLING_THRESHOLD} - Saving for ML Training only.", flush=True)
                         elif self.current_btc_regime in ["TRENDING", "BREAKOUT"]:
-                            # Only best scores in Trending
                             if sniper_check_score < SNIPER_BEST_SCORE_THRESHOLD:
-                                print(f"[SNIPER FILTER] {symbol} REJECTED: Score ({sniper_check_score:.1f}) < {SNIPER_BEST_SCORE_THRESHOLD} in TRENDING market.", flush=True)
-                                continue
+                                is_elite = False
+                                print(f"[JOURNEY MODE] {symbol} Score {sniper_check_score:.1f} < {SNIPER_BEST_SCORE_THRESHOLD} - Saving for ML Training only.", flush=True)
+
+                        # Update signal sniper status based on final scan filters
+                        signal["is_sniper"] = is_elite
                         
-                        # LLM Intelligence Layer - additional validation (soft filter - logs warning but doesn't block)
+                        # LLM Intelligence Layer - additional validation (soft filter)
                         llm_info = ""
                         if LLM_ENABLED and signal.get("llm_validation"):
                             llm_val = signal["llm_validation"]
                             llm_conf = llm_val.get("confidence", 0)
                             llm_info = f" | LLM: {llm_conf:.0%}"
-                            if not llm_val.get("approved") and llm_conf >= LLM_MIN_CONFIDENCE:
-                                # LLM disapproved but with good confidence - this is a warning
-                                print(f"[LLM WARNING] {symbol} - LLM nao aprovou mas seguindo com sinal (conf: {llm_conf:.0%})", flush=True)
                         
                         with self._lock:
                             self.active_signals[symbol] = signal
-                        new_signals.append(signal)
-                        sig_type = signal['signal_type'].replace('_', ' ')
-                        ml_info = f" | ML: {signal['ml_probability']:.2%}" if signal.get('ml_probability') else ""
-                        print(f"[NEW SIGNAL] {symbol} {signal['direction']} ({sig_type}) Score: {signal['score']:.1f}%{ml_info}{llm_info}", flush=True)
                         
-                        # === BANKROLL MANAGER (SIMULATION) ===
-                        # Assess if this signal qualifies for the Elite Bankroll
-                        if self.bankroll_manager:
-                            self.bankroll_manager.assess_signal(signal)
+                        if is_elite:
+                            new_signals.append(signal)
+                            sig_type = signal['signal_type'].replace('_', ' ')
+                            ml_info = f" | ML: {signal['ml_probability']:.2%}" if signal.get('ml_probability') else ""
+                            print(f"[NEW ELITE SIGNAL] 🦅 {symbol} {signal['direction']} ({sig_type}) Score: {signal['score']:.1f}%{ml_info}{llm_info}", flush=True)
                             
-                        self.save_signal_to_db(signal) # Save on new signal
+                            # Assess for Elite Bankroll
+                            if self.bankroll_manager:
+                                self.bankroll_manager.assess_signal(signal)
+                        
+                        self.save_signal_to_db(signal)
                 
                 # Periodic cleanup of history (every scan)
                 self.cleanup_history()
@@ -1052,6 +1056,20 @@ class SignalGenerator:
                             lambda p: self.llm_brain.call_gemini(p)
                         )
                         self.strategist_report = report
+
+                # === 6. ML MODEL CARE (Autonomous) ===
+                if self.ml_supervisor_agent and self.ml_predictor:
+                    care_res = self.ml_supervisor_agent.care_for_model(self.ml_predictor)
+                    if care_res.get("action") == "TRAIN":
+                        print(f"[ML SUPERVISOR] 🧠 Autonomous Training Triggered: {care_res.get('reason')}", flush=True)
+                        # Run training in background to not block scan loop
+                        def async_train():
+                            try:
+                                self.ml_predictor.train_model(min_samples=ML_MIN_SAMPLES)
+                            except Exception as e:
+                                print(f"[ML ERROR] Async training failed: {e}")
+                        import threading
+                        threading.Thread(target=async_train, daemon=True).start()
 
                 # Small delay to avoid rate limiting
                 time.sleep(0.1)

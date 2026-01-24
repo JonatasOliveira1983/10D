@@ -1,4 +1,8 @@
 import unittest
+import sys
+import os
+sys.path.append(os.getcwd())
+sys.path.append(os.path.join(os.getcwd(), 'backend'))
 from unittest.mock import patch, MagicMock
 from backend.services.llm_agents.market_info_agent import MarketInfoAgent
 

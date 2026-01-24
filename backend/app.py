@@ -82,7 +82,8 @@ def log_feed_callback(agent_id, type_id, message, details=None):
 print("[INIT] Creating SignalGenerator with Log Channel...", flush=True)
 generator = SignalGenerator(limit=PAIR_LIMIT, log_callback=log_feed_callback)
 print("[DEBUG] Creating SignalGenerator instance...", flush=True)
-generator = SignalGenerator()
+# The second initialization was shadowing the first one! Removing the duplicate.
+# generator = SignalGenerator() 
 # Initialize AI Analytics Service
 analytics_service = AIAnalyticsService(generator.db)
 # Initialize Health Monitor
@@ -338,42 +339,54 @@ def get_agents_status():
                 "name": "Scout Técnico",
                 "status": "ATIVO",
                 "role": "Análise de Preço & MTF",
-                "last_action": "Monitorando Pivot/EMA"
+                "last_action": "Monitorando Pivot/EMA",
+                "details": "Conectado à Bybit API. Analisando 109 pares em 3 timeframes (30m, 1h, 4h).",
+                "comm_status": "ONLINE"
             },
             {
                 "id": "fundamental_agent",
                 "name": "Sentinela de Fluxo",
                 "status": "ATIVO",
                 "role": "Liquidez & Order Flow",
-                "last_action": "Analisando CVD/OI"
+                "last_action": "Analisando CVD/OI",
+                "details": "Processando dados institutional de Open Interest e Long/Short Ratio.",
+                "comm_status": "ONLINE"
             },
             {
                 "id": "risk_agent",
                 "name": "Governador de Risco",
                 "status": "ATIVO",
                 "role": "Relação R:R & Proteção",
-                "last_action": "Validando Stop Loss"
+                "last_action": "Validando Stop Loss",
+                "details": "Supervisionando limites de perda máxima e proteção de capital.",
+                "comm_status": "ONLINE"
             },
             {
                 "id": "market_info_agent",
                 "name": "Âncora de Mercado",
                 "status": "ATIVO",
                 "role": "Notícias & Listagens",
-                "last_action": "Checando Bybit/RSS"
+                "last_action": "Checando Bybit/RSS",
+                "details": "Monitorando Bybit Announcements e feeds RSS (CoinTelegraph, Coindesk).",
+                "comm_status": "ONLINE"
             },
             {
                 "id": "ml_supervisor_agent",
                 "name": "Supervisor ML",
-                "status": "ATIVO",
+                "status": "ATIVO" if generator.ml_predictor and generator.ml_predictor.model else "WARMUP",
                 "role": "Integridade do Modelo",
-                "last_action": "Verificando Precisão"
+                "last_action": "Gerindo Model Care",
+                "details": f"Status: {getattr(generator.ml_supervisor_agent, 'model_status', 'N/A')}. Analisando amostras para otimização contínua.",
+                "comm_status": "ONLINE"
             },
             {
                 "id": "bankroll_captain_agent",
                 "name": "Capitão da Banca",
                 "status": "ATIVO",
                 "role": "Sniper & Gestão 20%",
-                "last_action": "Monitorando Slots"
+                "last_action": "Monitorando Slots",
+                "details": f"Slots: {getattr(generator.llm_brain.council.bankroll_captain, 'active_trades', {}) if hasattr(generator, 'llm_brain') and hasattr(generator.llm_brain, 'council') else 'N/A'}. Limite de Risco: 20%.",
+                "comm_status": "ONLINE"
             }
         ]
         

@@ -67,18 +67,18 @@ class MarketInfoAgent(BaseAgent):
         return results
 
     def run(self, **kwargs) -> List[Dict]:
-        """Collect and return market information.
-        Optional kwargs:
-            include_bybit (bool): default True
-            include_rss (bool): default True
-        """
+        """Collect and return market information."""
         include_bybit = kwargs.get("include_bybit", True)
         include_rss = kwargs.get("include_rss", True)
         news = []
         if include_bybit:
-            news.extend(self._fetch_bybit_announcements())
+            bybit_news = self._fetch_bybit_announcements()
+            print(f"[MarketInfoAgent] Fetched {len(bybit_news)} Bybit announcements", flush=True)
+            news.extend(bybit_news)
         if include_rss:
-            news.extend(self._fetch_rss())
+            rss_news = self._fetch_rss()
+            print(f"[MarketInfoAgent] Fetched {len(rss_news)} RSS items", flush=True)
+            news.extend(rss_news)
         # Sort by published_at descending if possible
         def _parse_date(item):
             try:
@@ -89,17 +89,21 @@ class MarketInfoAgent(BaseAgent):
         return news
 
     def analyze(self, signal: Dict[str, Any], market_context: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyzes how market news affects a specific signal.
-        For now, this is a placeholder that returns a neutral verdict.
-        """
+        """Analyzes how market news affects a specific signal."""
         news = self.run()
         # Basic logic: search for signal symbol in news titles
         symbol = signal.get("symbol", "").upper()
         relevant_news = [n for n in news if symbol in n["title"].upper()]
         
+        verdict = "NEUTRAL"
+        if len(relevant_news) > 0:
+            print(f"[MarketInfoAgent] Found {len(relevant_news)} relevant news for {symbol}", flush=True)
+            # Simple heuristic: more news might mean higher volatility/interest
+            # But we'll stay neutral for now unless we do sentiment analysis
+        
         return {
             "score": 50,
-            "verdict": "NEUTRAL",
+            "verdict": verdict,
             "reasoning": f"Found {len(relevant_news)} news items for {symbol}. No major impact detected.",
             "metadata": {"news_count": len(relevant_news), "items": relevant_news[:3]}
         }

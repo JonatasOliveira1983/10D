@@ -1,4 +1,8 @@
 import unittest
+import sys
+import os
+sys.path.append(os.getcwd())
+sys.path.append(os.path.join(os.getcwd(), 'backend'))
 from backend.services.llm_agents.ml_supervisor_agent import MLSupervisorAgent
 
 class TestMLSupervisorAgent(unittest.TestCase):

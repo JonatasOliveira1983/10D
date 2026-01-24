@@ -214,6 +214,10 @@ class BankrollManager:
             if self.log_callback:
                 self.log_callback("bankroll_captain_agent", "TRADE_OPEN", f"🦅 {msg}", new_trade)
             
+            # 5. Register in Captain Agent
+            if hasattr(self.llm_brain, 'council') and hasattr(self.llm_brain.council, 'bankroll_captain'):
+                self.llm_brain.council.bankroll_captain.register_trade(signal["id"], new_trade)
+            
             self.status_cache = None
             return True
             
@@ -350,13 +354,47 @@ class BankrollManager:
                 else:
                     pnl_pct = (entry_price - current_price) / entry_price
                     
-                # Leverage PnL
-                roi = pnl_pct * self.LEVERAGE
+                # leverage/roi already calculated above
                 
+                # --- NEW: FIBONACCI & STAGNATION LOGIC ---
+                fib_exit = False
+                fib_reason = ""
+                stagnation_exit = False
+                stagnation_reason = ""
+                
+                # 1. Fetch candles for Fibonacci (We use 1H to get the local swing)
+                patterns = {}
+                try:
+                    from services.indicator_calculator import calculate_fibonacci_levels, detect_candlestick_patterns
+                    h1_candles = self.client.get_klines(symbol, "60", 144)
+                    if h1_candles:
+                        fib_levels = calculate_fibonacci_levels(h1_candles)
+                        
+                        # Fetch M5 candles for Price Action (Pattern) confirmation
+                        m5_candles = self.client.get_klines(symbol, "5", 5)
+                        if m5_candles:
+                            patterns = detect_candlestick_patterns(m5_candles)
+                        
+                        # Enrich trade with current roi for agent evaluation
+                        trade["current_roi"] = roi * 100 
+                        fib_exit, fib_reason = self.elite_agent.evaluate_fibonacci_exit(trade, current_price, fib_levels, patterns)
+                except Exception as fe:
+                    print(f"[BANKROLL] Fib/Pattern check error for {symbol}: {fe}")
+
+                # 2. Stagnation Check
+                stagnation_exit, stagnation_reason = self.elite_agent.evaluate_stagnation_exit(trade, roi * 100)
+
                 # --- NEW: ADVANCED CAPTAIN LOGIC (M1/M5/H1 Checks) ---
                 should_close, captain_reason = self._check_advanced_captain_logic(trade, current_price)
 
-                # --- NEW: GENERATE LIVE TELEMETRY (AGENT THOUGHTS) ---
+                # Final Decision Override
+                if fib_exit:
+                    should_close = True
+                    captain_reason = fib_reason
+                elif stagnation_exit:
+                    should_close = True
+                    captain_reason = stagnation_reason
+
                 # --- NEW: GENERATE LIVE TELEMETRY (THE CAPTAIN SPEAKS) ---
                 telemetry = ""
                 
@@ -437,12 +475,46 @@ class BankrollManager:
                     pnl_usd = trade["entry_size_usd"] * roi
                     # Clamp loss to 100% of collateral if needed (though we use 50x)
                     if pnl_usd < -trade["entry_size_usd"]: pnl_usd = -trade["entry_size_usd"]
-                    self._close_trade(trade, current_price, pnl_usd, roi, final_status, status)
+                    
+                    # --- NEW: SMART FLIP FOR FIBONACCI REVERSALS ---
+                    if fib_exit:
+                        print(f"[BANKROLL] 🔄 FIBONACCI FLIP DETECTED! Reversing {symbol} to catch correction.", flush=True)
+                        self._trigger_bankroll_flip(trade, current_price, pnl_usd, roi, final_status, status)
+                    else:
+                        self._close_trade(trade, current_price, pnl_usd, roi, final_status, status)
                 else:
                     self.db.client.table("bankroll_trades").update(update_data).eq("id", trade["id"]).execute()
 
         except Exception as e:
             print(f"[BANKROLL] Error updating positions: {e}")
+
+    def _trigger_bankroll_flip(self, trade, exit_price, pnl_usd, roi, status_label, bankroll_status):
+        """Closes the current trade and immediately opens an identical one in the opposite direction."""
+        # 1. Close current
+        self._close_trade(trade, exit_price, pnl_usd, roi, status_label, bankroll_status)
+        
+        # 2. Open Opposite
+        old_direction = trade.get("direction", "LONG")
+        new_direction = "SHORT" if old_direction == "LONG" else "LONG"
+        
+        # Build "Pseudo-Signal" for the flip
+        flip_signal = {
+            "id": f"flip_{trade['id']}",
+            "symbol": trade["symbol"],
+            "direction": new_direction,
+            "entry_price": exit_price,
+            "score": 100, # High score for the tactical reversal
+            "score_breakdown": {"rules_score": 100},
+            "is_eagle_elite": True, # Ensure it passes captain check
+            "stop_loss": exit_price * (1.02 if new_direction == "SHORT" else 0.98), # 2% SL for correction
+            "take_profit_sniper": exit_price * (0.95 if new_direction == "SHORT" else 1.05) # 5% TP for correction
+        }
+        
+        print(f"[BANKROLL] [FLIP] Reversing into {new_direction} for {trade['symbol']}...", flush=True)
+        # Use our existing open_trade logic
+        # We need fresh status after closing the previous one
+        new_status = self.get_status()
+        self._open_trade(flip_signal, new_status)
 
     def _close_trade(self, trade, exit_price, pnl_usd, roi, status_label, bankroll_status):
         """Finalizes the trade and updates the compounding cycle"""
@@ -507,6 +579,10 @@ class BankrollManager:
                 "win_rate": win_rate,
                 "updated_at": datetime.utcnow().isoformat()
             }).eq("id", "elite_bankroll").execute()
+            
+            # 4. Deregister from Captain Agent
+            if hasattr(self.llm_brain, 'council') and hasattr(self.llm_brain.council, 'bankroll_captain'):
+                self.llm_brain.council.bankroll_captain.deregister_trade(trade.get("signal_id", ""))
             
             print(f"[BANKROLL] Balance Updated: ${new_balance:.2f} | WinRate: {win_rate:.1f}%{msg_cycle}", flush=True)
             self.status_cache = None

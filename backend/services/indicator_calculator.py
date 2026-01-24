@@ -771,9 +771,97 @@ def detect_judas_swing(
                                 "deviation_atr": round(desvio, 2),
                                 "reclaim_candles": reclaim_index - i,
                                 "wick_percent": round((wick/total)*100, 2)
-                            }
-                                
     return None, {}
+
+
+def calculate_fibonacci_levels(candles: List[Dict], period: int = 144) -> Dict[str, float]:
+    """
+    Calculate Fibonacci retracement levels for the given period.
+    Identifies the local Swing High and Swing Low and returns the standard levels.
+    """
+    if len(candles) < 2:
+        return {}
+        
+    recent_candles = candles[-period:] if len(candles) > period else candles
+    
+    highs = [c["high"] for c in recent_candles]
+    lows = [c["low"] for c in recent_candles]
+    
+    swing_high = max(highs)
+    swing_low = min(lows)
+    diff = swing_high - swing_low
+    
+    if diff == 0:
+        return {}
+        
+    return {
+        "swing_high": swing_high,
+        "swing_low": swing_low,
+        "diff": diff,
+        # Standard Retracement Levels (from High to Low - Bullish Retracement)
+        "bull_0.382": swing_high - (0.382 * diff),
+        "bull_0.5": swing_high - (0.5 * diff),
+        "bull_0.618": swing_high - (0.618 * diff),
+        # Standard Retracement Levels (from Low to High - Bearish Retracement)
+        "bear_0.382": swing_low + (0.382 * diff),
+        "bear_0.5": swing_low + (0.5 * diff),
+        "bear_0.618": swing_low + (0.618 * diff),
+    }
+
+
+def detect_candlestick_patterns(candles: List[Dict]) -> Dict[str, bool]:
+    """
+    Detect common candlestick patterns:
+    - Hammer / Inverted Hammer (Bullish)
+    - Shooting Star / Hanging Man (Bearish)
+    - Engulfing (Bullish/Bearish)
+    - Doji (Indecision)
+    """
+    if len(candles) < 2:
+        return {}
+        
+    curr = candles[-1]
+    prev = candles[-2]
+    
+    # Pre-calculate body and wicks
+    c_open, c_close, c_high, c_low = curr["open"], curr["close"], curr["high"], curr["low"]
+    p_open, p_close = prev["open"], prev["close"]
+    
+    body = abs(c_close - c_open)
+    upper_wick = c_high - max(c_open, c_close)
+    lower_wick = min(c_open, c_close) - c_low
+    total_range = c_high - c_low
+    
+    if total_range == 0:
+        return {"doji": True}
+        
+    patterns = {
+        "hammer": False,
+        "shooting_star": False,
+        "bullish_engulfing": False,
+        "bearish_engulfing": False,
+        "doji": body <= (total_range * 0.1),
+        "heavy_wick_top": upper_wick > (total_range * 0.5),
+        "heavy_wick_bottom": lower_wick > (total_range * 0.5)
+    }
+    
+    # Hammer
+    if body <= (total_range * 0.3) and lower_wick >= (body * 2) and upper_wick <= (body * 0.5):
+        patterns["hammer"] = (c_close > c_open) # Confirm bullish hammer
+        
+    # Shooting Star
+    if body <= (total_range * 0.3) and upper_wick >= (body * 2) and lower_wick <= (body * 0.5):
+        patterns["shooting_star"] = (c_close < c_open) # Confirm bearish star
+        
+    # Engulfing
+    p_body = abs(p_close - p_open)
+    if body > p_body and p_body > 0:
+        if c_close > c_open and p_close < p_open: # Bullish
+            patterns["bullish_engulfing"] = True
+        elif c_close < c_open and p_close > p_open: # Bearish
+            patterns["bearish_engulfing"] = True
+            
+    return patterns
 
 
 def calculate_pivot_trend(candles: List[Dict]) -> Tuple[Optional[str], Dict]:

@@ -213,44 +213,67 @@ class EliteManagerAgent(BaseAgent):
             print(f"[CAPTAIN] Inertia check error: {e}")
         return False
 
-    def record_learning(self, symbol: str, insight_type: str, lesson: str, context: Dict = None):
+    def evaluate_candlestick_confirmation(self, patterns: Dict[str, bool], direction: str) -> bool:
         """
-        Persists a tactical lesson to Supabase for the ML 'Brain'.
+        Confirms if the current price action supports the intended direction.
         """
-        if not self.db:
-            return
-
-        try:
-            data = {
-                "symbol": symbol,
-                "insight_type": insight_type,
-                "lesson_learned": lesson,
-                "context_data": context or {},
-                "experience_points_gained": 10 if "WON" in str(context) else 2
-            }
-            self.db.client.table("agent_learning").insert(data).execute()
-            print(f"[CAPTAIN] 🧠 Learning recorded: {insight_type} for {symbol}", flush=True)
+        if direction == "LONG":
+            # Bullish signals: Hammer, Bullish Engulfing, or heavy wick at bottom
+            return patterns.get("hammer") or patterns.get("bullish_engulfing") or patterns.get("heavy_wick_bottom")
+        else:
+            # Bearish signals: Shooting Star, Bearish Engulfing, or heavy wick at top
+            return patterns.get("shooting_star") or patterns.get("bearish_engulfing") or patterns.get("heavy_wick_top")
+        
+    def evaluate_fibonacci_exit(self, trade: Dict, current_price: float, fib_levels: Dict[str, float], patterns: Dict[str, bool] = None) -> Tuple[bool, str]:
+        """
+        Rule: If ROI > 300% and price retracts to Fibonacci 0.5 level, exit.
+        Uses Candlestick patterns for confirmation if provided.
+        """
+        if not fib_levels or "bull_0.5" not in fib_levels:
+            return False, ""
             
-            # Update local memory
-            self.learning_data["last_reflection"] = lesson
-            self.learning_data["experience_points"] += data["experience_points_gained"]
-            self.save_learning_state()
+        entry_price = trade["entry_price"]
+        direction = trade.get("direction", "LONG")
+        roi = trade.get("current_roi", 0)
+        
+        # Confirmation logic
+        pattern_confirmed = True
+        if patterns:
+             # If we are looking for a reversal, we want to see patterns in the OPPOSITE direction
+             # of the current trade (e.g. if LONG, look for Bearish patterns to exit)
+             pattern_confirmed = self.evaluate_candlestick_confirmation(patterns, "SHORT" if direction == "LONG" else "LONG")
+
+        # We only apply this to high-ROI trades (> 100%)
+        if roi >= 100:
+            if direction == "LONG":
+                fib_05 = fib_levels["bull_0.5"]
+                if current_price <= fib_05 and pattern_confirmed:
+                    return True, f"FIBONACCI EXIT + PRICE ACTION: Reversão confirmada por padrão de candle em {roi:.1f}%"
+            else:
+                fib_05 = fib_levels["bear_0.5"]
+                if current_price >= fib_05 and pattern_confirmed:
+                    return True, f"FIBONACCI EXIT + PRICE ACTION: Reversão confirmada por padrão de candle em {roi:.1f}%"
+                    
+        return False, ""
+
+    def evaluate_stagnation_exit(self, trade: Dict, current_roi: float) -> Tuple[bool, str]:
+        """
+        Rule: If 100% < ROI < 300% and trade > 6 hours without progress, exit to free slot.
+        """
+        if 100 <= current_roi < 300:
+            opened_at_str = trade.get("opened_at")
+            if not opened_at_str: return False, ""
             
-        except Exception as e:
-            print(f"[CAPTAIN] Error recording learning: {e}", flush=True)
-
-    def load_learning_state(self):
-        """Loads learning state from DB"""
-        if not self.db: return
-        try:
-            # We could fetch aggregated stats or the latest reflection
-            pass
-        except:
-            pass
-
-    def save_learning_state(self):
-        """Saves current state summary - typically handled via bankroll_status updates"""
-        pass
+            try:
+                opened_at = datetime.fromisoformat(opened_at_str.replace('Z', '+00:00'))
+                duration_hours = (datetime.utcnow().replace(tzinfo=opened_at.tzinfo) - opened_at).total_seconds() / 3600
+                
+                if duration_hours >= 6:
+                    return True, f"SAÍDA POR ESTAGNAÇÃO: {duration_hours:.1f}h em +{current_roi:.1f}% ROI. Liberando slot."
+            except:
+                pass
+                
+        return False, ""
 
     def get_status(self) -> Dict:
         """Returns the current state for UI display"""
