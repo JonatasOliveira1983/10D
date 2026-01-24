@@ -172,16 +172,35 @@ def delayed_init():
     else:
         print("[INIT] [WARN] Database connection timeout (60s) - Starting in OFFLINE/MEMORY ONLY mode", flush=True)
 
-    # === STEP 1: Initialize pairs (FAST) ===
-    try:
-        print(f"[INIT] Calling generator.initialize({PAIR_LIMIT})...", flush=True)
-        pairs = generator.initialize(pair_limit=PAIR_LIMIT)
-        print(f"[INIT] SUCCESS - Loaded {len(pairs)} pairs", flush=True)
-    except Exception as e:
-        print(f"[INIT] [CRITICAL] Failed to initialize pairs (API Error?): {e}", flush=True)
-        print("[INIT] Using fallback pair list...", flush=True)
-        # Fallback to a few majors if API fails
-        generator.monitored_pairs = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT"]
+    # === STEP 1: Initialize pairs (ROBUST RETRY) ===
+    pairs_loaded = False
+    retry_count = 0
+    max_retries = 3
+    
+    while not pairs_loaded and retry_count < max_retries:
+        try:
+            print(f"[INIT] Calling generator.initialize({PAIR_LIMIT}) (Attempt {retry_count+1}/{max_retries})...", flush=True)
+            pairs = generator.initialize(pair_limit=PAIR_LIMIT)
+            if pairs and len(pairs) > 0:
+                print(f"[INIT] SUCCESS - Loaded {len(pairs)} pairs", flush=True)
+                pairs_loaded = True
+            else:
+                 print(f"[INIT] [WARN] Generator returned empty pairs list.", flush=True)
+                 retry_count += 1
+                 time.sleep(2)
+        except Exception as e:
+            print(f"[INIT] [WARN] Failed to initialize pairs (API Error?): {e}", flush=True)
+            retry_count += 1
+            time.sleep(3)
+
+    if not pairs_loaded:
+        print("[INIT] [CRITICAL] All API attempts failed. Using extended fallback pair list...", flush=True)
+        # Fallback to Top 10 Major Pairs as requested
+        generator.monitored_pairs = [
+            "BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT", 
+            "ADAUSDT", "AVAXUSDT", "LINKUSDT", "MATICUSDT", "LTCUSDT"
+        ]
+        print(f"[INIT] Monitoring {len(generator.monitored_pairs)} fallback pairs.", flush=True)
 
     # === STEP 2: Start background scanner (CRITICAL) ===
     # We allow scanner to start even if DB or Init failed partially
@@ -352,6 +371,69 @@ def get_agents_status():
             "system_readiness": generator.system_ready
         })
     except Exception as e:
+        return jsonify({"status": "ERROR", "message": str(e)}), 500
+
+
+@app.route("/api/system/logs")
+def get_system_logs():
+    """Get real logs from agents and trades for the UI"""
+    try:
+        logs = []
+        
+        # 1. Fetch recent trade telemetry (The "War Room" feed)
+        recent_trades = generator.db.client.table("bankroll_trades")\
+            .select("symbol, telemetry, created_at, status")\
+            .order("created_at", desc=True)\
+            .limit(10)\
+            .execute()
+            
+        if recent_trades.data:
+            for t in recent_trades.data:
+                msg = t.get("telemetry") or f"Trade {t['status']} on {t['symbol']}"
+                logs.append({
+                    "id": f"trade_{t['symbol']}_{t['created_at']}",
+                    "timestamp": datetime.fromisoformat(t['created_at']).strftime("%H:%M:%S"),
+                    "agent": "elite_manager",
+                    "message": f"🦅 {msg}"
+                })
+
+        # 2. Fetch recent learning/insights
+        learning = generator.db.client.table("agent_learning")\
+            .select("*")\
+            .order("created_at", desc=True)\
+            .limit(5)\
+            .execute()
+            
+        if learning.data:
+             for l in learning.data:
+                logs.append({
+                    "id": f"learn_{l['id']}",
+                    "timestamp": datetime.fromisoformat(l['created_at']).strftime("%H:%M:%S"),
+                    "agent": "strategist",
+                    "message": f"🧠 {l['insight_type']}: {l['lesson_learned']}"
+                })
+        
+        # 3. Add current Risk Status log
+        if hasattr(generator, 'bankroll_manager') and generator.bankroll_manager:
+            status = generator.bankroll_manager.get_status()
+            if status:
+                slots = status.get('active_slots_used', 0)
+                logs.append({
+                    "id": "status_monitor",
+                    "timestamp": datetime.now().strftime("%H:%M:%S"),
+                    "agent": "governor",
+                    "message": f"⚖️ Monitoramento de Risco: Utilizando {slots}/10 slots. Banca: ${status.get('current_balance', 0):.2f}"
+                })
+
+        # Sort by timestamp (string sort works for HH:MM:SS effectively for today's logs)
+        logs.sort(key=lambda x: x['timestamp'])
+        
+        return jsonify({
+            "status": "OK",
+            "logs": logs
+        })
+    except Exception as e:
+        print(f"[LOGS ERROR] {e}")
         return jsonify({"status": "ERROR", "message": str(e)}), 500
 
 

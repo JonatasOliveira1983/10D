@@ -10,25 +10,32 @@ export default function AgentsView() {
     const [activeAgent, setActiveAgent] = useState(null); // Track who is "speaking"
     const logsEndRef = useRef(null);
 
-    // Mock logs generator for "War Room" feel
-    const generateMockLog = () => {
-        const actions = [
-            { agent: 'scout', msg: '👁️ Varredura de 30 pares concluída. Padrão bullish em SOL.' },
-            { agent: 'sentinel', msg: '🛡️ Volume institucional detectado em BTC. Absorção confirmada.' },
-            { agent: 'strategist', msg: '🧠 Correlação BTC/ETH estável (0.85). Cenário favorável.' },
-            { agent: 'governor', msg: '⚖️ Risco da banca em 12%. Autorizando novos slots.' },
-            { agent: 'anchor', msg: '⚓ SP500 abrindo em alta. Contexto macro: RISK-ON.' },
-            { agent: 'elite_manager', msg: '🦅 Monitorando 2 posições abertas. Trailing stop ativo.' },
-            { agent: 'gemini', msg: '💡 CORTEX: Validando sinal com 89% de confiança. Proceder.' }
-        ];
+    // Fetches real logs from the new endpoint
+    const fetchLogs = async () => {
+        try {
+            const res = await fetch('/api/system/logs');
+            const data = await res.json();
 
-        const randomAction = actions[Math.floor(Math.random() * actions.length)];
-        return {
-            id: Date.now(),
-            timestamp: new Date().toLocaleTimeString(),
-            agent: randomAction.agent,
-            message: randomAction.msg
-        };
+            if (data.status === 'OK' && data.logs) {
+                // Determine new logs to trigger animation
+                const currentIds = new Set(logs.map(l => l.id));
+                const newEntries = data.logs.filter(l => !currentIds.has(l.id));
+
+                if (newEntries.length > 0) {
+                    setLogs(data.logs);
+
+                    // Trigger visual feedback for the latest agent
+                    const latest = newEntries[newEntries.length - 1];
+                    setActiveAgent(latest.agent);
+                    setTimeout(() => setActiveAgent(null), 2000);
+                } else if (logs.length === 0) {
+                    // Initial load
+                    setLogs(data.logs);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching logs:', error);
+        }
     };
 
     const fetchSystemState = async () => {
@@ -58,19 +65,10 @@ export default function AgentsView() {
 
     useEffect(() => {
         fetchSystemState();
+        fetchLogs(); // Initial fetch
+
         const interval = setInterval(fetchSystemState, 5000);
-
-        // Simulate Live Logs
-        const logInterval = setInterval(() => {
-            const newLog = generateMockLog();
-            if (newLog) {
-                setLogs(prev => [...prev.slice(-50), newLog]); // Keep last 50 logs
-
-                // Trigger Visual Interaction
-                setActiveAgent(newLog.agent);
-                setTimeout(() => setActiveAgent(null), 2000); // Glow for 2 seconds
-            }
-        }, 3500);
+        const logInterval = setInterval(fetchLogs, 3000); // Poll logs every 3s
 
         return () => {
             clearInterval(interval);
