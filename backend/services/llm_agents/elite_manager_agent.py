@@ -298,6 +298,37 @@ class EliteManagerAgent(BaseAgent):
                 
         return False, ""
 
+    def record_learning(self, symbol: str, insight_type: str, lesson: str, context: Dict = None):
+        """Records tactical learning from trade outcomes."""
+        try:
+            print(f"[CAPTAIN] [LEARNING] Recording {insight_type} for {symbol}: {lesson[:50]}...", flush=True)
+            
+            # 1. Update internal experience and strategy reflection
+            if "LOSS" in insight_type:
+                self.learning_data["losses"] += 1 
+                self.learning_data["experience_points"] = max(0, self.learning_data["experience_points"] - 5)
+            else:
+                self.learning_data["wins"] += 1
+                self.learning_data["experience_points"] += 10
+            
+            self.learning_data["last_reflection"] = lesson
+            self.save_learning_state()
+            
+            # 2. Persist to DB for cross-session intelligence
+            if self.db:
+                self.db.log_agent_insight(
+                    agent_id="bankroll_captain",
+                    insight_type=insight_type,
+                    message=lesson,
+                    details={
+                        "symbol": symbol,
+                        "context": context or {},
+                        "confidence": 1.0
+                    }
+                )
+        except Exception as e:
+            print(f"[CAPTAIN] [LEARNING ERROR] Failed to record: {e}", flush=True)
+
     def get_status(self) -> Dict:
         """Returns the current state for UI display"""
         return self.learning_data

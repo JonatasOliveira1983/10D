@@ -1,4 +1,4 @@
-# 10D Trading System v6.6 (Elite & Risk Update)
+# 10D Trading System v5.1-STABLE (Restored)
 
 **10D** is an advanced automated trading system powered by Hybrid Intelligence (Rule-Based Scanners + Multi-Agent LLM Council) to identify high-probability crypto setups and manage capital with institutional-grade precision.
 
@@ -16,7 +16,7 @@ O sistema evoluiu para uma estrutura de **Autonomia Total**, onde os agentes nã
 3.  **Market Info Agent**: Monitora notícias em tempo real (Bybit/RSS) e fornece o contexto macro para o conselho.
 4.  **Soldados (Scout & Sentinel)**: Monitoramento especializado de tendências MTF e caça de liquidez (CVD/LSR).
 
-## 💎 Funcionalidades de Elite (v6.6)
+## 💎 Funcionalidades de Elite (v5.1-STABLE)
 
 ### 1. Gestão de Risco & Slots
 - **20% Exposure Cap**: Proteção rígida que limita cada operação a no máximo 20% do capital unificado.
@@ -28,4 +28,4 @@ O sistema evoluiu para uma estrutura de **Autonomia Total**, onde os agentes nã
 - **MTF Confluence**: Exige confirmação em múltiplos timeframes (Eagle Elite logic).
 
 ---
-*Atualizado em: 25/01/2026 - Versão 6.6 (Elite & Risk Update)*
+*Restaurado em: 25/01/2026 - Versão 5.1-STABLE (Restoration Update)*

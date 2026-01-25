@@ -31,7 +31,7 @@ CURRENT PORTFOLIO: {json.dumps(exposure_summary)}
 
 RULES:
 1. MAX EXPOSURE: Do not allow more than 10 active trades.
-2. CORRELATION: If we already have 5 LONGs in Alts, being cautious about the 6th if they move together.
+2. CORRELATION: If we already have 5 LONGs in Alts, be cautious but allow up to 10 total if quality is high.
 3. CONVICTION: Only allow the trade if it doesn't create a "One-Way Bettor" scenario.
 
 RESPOND IN JSON FORMAT ONLY. ALL TEXT FIELDS MUST BE IN PORTUGUESE (PT-BR):

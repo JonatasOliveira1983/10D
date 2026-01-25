@@ -286,21 +286,20 @@ class DatabaseManager:
         if not self._ensure_client(): return
         
         try:
-            # Table: llm_insights (id, symbol, insight_type, content, confidence, outcome, created_at)
-            # We map message to content for UI display
+            # Table: agent_learning (id, symbol, insight_type, lesson_learned, context_data, experience_points_gained, created_at)
+            # Map parameters to agent_learning schema
             payload = {
+                "symbol": details.get("symbol") if details else None,
                 "insight_type": f"{agent_id}|{insight_type}",
-                "content": {
-                    "message": message,
-                    "details": details or {}
-                },
-                "confidence": details.get("confidence") if details else 0.5,
+                "lesson_learned": message,
+                "context_data": details.get("context") if details else (details or {}),
+                "experience_points_gained": details.get("experience_points", 0) if details else 0,
                 "created_at": datetime.now().isoformat()
             }
-            self.client.table("llm_insights").insert(payload).execute()
+            self.client.table("agent_learning").insert(payload).execute()
         except Exception as e:
             # Silent fail to not block main thread
-            print(f"[DB LOG ERROR] Failed to log insight to llm_insights: {e}", flush=True)
+            print(f"[DB LOG ERROR] Failed to log insight to agent_learning: {e}", flush=True)
 
     # --- Métodos para Trading Plan ---
 
