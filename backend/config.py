@@ -126,7 +126,7 @@ MIN_SCORE_TO_SAVE = 60          # Minimum score to save signal (Lowered for visi
 # API SETTINGS
 # =============================================================================
 
-BYBIT_BASE_URL = "https://api.bybit.com"
+BYBIT_BASE_URL = "https://api-testnet.bybit.com"
 UPDATE_INTERVAL_SECONDS = 5  # Scan every 5 seconds for real-time updates
 
 # Timeframes
