@@ -338,6 +338,41 @@ const BancaPage = () => {
                                 </div>
                             )}
                         </div>
+                        {/* RISK MANAGEMENT HEADER */}
+                        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="bg-red-950/20 border border-red-500/20 rounded-xl p-4 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-red-500/10 rounded-lg">
+                                        <span className="material-symbols-outlined text-red-400">shield</span>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-red-200 font-bold text-sm">RISK MANAGEMENT</h4>
+                                        <p className="text-red-400/60 text-xs">Proteção Ativa</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <span className="block text-xl font-bold text-red-400">20% MAX</span>
+                                    <span className="text-xs text-red-500/60">EXPOSURE CAP</span>
+                                </div>
+                            </div>
+
+                            <div className="bg-violet-950/20 border border-violet-500/20 rounded-xl p-4 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-violet-500/10 rounded-lg">
+                                        <span className="material-symbols-outlined text-violet-400">dataset</span>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-violet-200 font-bold text-sm">ELITE SLOTS</h4>
+                                        <p className="text-violet-400/60 text-xs">Vagas para Sinais</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <span className="block text-xl font-bold text-violet-400">{status?.active_slots_used || 0} / 10</span>
+                                    <span className="text-xs text-violet-500/60">ACTIVE TRADES</span>
+                                </div>
+                            </div>
+                        </div>
+
                     </header>
 
                     {/* MAIN GRID */}
@@ -443,8 +478,8 @@ const BancaPage = () => {
                                 <button
                                     onClick={() => setViewMode('active')}
                                     className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${viewMode === 'active'
-                                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-500/10'
-                                            : 'hover:bg-gray-800/50 text-gray-400'
+                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-500/10'
+                                        : 'hover:bg-gray-800/50 text-gray-400'
                                         }`}
                                 >
                                     <div className={`w-2 h-2 rounded-full ${viewMode === 'active' ? 'bg-emerald-400 animate-pulse' : 'bg-gray-600'}`} />
@@ -456,8 +491,8 @@ const BancaPage = () => {
                                 <button
                                     onClick={() => setViewMode('history')}
                                     className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${viewMode === 'history'
-                                            ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                                            : 'hover:bg-gray-800/50 text-gray-400'
+                                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                        : 'hover:bg-gray-800/50 text-gray-400'
                                         }`}
                                 >
                                     <span className="material-symbols-outlined text-sm">history</span>

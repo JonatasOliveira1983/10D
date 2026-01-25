@@ -1,6 +1,8 @@
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List
 from .base_agent import BaseAgent
+from ..bybit_executor import execute_signals
+from ..signal_utils import is_elite_signal, compute_trade_qty, should_use_limit
 
 class BankrollCaptainAgent(BaseAgent):
     """Agent responsible for bankroll management and risk exposure.
@@ -68,11 +70,24 @@ class BankrollCaptainAgent(BaseAgent):
     def analyze(self, signal: Dict[str, Any], market_context: Dict[str, Any]) -> Dict[str, Any]:
         """Analyzes bankroll limits for the signal."""
         trade_amount = signal.get("amount", 0)
+        # Verify if we have a valid price to estimate amount if missing
+        if trade_amount == 0 and "entry_price" in signal:
+             # Estimate based on 20% rule if not provided, just for checking
+             # But strictly, the agent approves/rejects based on provided amounts or potential
+             pass 
+
         total_bankroll = market_context.get("total_bankroll", 0)
         
+        # If trade_amount is 0, we might need to calculate it or just check slots
+        # For 'analyze', we act as a gatekeeper. 
+        # If no amount is known, we assume it WILL adhere to limits, 
+        # so we check slots primarily, and exposure if amount is known.
+        
+        # Mock run call for deciding verdict
         allowed_data = self.run(trade_amount=trade_amount, total_bankroll=total_bankroll)
         
         return {
+            "agent": self.name,
             "score": 100 if allowed_data["allowed"] else 0,
             "verdict": "APPROVED" if allowed_data["allowed"] else "REJECTED",
             "reasoning": allowed_data["reason"],

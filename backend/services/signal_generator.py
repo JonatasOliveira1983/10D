@@ -730,10 +730,10 @@ class SignalGenerator:
             print(f"[MTF] {symbol} Confluence Score: {mtf_score}/3", flush=True)
 
         if signal["score"] >= 65 and mtf_score >= 1:
-            signal["is_eagle_elite"] = True
+            signal["is_elite"] = True
             print(f"[EAGLE ELITE] 🦅 {symbol} identified with high MTF confluence!", flush=True)
         else:
-            signal["is_eagle_elite"] = False
+            signal["is_elite"] = False
 
         return signal
 
