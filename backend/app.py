@@ -1266,26 +1266,15 @@ def force_elite_signal():
         
         # 2. Force it through the BankrollManager
         # FORCE EXECUTION (Fail-Safe for Offline Mode)
+        # FORCE EXECUTION (Fail-Safe for Deployment)
         print(f"[TEST] Forcing Elite Signal (Direct): {symbol} @ {price}", flush=True)
+        
         try:
-             # Ensure memory fallback is ready
-             status = generator.bankroll_manager.get_status() 
-             # Try via manager
-             success = generator.bankroll_manager._open_trade(signal, status)
-             if not success:
-                 print("[TEST] Manager returned False. Forcing append to memory.", flush=True)
-                 # Manually populate defaults if manager didn't
-                 signal["status"] = "OPEN"
-                 signal["entry_size_usd"] = status.get("entry_size_usd", 1.0)
-                 signal["stop_loss"] = price * 0.99
-                 signal["opened_at"] = datetime.utcnow().isoformat()
-                 signal["roi_pct"] = 0.0
-                 signal["pnl_usd"] = 0.0
-                 generator.bankroll_manager.memory_trades.append(signal)
-                 success = True
+            status = generator.bankroll_manager.get_status()
+            success = generator.bankroll_manager._open_trade(signal, status)
         except Exception as e:
-             print(f"[TEST] Exception forcing trade: {e}", flush=True)
-             success = False
+            print(f"[TEST] Exception forcing trade: {e}", flush=True)
+            success = False
         
         if success:
             return jsonify({

@@ -272,14 +272,23 @@ class BankrollManager:
                 self.log_callback("bankroll_captain_agent", "TRADE_OPEN", f"🦅 {msg}", {**new_trade, "bybit_res": bybit_res})
             
             # 5. Register in Captain Agent
-            if hasattr(self.llm_brain, 'council') and hasattr(self.llm_brain.council, 'bankroll_captain'):
-                self.llm_brain.council.bankroll_captain.register_trade(signal["id"], new_trade)
+            try:
+                if self.llm_brain and hasattr(self.llm_brain, 'council') and hasattr(self.llm_brain.council, 'bankroll_captain'):
+                    self.llm_brain.council.bankroll_captain.register_trade(signal["id"], new_trade)
+            except Exception as brain_err:
+                print(f"[BANKROLL] Captain Brain Register Error (Non-Fatal): {brain_err}", flush=True)
             
             self.status_cache = None
             return True
             
         except Exception as e:
             print(f"[BANKROLL] Failed to open trade: {e}", flush=True)
+            # LOG THE TRACEBACK to debug file
+            try:
+                with open("debug_bm_full_error.txt", "w") as f:
+                    import traceback
+                    f.write(traceback.format_exc())
+            except: pass
             return False
 
     def _check_advanced_captain_logic(self, trade: dict, current_price: float) -> Tuple[bool, str]:
