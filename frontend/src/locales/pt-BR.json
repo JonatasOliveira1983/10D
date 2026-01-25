@@ -1,9 +1,8 @@
 {
     "nav": {
-        "invest": "M.L Máquina de Aprendizado",
         "signalJourney": "Signal Journey",
-        "journeyHistory": "Histórico Journey",
-        "organizer": "Organizador",
+        "agents": "Agentes",
+        "banca": "Banca",
         "settings": "Configurações"
     },
     "header": {

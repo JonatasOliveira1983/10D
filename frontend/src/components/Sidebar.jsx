@@ -10,11 +10,9 @@ export default function Sidebar({ currentPage, onNavigate, theme, onToggleTheme,
     const tenMMenuRef = useRef(null);
 
     const menuItems = [
-        { id: 'dashboard', icon: <IconBrain />, label: t('nav.invest'), mobileLabel: 'M.L' },
         { id: 'signal-journey', icon: <IconBrain />, label: t('nav.signalJourney'), mobileLabel: 'Journey' },
-        { id: 'journey-history', icon: <IconHistory />, label: t('nav.journeyHistory'), mobileLabel: 'Histórico' },
-        { id: 'agents', icon: <IconAI />, label: 'Agentes', mobileLabel: 'Agentes' },
-        { id: 'banca', icon: <IconOrganizer />, label: 'Banca', mobileLabel: 'Banca' },
+        { id: 'agents', icon: <IconAI />, label: t('nav.agents'), mobileLabel: 'Agentes' },
+        { id: 'banca', icon: <IconOrganizer />, label: t('nav.banca'), mobileLabel: 'Banca' },
     ];
 
     // Close menus when clicking outside

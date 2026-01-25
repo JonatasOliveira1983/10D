@@ -1,8 +1,10 @@
 import logging
 from datetime import datetime
 import json
+import time
 from typing import List, Dict, Tuple, Optional
 from services.llm_agents.elite_manager_agent import EliteManagerAgent
+from services.bybit_executor import place_test_order
 
 class BankrollManager:
     """
@@ -39,6 +41,22 @@ class BankrollManager:
         # Cache for status to reduce DB calls (Careful with concurrency!)
         self.status_cache = None
         self.last_status_fetch = 0
+        
+        # OFF-LINE FALLBACK MEMORY
+        self.memory_status = {
+            "id": "elite_bankroll",
+            "current_balance": 1000.0, # Default demo balance
+            "base_balance": 1000.0,
+            "entry_size_usd": 50.0, # 5%
+            "trades_in_cycle": 0,
+            "total_trades": 0,
+            "cycle_number": 1,
+            "wins": 0,
+            "losses": 0,
+            "win_rate": 0.0,
+            "roi_percentage": 0.0
+        }
+        self.memory_trades = []
     
     def get_status(self):
         """Fetch current bankroll status from Supabase (Persistent)"""
@@ -61,9 +79,20 @@ class BankrollManager:
                 self.status_cache = status
                 self.last_status_fetch = datetime.now().timestamp()
                 return status
+                return status
         except Exception as e:
-            print(f"[BANKROLL] Error fetching status: {e}", flush=True)
-        return None
+            print(f"[BANKROLL] Error fetching status from DB ({e}). Using FALLBACK MEMORY.", flush=True)
+            # Fallback
+            return self.memory_status
+        return self.memory_status
+
+    def _calculate_qty_for_symbol(self, symbol: str, price: float, entry_usd: float) -> float:
+        """Calculates quantity based on USD amount and leverage"""
+        if price <= 0: return 0.01
+        # We use leverage 50x
+        raw_qty = (entry_usd * self.LEVERAGE) / price
+        # Round to precision (usually 2 decimals for alts like SOL)
+        return round(raw_qty, 2)
 
     def _check_risk_exposure(self, status):
         """
@@ -73,8 +102,12 @@ class BankrollManager:
         """
         try:
             # FORCE FETCH open trades (Bypass cache for safety)
-            res = self.db.client.table("bankroll_trades").select("*").eq("status", "OPEN").execute()
-            open_trades = res.data or []
+            try:
+                res = self.db.client.table("bankroll_trades").select("*").eq("status", "OPEN").execute()
+                open_trades = res.data or []
+            except:
+                # Fallback to memory trades
+                open_trades = [t for t in self.memory_trades if t["status"] == "OPEN"]
             
             # 1. Count Active Risky Trades
             risky_trades_count = 0
@@ -205,14 +238,38 @@ class BankrollManager:
                 "opened_at": datetime.utcnow().isoformat()
             }
             
-            self.db.client.table("bankroll_trades").insert(new_trade).execute()
+            # 4. EXECUTE ON BYBIT TESTNET
+            bybit_res = {}
+            try:
+                # Prepare signal for executor structure
+                exec_sig = {
+                    "symbol": symbol,
+                    "side": "Buy" if direction == "LONG" else "Sell",
+                    "qty": self._calculate_qty_for_symbol(symbol, entry_price, entry_size),
+                    "price": entry_price, # Optional for market orders? Executor defaults to Limit if price present.
+                    "timestamp": int(time.time() * 1000)
+                }
+                bybit_res = place_test_order(exec_sig)
+                print(f"[BANKROLL] Bybit Testnet Response: {bybit_res}", flush=True)
+            except Exception as e:
+                print(f"[BANKROLL] [ERROR] Bybit Testnet execution failed: {e}", flush=True)
+
+            try:
+                self.db.client.table("bankroll_trades").insert(new_trade).execute()
+            except Exception as dbe:
+                 print(f"[BANKROLL] DB Insert Failed ({dbe}). Saving to MEMORY.", flush=True)
+                 new_trade["id"] = max([int(t.get("id", 0)) for t in self.memory_trades] + [0]) + 1
+                 self.memory_trades.append(new_trade)
             
-            self.db.client.table("bankroll_trades").insert(new_trade).execute()
+            # REMOVED DUPLICATE INSERT CALL
             
             msg = f"TRADE INICIADO: {symbol} | Risco: ${entry_size:.2f} | Alvo: 6% (Sniper)"
+            if bybit_res.get("retCode") == 0:
+                msg += " [LIVE TESTNET OK]"
+            
             print(f"[BANKROLL] {msg}", flush=True)
             if self.log_callback:
-                self.log_callback("bankroll_captain_agent", "TRADE_OPEN", f"🦅 {msg}", new_trade)
+                self.log_callback("bankroll_captain_agent", "TRADE_OPEN", f"🦅 {msg}", {**new_trade, "bybit_res": bybit_res})
             
             # 5. Register in Captain Agent
             if hasattr(self.llm_brain, 'council') and hasattr(self.llm_brain.council, 'bankroll_captain'):
@@ -314,13 +371,18 @@ class BankrollManager:
         """
         try:
             # Fetch open trades
-            open_trades = self.db.client.table("bankroll_trades").select("*").eq("status", "OPEN").execute()
-            if not open_trades.data:
+            try:
+                open_trades_res = self.db.client.table("bankroll_trades").select("*").eq("status", "OPEN").execute()
+                open_trades_data = open_trades_res.data
+            except:
+                open_trades_data = [t for t in self.memory_trades if t["status"] == "OPEN"]
+                
+            if not open_trades_data:
                 return
 
             status = self.get_status()
             
-            for trade in open_trades.data:
+            for trade in open_trades_data:
                 symbol = trade["symbol"]
                 current_price = current_prices.get(symbol)
                 

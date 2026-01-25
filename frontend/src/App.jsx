@@ -1,17 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import Dashboard from './components/Dashboard';
 import OpeningPage from './components/OpeningPage';
 
-import TradesOrganizerPage from './components/TradesOrganizer/TradesOrganizerPage';
+
 import BancaPage from './components/Banca/BancaPage'; // Restored the complete version
-import HistoryView from './components/HistoryView';
-import AIAnalytics from './components/AIAnalytics';
-import MLPerformance from './components/MLPerformance';
-import LiveMonitor from './components/LiveMonitor';
 import SignalJourney from './components/SignalJourney';
-import JourneyHistory from './components/JourneyHistory';
 import SettingsPage from './components/SettingsPage';
 import AgentsView from './components/AgentsView';
 import { fetchSignals, fetchStats, fetchHistory, fetchBTCRegime } from './services/api';
@@ -32,7 +26,7 @@ export default function App() {
     const [loading, setLoading] = useState(true);
     const [isConnected, setIsConnected] = useState(false);
     const [theme, setTheme] = useState('dark');
-    const [currentPage, setCurrentPage] = useState('dashboard');
+    const [currentPage, setCurrentPage] = useState('signal-journey');
     const [pinnedSymbol, setPinnedSymbol] = useState(null);
     const [btcRegime, setBtcRegime] = useState(null);
 
@@ -42,8 +36,9 @@ export default function App() {
         if (path === '/btcanalises' || path === '/banca') {
             setShowOpening(false);
             setCurrentPage('banca');
-            // Optional: Clean URL to avoid confusion or reload loops
-            window.history.replaceState({}, document.title, "/");
+        } else if (path === '/journey') {
+            setShowOpening(false);
+            setCurrentPage('signal-journey');
         }
     }, []);
 
@@ -128,38 +123,6 @@ export default function App() {
                         />
 
                         <main className="main-content">
-                            {currentPage === 'dashboard' && (
-                                <Dashboard
-                                    signals={processedSignals}
-                                    pinnedSymbol={pinnedSymbol}
-                                    onPin={handlePin}
-                                    loading={loading}
-                                />
-                            )}
-                            {currentPage === 'organizer' && (
-                                <TradesOrganizerPage />
-                            )}
-                            {currentPage === 'banca' && (
-                                <BancaPage />
-                            )}
-                            {currentPage === 'history' && (
-                                <HistoryView
-                                    history={history}
-                                    loading={loading}
-                                />
-                            )}
-                            {currentPage === 'ai' && (
-                                <AIAnalytics />
-                            )}
-                            {currentPage === 'ml' && (
-                                <MLPerformance />
-                            )}
-                            {currentPage === 'live-monitor' && (
-                                <LiveMonitor
-                                    signals={signals}
-                                    loading={loading}
-                                />
-                            )}
                             {currentPage === 'signal-journey' && (
                                 <SignalJourney
                                     signals={signals}
@@ -167,12 +130,10 @@ export default function App() {
                                     loading={loading}
                                 />
                             )}
-                            {currentPage === 'journey-history' && (
-                                <JourneyHistory
-                                    history={history}
-                                    loading={loading}
-                                />
+                            {currentPage === 'banca' && (
+                                <BancaPage />
                             )}
+
                             {currentPage === 'settings' && (
                                 <SettingsPage
                                     theme={theme}

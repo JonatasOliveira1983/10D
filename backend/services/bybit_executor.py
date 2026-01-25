@@ -20,7 +20,7 @@ def place_test_order(signal: Dict) -> Dict:
     params = {
         "category": "linear",  # USDC perpetual – adjust if needed
         "symbol": signal["symbol"],
-        "side": signal["side"].lower(),
+        "side": signal["side"].capitalize(),
         "orderType": order_type,
         "qty": str(signal["qty"]),
         "timeInForce": "GTC",
