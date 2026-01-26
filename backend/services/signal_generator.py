@@ -1324,16 +1324,17 @@ class SignalGenerator:
             is_sniper = signal.get("is_sniper", False)
 
             # [SNIPER EXCLUSIVE] Immediately discard signals that are NOT sniper
-            if not is_sniper:
-                print(f"[MONITOR PURGE] {symbol} is NOT a Sniper signal. Removing from monitoring.", flush=True)
-                signal["status"] = "DISCARDED" # Permanent status for DB
-                signal["exit_timestamp"] = current_time
-                self.save_signal_to_db(signal)
-                
-                with self._lock:
-                    if symbol in self.active_signals:
-                        del self.active_signals[symbol]
-                continue
+            # DISABLED: We want to keep them for "Journey" monitoring even if not traded
+            # if not is_sniper:
+            #     print(f"[MONITOR PURGE] {symbol} is NOT a Sniper signal. Removing from monitoring.", flush=True)
+            #     signal["status"] = "DISCARDED" # Permanent status for DB
+            #     signal["exit_timestamp"] = current_time
+            #     self.save_signal_to_db(signal)
+            #     
+            #     with self._lock:
+            #         if symbol in self.active_signals:
+            #             del self.active_signals[symbol]
+            #     continue
             
             # Initialize hit flag for this iteration
             hit = False

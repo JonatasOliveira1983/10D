@@ -80,8 +80,8 @@ TAKE_PROFIT_PERCENT = 0.02  # 2% (Default for Trending)
 PARTIAL_TP_PERCENT = 0.02    # 2% (Target 1 - Close 50% and move SL to Entry)
 TRAILING_STOP_TRIGGER = 0.03 # 3% (Activate Trailing Stop)
 TRAILING_STOP_DISTANCE = 0.01 # 1% (SL follows price at 1% distance)
-TARGET_SNIPER_6 = 0.06       # 6% Super Target
-SNIPER_FORCE_TARGET = 0.06   # Force 6% target in sniper mode
+TARGET_SNIPER_6 = 10.0       # 1000% Super Target (Was 0.06)
+SNIPER_FORCE_TARGET = 10.0   # Force 1000% target in sniper mode
 SNIPER_DECOUPLING_THRESHOLD = 0.40 # Minimum decoupling for ranging sniper
 SNIPER_BEST_SCORE_THRESHOLD = 70  # Lowered for demo (Standard: 85)
 
@@ -95,6 +95,10 @@ ENTRY_MISSED_PERCENT = 0.01 # 1%
 PAIR_LIMIT = 100            # Monitor top 100 pairs by volume
 EXCLUDED_PAIRS = [          # Pairs to exclude from monitoring
     "BTCUSDT",              # BTC leads the market, we follow it, not trade it
+    "PAXGUSDT",             # Gold Token (Stable-ish)
+    "XAUTUSDT",             # Gold Token (Stable-ish)
+    "USDCUSDT",             # Stablecoin
+    "EURUSDT",              # Forex
 ]
 
 # =============================================================================

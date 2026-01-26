@@ -192,6 +192,13 @@ class BankrollManager:
         try:
             res = self.db.client.table("bankroll_trades").select("*").eq("status", "OPEN").execute()
             open_trades = res.data or []
+            
+            # [CRITICAL] DUPLICATE CHECK
+            # Do not open if we already have an OPEN trade for this symbol
+            for t in open_trades:
+                if t.get("symbol") == signal.get("symbol"):
+                    # print(f"[BANKROLL] Skipping duplicate signal for {signal['symbol']}", flush=True)
+                    return False
         except:
             pass
 
@@ -527,8 +534,8 @@ class BankrollManager:
                     closed = True
                     final_status = f"FECHADO PELO CAPITÃO ({captain_reason})"
                     print(f"[BANKROLL] 🏛️ CAPTAIN EXIT triggered for {symbol}: {captain_reason}", flush=True)
-                elif roi >= 3.0: # +300% (6% Price Move)
-                    final_status = "WON (SNIPER 300%)"
+                elif roi >= 10.0: # +1000% (20% Price Move @ 50x)
+                    final_status = "WON (SNIPER 1000%)"
                     closed = True
                 elif roi <= -0.5: # -50% (1% Price Move)
                     # FINAL CHECK: Did we hit SL?
